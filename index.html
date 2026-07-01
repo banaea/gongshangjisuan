@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全国工伤赔偿计算器 V4.1.16 稳定版</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f5f7fa;
+            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; color: #1a56db; margin-bottom: 8px; }
+        .header p { color: #6b7280; font-size: 14px; }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            border-left: 4px solid #1a56db;
+            padding-left: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .export-btn {
+            padding: 8px 18px;
+            background: #1a56db;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .export-btn:hover { background: #1e40af; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .form-group { margin-bottom: 8px; }
+        .group-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 22px 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .form-group:first-child .group-title { margin-top: 0; }
+        .form-item { display: flex; flex-direction: column; }
+        .form-item label {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .form-item input, .form-item select {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-item input:focus, .form-item select:focus {
+            border-color: #1a56db;
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+        }
+        .form-item input[readonly], .form-item input[disabled] {
+            background: #f3f4f6;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+        .avg-salary-input {
+            background: #fffbeb !important;
+            border-color: #f59e0b !important;
+        }
+        .input-tip {
+            font-size: 12px;
+            color: #d97706;
+            margin-top: 4px;
+        }
+        .checkbox-item {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 0;
+        }
+        .checkbox-item input { width: 16px; height: 16px; }
+        .checkbox-item label { margin: 0; font-size: 14px; color: #4b5563; }
+
+        .salary-note {
+            background: #eff6ff;
+            border-left: 3px solid #1a56db;
+            padding: 8px 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #1e40af;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        .detail-table th, .detail-table td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        .detail-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            position: sticky;
+            top: 0;
+        }
+        .item-name { font-weight: 600; color: #111827; min-width: 160px; }
+        .legal-basis { font-size: 12px; color: #6b7280; line-height: 1.5; }
+        .legal-basis .basis-title {
+            font-weight: 600;
+            color: #1a56db;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .formula {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12px;
+            color: #047857;
+            background: #ecfdf5;
+            padding: 4px 6px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .process { font-size: 12px; color: #4b5563; line-height: 1.8; }
+        .payer { font-size: 12px; font-weight: 500; }
+        .payer-social { color: #047857; }
+        .payer-company { color: #dc2626; }
+        .amount {
+            font-weight: 600;
+            color: #111827;
+            text-align: right;
+            font-size: 14px;
+            min-width: 100px;
+        }
+        .amount .unit { font-size: 11px; font-weight: normal; color: #6b7280; }
+
+        .total-row {
+            background: #f0f9ff;
+            font-weight: 700;
+        }
+        .total-row td {
+            border-top: 2px solid #1a56db;
+            border-bottom: none;
+        }
+        .grand-total {
+            background: #eff6ff;
+            font-size: 15px;
+        }
+
+        .tip {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 12px;
+            line-height: 1.7;
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>全国工伤赔偿计算器</h1>
+            <p>31省市全量官方标准 · 延迟退休可选开关 · 未伤残/未离职场景全覆盖</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">基本信息录入</div>
+            
+            <div class="salary-note">
+                缴费工资说明：根据《工伤保险条例》第64条，本人工资低于统筹地区职工平均工资60%的，按60%计算；高于300%的，按300%计算。
+            </div>
+
+            <!-- 第一组：基础信息 -->
+            <div class="form-group">
+                <div class="group-title">基础信息</div>
+                <div class="form-grid">
+                    <div class="form-item" style="grid-column: span 1;">
+                        <div style="display:flex; gap:12px; align-items:flex-end;">
+                            <div style="flex:1; display:flex; flex-direction:column;">
+                                <label>参保省/直辖市/自治区</label>
+                                <select id="province" onchange="onProvinceChange()" style="width:100%;"></select>
+                            </div>
+                            <div id="gdCityOuter" style="flex:1; display:none; flex-direction:column;">
+                                <label>请选择统筹地市</label>
+                                <select id="gdCitySelect" onchange="onGuangdongCityChange();calculate();" style="width:100%;">
+                                    <option value="other" selected>广东省其他地市</option>
+                                    <option value="gz">广州市</option>
+                                    <option value="sz">深圳市</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="gdTipBox" class="input-tip" style="display:none; margin-top:4px;">⚠️ 请正确选择统筹地市，区分广州市、深圳市、广东省其他地市</div>
+                    </div>
+
+                    <div class="form-item">
+                        <label>本人月工资（元）</label>
+                            <input type="text" inputmode="decimal" id="monthlySalary" value="0.00" 
+                            oninput="formatDecimalInput(this);recalcDailyWageNewRule();calculate();" 
+                            onblur="fixDecimalOnBlur(this);recalcDailyWageNewRule();calculate();">
+                    </div>
+                    <div class="form-item">
+                        <label>出生年月</label>
+                        <input type="month" id="birthDate" value="1969-01" onchange="updatePostAndRetire(); calculate()">
+                    </div>
+                    <div class="form-item">
+                        <label>是否离职/解除劳动关系</label>
+                        <select id="isResigned" onchange="updateResignStatus(); calculate();">
+                            <option value="0" selected>否</option>
+                            <option value="1">是</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label id="leaveDateLabel">离职/解除劳动关系年月</label>
+                        <input type="month" id="leaveDate" disabled onchange="calculate()">
+                        <div class="input-tip" id="leaveDateTip">未离职，无需填写</div>
+                    </div>
+                    <div class="form-item">
+                        <label>年龄（自动计算）</label>
+                        <input type="text" id="age" readonly>
+                    </div>
+                    <div class="form-item">
+                        <label>性别</label>
+                        <select id="gender" onchange="updatePostAndRetire(); calculate();">
+                            <option value="男" selected>男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label>岗位类型（女性适用）</label>
+                        <select id="postType" onchange="updatePostAndRetire(); calculate();">
+                            <option value="工人">工人（原50岁退休）</option>
+                            <option value="干部">干部/管理岗（原55岁退休）</option>
+                        </select>
+                        <div class="input-tip" id="postTip">男性无需选择岗位类型</div>
+                    </div>
+                    <div class="form-item">
+                        <label>法定退休年月（自动计算）</label>
+                        <input type="text" id="retireDateShow" readonly>
+                    </div>
+                    <div class="form-item" id="retireDiffItem" style="display: none;">
+                        <label>离职距法定退休时长</label>
+                        <input type="text" id="retireDiffShow" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二组：伤残与待遇基数 -->
+            <div class="form-group">
+                <div class="group-title">伤残等级与待遇基数</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label>伤残等级</label>
+                        <select id="disabilityLevel" onchange="calculate(); updateDateLabel();">
+                            <option value="0" selected>未达伤残等级</option>
+                            <option value="1">一级</option>
+                            <option value="2">二级</option>
+                            <option value="3">三级</option>
+                            <option value="4">四级</option>
+                            <option value="5">五级</option>
+                            <option value="6">六级</option>
+                            <option value="7">七级</option>
+                            <option value="8">八级</option>
+                            <option value="9">九级</option>
+                            <option value="10">十级</option>
+                        </select>
+                    </div>
+                    <div class="form-item" style="grid-column: span 2;">
+                        <label id="avgSalaryLabel">统筹地区上年度职工月平均工资（元）</label>
+                        <input type="text" inputmode="decimal" id="localAvgSalary" value="7506.00" class="avg-salary-input" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+                        <div class="input-tip" id="avgSalaryTip">⚠️ 此标准每年更新，请人工确认当地最新数值后再使用</div>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="isOccupationalDisease" onchange="calculate()">
+                        <label for="isOccupationalDisease">是否为职业病工伤（按当地标准增发医疗补助金）</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="useDelayRetire" onchange="updatePostAndRetire(); calculate();">
+                        <label for="useDelayRetire">适用渐进式延迟退休规定（默认按原法定退休年龄计算）</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第三组：医疗费信息 -->
+            <div class="form-group">
+                <div class="group-title">医疗费信息</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label>医疗费总金额（元）</label>
+                        <input type="text" inputmode="decimal" id="medicalTotal" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+                    </div>
+                    <div class="form-item">
+                        <label>医保/其他方式已报销金额（元）</label>
+                        <input type="text" inputmode="decimal" id="medicalReimbursed" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+                    </div>
+                    <div class="form-item">
+                        <label>医疗费免赔额（元）</label>
+                        <input type="text" inputmode="decimal" id="medicalDeductible" value="100.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+                    </div>
+                    <div class="form-item">
+                        <label>非医保扣减比例（%）</label>
+                        <input type="text" inputmode="decimal" id="nonMedicalRatio" value="15" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+                    </div>
+                    <div class="form-item">
+                        <label>医疗费赔付比例（%）</label>
+                        <input type="text" inputmode="decimal" id="medicalRatio" value="90" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第四组：停工留薪期（误工费） -->
+            <!-- 第四组：停工留薪期（误工费） -->
+            <div class="form-group">
+                <div class="group-title">停工留薪期（误工费）</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label>误工费保单日限额（元/日）</label>
+                        <select id="insuranceDayLimitSelect" onchange="handleInsuranceLimitChange()">
+                            <option value="50.00">50.00</option>
+                            <option value="80.00">80.00</option>
+                            <option value="100.00" selected>100.00</option>
+                            <option value="200.00">200.00</option>
+                            <option value="other">其他</option>
+                        </select>
+                        <!-- 新增oninput实时触发，onblur保留容错；初始默认100，选其他自动置0 -->
+                        <input type="text" inputmode="decimal" id="insuranceDayLimitInput" value="100.00" disabled style="margin-top:6px;" 
+                        oninput="formatDecimalInput(this);recalcDailyWageNewRule();calculate();" 
+                        onblur="fixDecimalOnBlur(this);recalcDailyWageNewRule();calculate();">
+                    </div>
+                    <div class="form-item">
+                        <label>停工留薪期天数</label>
+                        <input type="text" inputmode="numeric" id="stopWorkDays" value="0" oninput="formatIntInput(this);calculate()">
+                    </div>
+                    <div class="form-item">
+                        <label>停工留薪期日工资标准（元/天）</label>
+                        <input type="text" inputmode="decimal" id="dailyWage" value="100.00" readonly>
+                        <div class="input-tip">⚠️ 此处与本人月工资联动，最高不超保单限额</div>
+                    </div>
+                    <div class="form-item">
+                        <label>误工费免赔天数</label>
+                        <input type="text" inputmode="numeric" id="deductDays" value="5" oninput="formatIntInput(this);calculate()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                赔偿明细 · 含法律依据与计算公式
+                <button class="export-btn" onclick="exportExcel()">导出Excel表格</button>
+            </div>
+
+            <table class="detail-table" id="resultTable">
+                <thead>
+                    <tr>
+                        <th>赔偿项目</th>
+                        <th>法律依据</th>
+                        <th>计算公式</th>
+                        <th>计算过程</th>
+                        <th>支付主体</th>
+                        <th style="text-align:right;">金额</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+            </table>
+
+            <div class="tip" id="provinceRuleTip">
+                说明：一次性伤残补助金执行全国统一标准；一次性工伤医疗补助金、一次性伤残就业补助金按参保地省级官方办法计算。
+                <div style="color:#d97706; font-weight:bold; margin:8px 0;">
+                    ⚠️ 备注：若明细中出现递减比例提示，代表该省份对应补助金受离职时距退休年限调整计发金额
+                </div>
+            </div>
+        </div>
+
+        <div class="tip">
+            备注：<br>
+            1. 本工具依据各省现行有效工伤保险条例实施办法编制，仅作参考，具体以当地社保经办机构核算为准；<br>
+            2. 1-4级伤残法定为按月领取伤残津贴，本工具提供一次性计发测算，发放周期为停工留薪期满至法定退休年龄；<br>
+            3. 5-10级伤残达到法定退休年龄的，不再享受一次性医疗补助金和就业补助金；<br>
+            4. 默认按原法定退休年龄计算，勾选「适用渐进式延迟退休」后按2025年新政自动计算；<br>
+            5. 贵州省专项规则：医疗补助金固定月数不递减，就业补助金按距退休剩余月数计算，各等级设最高/最低月数封顶保底；<br>
+            6. 天津市专项规则：按建设项目参加工伤保险的工伤职工，未领取基本养老保险待遇的，全额享受一次性工伤医疗补助金与一次性伤残就业补助金；已领取基本养老保险待遇的，仅享受一次性工伤医疗补助金。
+        </div>
+    </div>
+
+    <script>
+        // ===================== 全国31省市工伤赔偿标准（完整闭合版） =====================
+        const PROVINCE_STANDARDS = {
+            // 直辖市
+            "北京市": {
+                baseType: "avg_salary",
+                medical: {5:18, 6:15, 7:12, 8:9, 9:6, 10:3},
+                employment: {5:18, 6:15, 7:12, 8:9, 9:6, 10:3},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 12049, odAdd: null,
+                legalBasis: [
+                    {title:"《北京市实施〈工伤保险条例〉若干规定》第22条", text:"距法定退休年龄超过五年(含五年)的支付全额；不足五年的每减少一年扣除全额的20%，最高扣除额不超过全额的90%。达到退休年龄或办理退休手续的，不享受两项补助金。"}
+                ],
+                desc: "两项补助金合并计算标准，同步按年龄递减，退休后不予支付"
+            },
+            "天津市": {
+                baseType: "avg_salary",
+                medical: { 5: 12, 6: 10, 7: 8, 8: 6, 9: 4, 10: 2 },
+                employment: { 5: 18, 6: 15, 7: 12, 8: 9, 9: 6, 10: 3 },
+                reduction: "both",
+                reductionRate: 0.2,
+                minRatio: 0.1,
+                defaultAvg: 8540,
+                odAdd: null,
+                legalBasis: [
+                    { title: "《天津市工伤保险若干规定》（市政府令第14号）第29条", text: "距法定退休年龄不足五年的，一次性工伤医疗补助金和一次性伤残就业补助金同步按比例递减：不足5年80%、不足4年60%、不足3年40%、不足2年20%、不足1年10%。达到退休年龄且符合领取养老金条件的不予支付，劳动合同法第38条被迫解除除外。" },
+                    { title: "津人社规〔2024〕4号", text: "养老保险缴费不足15年的按就高原则确定比例；建设项目参保未领养老待遇的全额享受两项补助金。" }
+                ],
+                desc: "一次性工伤医疗补助金、一次性伤残就业补助金两项同步按距退休年限同比例递减；计发基数为解除劳动关系上年度全市职工月平均工资"
+            },
+            "上海市": {
+                baseType: "avg_salary",
+                medical: {5:18, 6:15, 7:12, 8:9, 9:6, 10:3},
+                employment: {5:18, 6:15, 7:12, 8:9, 9:6, 10:3},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 12434, odAdd: null,
+                legalBasis: [
+                    {title:"《上海市工伤保险实施办法》第41条", text:"距法定退休年龄不足5年的按年限递减，不足1年递减90%。达到退休年龄的，不享受两项补助金。"}
+                ],
+                desc: "两项补助金同步按年龄递减，最低支付全额的10%，退休后不予支付"
+            },
+            "重庆市": {
+                baseType: "chongqing_salary",
+                medical: { 5: 12, 6: 10, 7: 8, 8: 6, 9: 4, 10: 2 },
+                employment: { 5: 60, 6: 48, 7: 15, 8: 12, 9: 9, 10: 6 },
+                reduction: "employment",
+                reductionRate: 0.1,
+                minRatio: 0.1,
+                defaultAvg: 8160,
+                odAdd: { type: "ratio", target: "medical", value: 0.3 },
+                legalBasis: [
+                    { title: "《重庆市工伤保险实施办法》第36条，重庆执行口径", text: "一次性伤残就业补助金距法定退休年龄10年及以上全额发放；不足10年每减少1年递减10%；距退休不足1年按全额10%计发。一次性工伤医疗补助金不随年龄递减；确诊职业病的，一次性工伤医疗补助金上浮30%；达到退休年龄两项补助金均不予支付。" }
+                ],
+                desc: "医疗补助金固定月数不递减，职业病工伤一次性医疗补助金上浮30%；就业补助金距退休不足10年逐年递减10%，最低发放全额10%，退休后两项均不予支付"
+            },
+
+            // 华东地区
+            "山东省": {
+                baseType: "avg_salary",
+                medical: {5:22, 6:18, 7:13, 8:10, 9:7, 10:4},
+                employment: {5:36, 6:30, 7:20, 8:16, 9:12, 10:8},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7506.00,
+                odAdd: { type: "ratio", target: "medical", value: 0.5 },
+                legalBasis: [
+                    {title:"《山东省贯彻〈工伤保险条例〉实施办法》第25条", text:"职业病医疗补助金增发50%。就业补助金距退休不足5年递减。达到退休年龄或办理退休手续的，不享受两项补助金。"}
+                ],
+                desc: "职业病医疗补助金增发50%；仅就业补助金递减，退休后两项均不予支付"
+            },
+            "江苏省": {
+                baseType: "fixed",
+                medical: {5:200000, 6:160000, 7:120000, 8:80000, 9:50000, 10:30000},
+                employment: {5:95000, 6:85000, 7:45000, 8:35000, 9:25000, 10:15000},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7722,
+                odAdd: { type: "ratio", target: "medical", value: 0.4 },
+                legalBasis: [
+                    {title:"《江苏省实施〈工伤保险条例〉办法》第28条", text:"距退休不足5年的两项补助金按比例支付，不足1年按10%支付。达到法定退休年龄的，不予支付。"}
+                ],
+                desc: "定额标准，两项同步递减，职业病医疗补助金增发40%，退休后不予支付"
+            },
+            "浙江省": {
+                baseType: "avg_salary",
+                medical: {5:30, 6:25, 7:10, 8:7, 9:4, 10:2},
+                employment: {5:30, 6:25, 7:10, 8:7, 9:4, 10:2},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0,
+                defaultAvg: 8433, odAdd: null,
+                legalBasis: [
+                    {title:"《浙江省工伤保险条例》第27条", text:"医疗补助金全额支付不递减；就业补助金距退休不足5年每满一周年递减20%。达到退休年龄的，不享受两项补助金。"}
+                ],
+                desc: "医疗补助金全额不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+            "安徽省": {
+                baseType: "avg_salary",
+                medical: {5:24, 6:18, 7:10, 8:8, 9:6, 10:4},
+                employment: {5:40, 6:34, 7:20, 8:15, 9:10, 10:5},
+                reduction: "employment", reductionRate: 0.1, minRatio: 0.3,
+                defaultAvg: 7999, odAdd: null,
+                legalBasis: [
+                    {title:"《安徽省实施〈工伤保险条例〉办法》第26条", text:"就业补助金距退休不足5年逐年递减10%，不足1年按30%支付。达到退休年龄的，不予支付两项补助金。"}
+                ],
+                desc: "仅就业补助金递减，每年递减10%，最低30%，退休后两项均不予支付"
+            },
+            "福建省": {
+                baseType: "avg_salary_age",
+                medicalCoeff: {5:0.7, 6:0.6, 7:0.4, 8:0.3, 9:0.2, 10:0.1},
+                employmentCoeff: {5:0.7, 6:0.6, 7:0.4, 8:0.3, 9:0.2, 10:0.1},
+                minMedical: {5:15, 6:15, 7:10, 8:10, 9:5, 10:3},
+                minEmployment: {5:15, 6:15, 7:10, 8:10, 9:5, 10:3},
+                lifeExpectancy: { male: 75.81, female: 81.55 }, // 分性别预期寿命
+                reduction: "both", // 医疗/就业补助金均递减
+                reductionRate: 0.2, // 每少1年递减20%
+                minRatio: 0.1, // 最低支付10%
+                defaultAvg: 8460, // 修正基数为8460
+                odAdd: { type: "ratio", target: "medical", value: 0.3 }, // 职业病增发30%
+                legalBasis: [
+                    {title:"《福建省实施〈工伤保险条例〉办法》第27条", text:"按人口平均预期寿命与解除劳动关系时年龄之差乘以系数计算，设最低月数保底。患职业病的工伤职工，一次性工伤医疗补助金在上述标准基础上增发30%，无上限限制。距法定退休年龄不足5年的，每减少1年递减20%，不足1年的按10%支付；达到退休年龄的，不予支付两项补助金。"}
+                ],
+                desc: "按预期寿命与年龄差动态计算月数（不满1年按1年算），设最低保底；职业病医疗补助金增发30%；距退休不足5年两项补助金均递减（最低10%），退休后两项均不予支付"
+            },
+            "江西省": {
+                baseType: "personal_salary",
+                medical: {5:21, 6:18, 7:14, 8:11, 9:8, 10:5},
+                employment: {5:32, 6:28, 7:25, 8:21, 9:17, 10:13},
+                reduction: "both", reductionRate: 0.1, minRatio: 0.5,
+                defaultAvg: 6525,
+                odAdd: { type: "ratio", target: "medical", value: 0.3 },
+                legalBasis: [
+                    {title:"《江西省实施〈工伤保险条例〉办法》第22条", text:"距法定退休年龄不足5年的两项补助金每差1年扣减10%。确诊职业病的，一次性工伤医疗补助金增发30%。达到退休年龄的，不享受两项补助金。"}
+                ],
+                desc: "以本人工资为基数，两项同步递减，每差1年扣10%；职业病一次性医疗补助金增发30%，退休后不予支付"
+            },
+
+            // 华南地区
+            "广东省": {
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
+                medical: {5:10, 6:8, 7:6, 8:4, 9:2, 10:1},
+                employment: {5:50, 6:40, 7:25, 8:15, 9:8, 10:4},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 11456, odAdd: null,
+                legalBasis: [
+                    {title:"《广东省工伤保险条例》第32、33、64条", text:"1、一次性伤残补助金、一次性工伤医疗补助金、一次性伤残就业补助金计发基数统一为本人缴费工资；2、两金基数可按解除劳动关系前12个月缴费工资修正；3、上下限基准就高：普通地市采用全省社平11456元，广州13704元、深圳14755元；本人工资超出社平300%封顶、低于社平60%保底；距退休不足5年两项补助金每提前一整年递减20%，不足1年按10%计发，达到法定退休年龄不予支付。"}
+                ],
+                desc: "三个一次性补助金计发基数统一为本人缴费工资，上下限基数广州、深圳执行本市社平、其余地市执行全省社平；两项补助金距法定退休年龄每提前1整年递减20%，不足1年按10%计发，达到退休年龄不再支付。"
+            },
+            "广西壮族自治区": {
+                baseType: "avg_salary",
+                medical: {5:20, 6:18, 7:15, 8:12, 9:9, 10:6},
+                employment: {5:34, 6:30, 7:22, 8:18, 9:14, 10:10},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 6756, odAdd: null,
+                legalBasis: [
+                    {title:"《广西壮族自治区实施〈工伤保险条例〉办法》第24条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+            "海南省": {
+                medicalBase: "avg_salary",
+                employmentBase: "personal_salary",
+                medical: {5:18, 6:16, 7:14, 8:12, 9:10, 10:8},
+                employment: {5:30, 6:25, 7:20, 8:15, 9:10, 10:5},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7300, odAdd: null,
+                legalBasis: [
+                    {title:"《海南经济特区工伤保险若干规定》第21条", text:"就业补助金距退休不足5年递减。达到退休年龄的，不享受两项补助金。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+
+            // 华中地区
+            "河南省": {
+                baseType: "avg_salary",
+                medical: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
+                employment: {5:56, 6:46, 7:36, 8:26, 9:16, 10:6},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7183, odAdd: null,
+                legalBasis: [
+                    {title:"《河南省工伤保险条例》第27条", text:"就业补助金距退休不足五年递减，不足一年按10%支付。达到退休年龄的，不予支付两项补助金。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+            "湖北省": {
+                baseType: "avg_salary",
+                medical: {5:18, 6:16, 7:14, 8:12, 9:10, 10:8},
+                employment: {5:34, 6:28, 7:20, 8:16, 9:12, 10:8},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 6948, odAdd: null,
+                legalBasis: [
+                    {title:"《湖北省工伤保险实施办法》第36条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+            "湖南省": {
+                baseType: "personal_salary",
+                medical: {5:24, 6:18, 7:15, 8:10, 9:8, 10:6},
+                employment: {5:36, 6:30, 7:15, 8:10, 9:8, 10:6},
+                reduction: "both", reductionRate: 0.1, minRatio: 0.5,
+                defaultAvg: 6711, odAdd: null,
+                legalBasis: [
+                    {title:"《湖南省实施〈工伤保险条例〉办法》第23条", text:"距退休不足5年的两项补助金每减少1年递减10%。达到退休年龄的，不予支付。"}
+                ],
+                desc: "以本人工资为基数，两项同步递减，每减少1年递减10%，退休后不予支付"
+            },
+
+            // 华北地区
+            "河北省": {
+                baseType: "avg_salary",
+                medical: {5:44, 6:38, 7:26, 8:20, 9:14, 10:8},
+                employment: {5:22, 6:16, 7:10, 8:8, 9:6, 10:4},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 6534, odAdd: null,
+                legalBasis: [
+                    {title:"《河北省工伤保险实施办法》第34条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+            "山西省": {
+                baseType: "personal_salary",
+                medical: {5:36, 6:33, 7:24, 8:21, 9:18, 10:15},
+                employment: {5:24, 6:21, 7:15, 8:12, 9:9, 10:6},
+                reduction: "both", reductionRate: 0.1, minRatio: 0.5,
+                defaultAvg: 6855, odAdd: null,
+                legalBasis: [
+                    {title:"《山西省实施〈工伤保险条例〉办法》第26条", text:"距退休不足5年的两项补助金每少1年递减10%。达到退休年龄的，不享受。"}
+                ],
+                desc: "以本人工资为基数，两项同步递减，每少1年递减10%，退休后不予支付"
+            },
+            "内蒙古自治区": {
+                baseType: "avg_salary",
+                medical: {5:26, 6:23, 7:16, 8:13, 9:10, 10:7},
+                employment: {5:26, 6:23, 7:16, 8:13, 9:10, 10:7},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7100,
+                odAdd: { type: "ratio", target: "medical", value: 0.2 },
+                legalBasis: [
+                    {title:"《内蒙古自治区工伤保险条例实施办法》第37条", text:"确诊职业病一次性工伤医疗补助金上浮20%；距退休不足5年的两项补助金每减少1年递减20%，不足1年按10%支付。达到退休年龄的不予支付。"}
+                ],
+                desc: "两项补助金同步递减，最低10%；职业病医疗补助金增发20%，退休后不予支付"
+            },
+
+            // 东北地区
+            "辽宁省": {
+                medicalBase: "avg_salary",
+                employmentBase: "personal_salary",
+                medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
+                employment: {5:28, 6:24, 7:20, 8:16, 9:12, 10:8},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7121, odAdd: null,
+                legalBasis: [
+                    {title:"《辽宁省工伤保险实施办法》第39条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+            "吉林省": {
+                baseType: "avg_salary",
+                medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
+                employment: {5:16, 6:14, 7:11, 8:9, 9:7, 10:5},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7178,
+                odAdd: { type: "ratio", target: "medical", value: 0.3 },
+                legalBasis: [
+                    {title:"《吉林省实施〈工伤保险条例〉办法》第40条", text:"确诊职业病的一次性工伤医疗补助金增发30%；就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，不予支付两项补助金。"}
+                ],
+                desc: "职业病医疗补助金增发30%；仅就业补助金递减，退休后两项均不予支付"
+            },
+            "黑龙江省": {
+                baseType: "personal_salary",
+                medical: {5:30, 6:25, 7:20, 8:15, 9:10, 10:5},
+                employment: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7010, odAdd: null,
+                legalBasis: [
+                    {title:"《黑龙江省贯彻〈工伤保险条例〉实施办法》第14条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "以本人工资为基数，医疗补助金固定不递减，仅就业补助金递减，退休后均不予支付"
+            },
+
+            // 西南地区
+            "四川省": {
+                baseType: "avg_salary",
+                medical: {5:14, 6:12, 7:10, 8:8, 9:6, 10:4},
+                employment: {5:60, 6:48, 7:26, 8:18, 9:10, 10:6},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7518,
+                odAdd: { type: "month", target: "medical", value: 6 },
+                legalBasis: [
+                    {title:"《四川省工伤保险条例》实施办法", text:"职业病一次性工伤医疗补助金增发6个月。就业补助金距退休不足5年递减。享受基本养老保险待遇的，不予支付两项补助金。"}
+                ],
+                desc: "职业病医疗补助金增发6个月；仅就业补助金递减，退休后两项均不予支付"
+            },
+            "贵州省": {
+                baseType: "guizhou_special",
+                medicalFixed: {5:36, 6:26, 7:12, 8:9, 9:6, 10:3},
+                employmentLimits: {
+                    5: {max:36, min:11},
+                    6: {max:26, min:8},
+                    7: {max:12, min:4},
+                    8: {max:9, min:3},
+                    9: {max:6, min:2},
+                    10: {max:3, min:1}
+                },
+                defaultAvg: 7272, odAdd: null,
+                legalBasis: [
+                    {title:"黔人社厅发〔2011〕27号 第6条", text:"一次性工伤医疗补助金固定月数标准，不递减。"},
+                    {title:"黔人社厅发〔2011〕27号 第7条", text:"一次性伤残就业补助金按距退休剩余月数计算，各等级设最高/最低月数封顶保底。"}
+                ],
+                desc: "市级统筹；医疗补助金固定不递减；就业补助金按月动态计算，退休后两项均不予支付"
+            },
+            "云南省": {
+                baseType: "avg_salary",
+                medical: {5:15, 6:13, 7:8, 8:6, 9:3, 10:2},
+                employment: {5:33, 6:29, 7:22, 8:18, 9:13, 10:7},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 8265,
+                odAdd: { type: "ratio", target: "medical", value: 0.3 },
+                legalBasis: [
+                    {title:"《云南省实施〈工伤保险条例〉办法》第38条", text:"职业病医疗补助金增发30%。就业补助金距退休不足5年递减。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "职业病医疗补助金增发30%；仅就业补助金递减，退休后两项均不予支付"
+            },
+            "西藏自治区": {
+                baseType: "avg_salary",
+                medical: {5:20, 6:18, 7:15, 8:12, 9:9, 10:6},
+                employment: {5:30, 6:25, 7:20, 8:15, 9:10, 10:5},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 11777, odAdd: null,
+                legalBasis: [
+                    {title:"《西藏自治区实施〈工伤保险条例〉办法》", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            },
+
+            // 西北地区
+            "陕西省": {
+                baseType: "avg_salary",
+                medical: {5:24, 6:21, 7:15, 8:12, 9:9, 10:6},
+                employment: {5:24, 6:21, 7:15, 8:12, 9:9, 10:6},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7750, odAdd: null,
+                legalBasis: [
+                    {title:"《陕西省实施〈工伤保险条例〉办法》第24条", text:"两项补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，不予支付。"}
+                ],
+                desc: "两项补助金同步递减，最低10%，退休后不予支付"
+            },
+            "甘肃省": {
+                baseType: "avg_salary",
+                medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
+                employment: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7194, odAdd: null,
+                legalBasis: [
+                    {title:"《甘肃省工伤保险实施办法》第28条", text:"距退休不足5年的两项补助金每减少1年递减20%，不足1年按10%支付。达到退休年龄的不予支付。"}
+                ],
+                desc: "两项补助金同步递减，最低10%，退休后不予支付"
+            },
+            "青海省": {
+                baseType: "avg_salary",
+                medical: {5:15, 6:13, 7:11, 8:9, 9:7, 10:5},
+                employment: {5:15, 6:13, 7:11, 8:9, 9:7, 10:5},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7800, odAdd: null,
+                legalBasis: [
+                    {title:"《青海省实施〈工伤保险条例〉办法》第34条", text:"距退休不足5年的两项补助金每减少1年递减20%，不足1年按10%支付。达到退休年龄的不予支付。"}
+                ],
+                desc: "两项补助金同步递减，最低10%，退休后不予支付"
+            },
+            "宁夏回族自治区": {
+                baseType: "avg_salary",
+                medical: {5:22, 6:19, 7:15, 8:12, 9:9, 10:6},
+                employment: {5:22, 6:19, 7:15, 8:12, 9:9, 10:6},
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7042,
+                odAdd: { type: "ratio", target: "both", value: 0.3 },
+                legalBasis: [
+                    {title:"《宁夏回族自治区实施〈工伤保险条例〉办法》第31条", text:"患职业病的职工解除劳动关系，一次性工伤医疗补助金、一次性伤残就业补助金两项同步增发30%；距退休不足5年的两项补助金每减少1年递减20%，不足1年按10%支付。达到退休年龄的不予支付。"}
+                ],
+                desc: "两项补助金同步递减，最低10%；职业病医疗+就业两项补助金整体同步上浮30%，退休后不予支付"
+            },
+            "新疆维吾尔自治区": {
+                baseType: "avg_salary",
+                medical: {5:11, 6:10, 7:9, 8:8, 9:7, 10:6},
+                employment: {5:27, 6:24, 7:21, 8:18, 9:15, 10:12},
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                defaultAvg: 7025, odAdd: null,
+                legalBasis: [
+                    {title:"《新疆维吾尔自治区实施〈工伤保险条例〉办法》第29条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
+                ],
+                desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
+            }
+        };
+
+        // 全国统一标准常量
+        const DISABILITY_BONUS_MONTHS = {
+            1:27, 2:25, 3:23, 4:21, 5:18, 6:16, 7:13, 8:11, 9:9, 10:7
+        };
+        const DISABILITY_ALLOWANCE_RATIO = {
+            1: 0.9, 2: 0.85, 3: 0.8, 4: 0.75
+        };
+
+        // ===================== 工具函数 =====================
+        function fmt(num) {
+            if (isNaN(num) || num === null || num === undefined) return '0.00';
+            return Number(num).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        }
+        // 两位小数金额输入格式化（输入中保留小数点，失焦自动补两位小数）
+        function formatDecimalInput(el) {
+            // 只保留数字和1个小数点
+            let val = el.value.replace(/[^\d.]/g, '');
+            // 只保留第一个小数点
+            const dotIndex = val.indexOf('.');
+            if (dotIndex !== -1) {
+                val = val.slice(0, dotIndex + 1) + val.slice(dotIndex + 1).replace(/\./g, '');
+                // 小数点后最多2位
+                const parts = val.split('.');
+                if (parts[1] && parts[1].length > 2) {
+                    val = parts[0] + '.' + parts[1].slice(0, 2);
+                }
+            }
+            // 禁止负数（去掉开头的负号相关）
+            el.value = val;
+            // 实时触发计算
+            calculate();
+        }
+
+        // 正整数输入格式化（天数类）
+        function formatIntInput(el) {
+            el.value = el.value.replace(/[^\d]/g, '');
+            calculate();
+        }
+
+        // 失焦自动补全两位小数
+        function fixDecimalOnBlur(el) {
+            let val = parseFloat(el.value);
+            if (isNaN(val) || val < 0) val = 0;
+            el.value = val.toFixed(2);
+            calculate();
+        }
+
+        function getMonthDiff(startStr, endStr) {
+            if (!startStr || !endStr) return 0;
+            const [sy, sm] = startStr.split('-').map(Number);
+            const [ey, em] = endStr.split('-').map(Number);
+            if (isNaN(sy) || isNaN(sm) || isNaN(ey) || isNaN(em)) return 0;
+            return (ey * 12 + em) - (sy * 12 + sm);
+        }
+
+        function addDaysToMonth(monthStr, days) {
+            if (!monthStr || isNaN(days)) return monthStr || '';
+            const [y, m] = monthStr.split('-').map(Number);
+            const date = new Date(y, m - 1, 1);
+            date.setDate(date.getDate() + days);
+            const ny = date.getFullYear();
+            const nm = String(date.getMonth() + 1).padStart(2, '0');
+            return `${ny}-${nm}`;
+        }
+
+        function formatMonthsToYearMonth(totalMonths) {
+            if (isNaN(totalMonths)) return '计算异常';
+            totalMonths = Math.max(0, Math.floor(totalMonths));
+            const years = Math.floor(totalMonths / 12);
+            const months = totalMonths % 12;
+            if (years === 0) return `${months}个月`;
+            if (months === 0) return `${years}年`;
+            return `${years}年${months}个月`;
+        }
+
+        // 法定退休年龄计算（支持延迟退休开关）
+        function calcRetireDate(birthStr, gender, postType, useDelay) {
+            if (!birthStr) return { retireDateStr: '', retireAgeMonths: 720, delayMonths: 0 };
+            const [birthYear, birthMonth] = birthStr.split('-').map(Number);
+            const birthTotalMonths = birthYear * 12 + birthMonth;
+
+            // 原法定退休年龄（月）
+            let baseRetireAgeMonths;
+            if (gender === '男') {
+                baseRetireAgeMonths = 60 * 12;
+            } else {
+                if (postType === '工人') {
+                    baseRetireAgeMonths = 50 * 12;
+                } else {
+                    baseRetireAgeMonths = 55 * 12;
+                }
+            }
+
+            // 不启用延迟退休：直接返回原退休年龄
+            if (!useDelay) {
+                const finalRetireTotal = birthTotalMonths + baseRetireAgeMonths;
+                let finalYear = Math.floor(finalRetireTotal / 12);
+                let finalMonth = finalRetireTotal % 12;
+                if (finalMonth === 0) {
+                    finalMonth = 12;
+                    finalYear = finalYear - 1;
+                }
+                return {
+                    retireDateStr: `${finalYear}-${String(finalMonth).padStart(2, '0')}`,
+                    retireAgeMonths: baseRetireAgeMonths,
+                    delayMonths: 0
+                };
+            }
+
+            // 启用延迟退休：渐进式延迟规则
+            let stepMonths;
+            let maxDelayMonths;
+            if (gender === '男') {
+                stepMonths = 4;
+                maxDelayMonths = 3 * 12;
+            } else {
+                if (postType === '工人') {
+                    stepMonths = 2;
+                    maxDelayMonths = 5 * 12;
+                } else {
+                    stepMonths = 4;
+                    maxDelayMonths = 3 * 12;
+                }
+            }
+
+            const originalRetireTotal = birthTotalMonths + baseRetireAgeMonths;
+            const policyStartTotal = 2025 * 12 + 1;
+
+            let delayMonths = 0;
+            if (originalRetireTotal > policyStartTotal) {
+                const overMonths = originalRetireTotal - policyStartTotal;
+                delayMonths = Math.ceil(overMonths / stepMonths);
+                delayMonths = Math.min(delayMonths, maxDelayMonths);
+            }
+
+            const finalRetireTotal = originalRetireTotal + delayMonths;
+            let finalYear = Math.floor(finalRetireTotal / 12);
+            let finalMonth = finalRetireTotal % 12;
+            if (finalMonth === 0) {
+                finalMonth = 12;
+                finalYear = finalYear - 1;
+            }
+
+            return {
+                retireDateStr: `${finalYear}-${String(finalMonth).padStart(2, '0')}`,
+                retireAgeMonths: baseRetireAgeMonths + delayMonths,
+                delayMonths: delayMonths
+            };
+        }
+        function getReductionRatio(std, yearsToRetire) {
+            if (!std || std.reduction === "none") return 1;
+            if (yearsToRetire >= 5) return 1;
+            if (yearsToRetire <= 0) return 0;
+            
+            const reduceYears = 5 - Math.floor(yearsToRetire);
+            let ratio = 1 - reduceYears * (std.reductionRate || 0.2);
+            return Math.max(ratio, std.minRatio || 0.1);
+        }
+
+        // ===================== 页面交互函数 =====================
+        function initProvinceSelect() {
+            const select = document.getElementById('province');
+            if (!select) return;
+            
+            select.innerHTML = '';
+            const provinces = Object.keys(PROVINCE_STANDARDS);
+            
+            provinces.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                select.appendChild(opt);
+            });
+            
+            // 默认选中山东省
+            if (provinces.includes('山东省')) {
+                select.value = '山东省';
+            } else if (provinces.length > 0) {
+                select.value = provinces[0];
+            }
+        }
+
+        function updateDateLabel() {
+            const level = parseInt(document.getElementById('disabilityLevel').value) || 0;
+            const label = document.getElementById('leaveDateLabel');
+            if (!label) return;
+            
+            if (level >= 1 && level <= 4) {
+                label.textContent = '事故发生年月';
+            } else {
+                label.textContent = '离职/解除劳动关系年月';
+            }
+        }
+
+        function updateResignStatus() {
+            const isResigned = document.getElementById('isResigned').value === '1';
+            const leaveDateInput = document.getElementById('leaveDate');
+            const leaveDateTip = document.getElementById('leaveDateTip');
+            if (!leaveDateInput || !leaveDateTip) return;
+
+            if (isResigned) {
+                leaveDateInput.disabled = false;
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                leaveDateInput.value = `${year}-${month}`;
+                leaveDateTip.textContent = '⚠️ 请修正为准确的离职/解除劳动关系年月';
+                leaveDateTip.style.color = '#d97706';
+            } else {
+                leaveDateInput.disabled = true;
+                leaveDateInput.value = '';
+                leaveDateTip.textContent = '未离职，无需填写';
+                leaveDateTip.style.color = '#6b7280';
+            }
+        }
+
+        function updatePostAndRetire() {
+            const gender = document.getElementById('gender').value || '男';
+            const postSelect = document.getElementById('postType');
+            const postTip = document.getElementById('postTip');
+            const birthStr = document.getElementById('birthDate').value;
+            const postType = document.getElementById('postType').value || '工人';
+            const useDelay = document.getElementById('useDelayRetire').checked || false;
+            const retireShow = document.getElementById('retireDateShow');
+
+            if (postSelect && postTip) {
+                if (gender === '男') {
+                    postSelect.disabled = true;
+                    postTip.textContent = '男性无需选择岗位类型';
+                    postTip.style.color = '#6b7280';
+                } else {
+                    postSelect.disabled = false;
+                    postTip.textContent = '⚠️ 请按实际岗位类型选择';
+                    postTip.style.color = '#d97706';
+                }
+            }
+
+            const retireInfo = calcRetireDate(birthStr, gender, postType, useDelay);
+            if (retireShow) retireShow.value = retireInfo.retireDateStr;
+        }
+
+        // 广东二级地市切换，自动填充对应社平工资
+        function onGuangdongCityChange() {
+            const cityVal = document.getElementById("gdCitySelect").value;
+            const avgInput = document.getElementById("localAvgSalary");
+            let wage;
+            switch(cityVal){
+                case "gz":
+                    wage = 13704;
+                    break;
+                case "sz":
+                    wage = 14755;
+                    break;
+                case "other":
+                default:
+                    wage = 11456;
+                    break;
+            }
+            avgInput.value = wage.toFixed(2);
+            calculate();
+        }
+
+        function onProvinceChange() {
+            const province = document.getElementById('province').value;
+            const std = PROVINCE_STANDARDS[province];
+            if (!std) return;
+            
+            const avgInput = document.getElementById('localAvgSalary');
+            const label = document.getElementById('avgSalaryLabel');
+            const tip = document.getElementById('avgSalaryTip');
+            const ruleTip = document.getElementById('provinceRuleTip');
+            const cityWrap = document.getElementById("guangdongCityWrap");
+
+            if (avgInput) {
+                avgInput.value = std.defaultAvg || 0;
+                fixDecimalOnBlur(avgInput); // 自动补两位小数
+            }
+
+            if (label && tip) {
+                if (province === '贵州省') {
+                    label.textContent = '统筹地区全市上年度职工月平均工资（元）';
+                    tip.textContent = '⚠️ 贵州省为市级统筹，请填写工伤参保地市的上年度职工月平均工资';
+                } else {
+                    label.textContent = '统筹地区上年度职工月平均工资（元）';
+                    tip.textContent = '⚠️ 此标准每年更新，请人工确认当地最新数值后再使用';
+                }
+            }
+
+            if (ruleTip) {
+                ruleTip.textContent = province + '规则说明：' + (std.desc || '') + '；政策依据：' + (std.legalBasis?.[0]?.title || '');
+            }
+            
+            // 广东二级统筹地区显示隐藏逻辑（唯一一段，无重复、变量正确）
+            // 广东二级统筹地区同行显示隐藏逻辑
+            const gdCityOuter = document.getElementById("gdCityOuter");
+            const gdTipBox = document.getElementById("gdTipBox");
+            if (province === "广东省") {
+                gdCityOuter.style.display = "flex";
+                gdTipBox.style.display = "block";
+                document.getElementById("gdCitySelect").value = "other";
+                onGuangdongCityChange();
+            } else {
+                gdCityOuter.style.display = "none";
+                gdTipBox.style.display = "none";
+            }
+
+            calculate();
+        }
+
+        // ===================== 补助金核心计算（已修复福建全部报错） =====================
+        function calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr) {
+            // 1. 达到退休年龄直接归零
+            if (yearsToRetire <= 0) {
+                return {
+                    medical: 0,
+                    employment: 0,
+                    medicalFormula: "达到法定退休年龄不予支付",
+                    employmentFormula: "达到法定退休年龄不予支付",
+                    medicalProcess: "已达到法定退休年龄，不享受一次性工伤医疗补助金",
+                    employmentProcess: "已达到法定退休年龄，不享受一次性伤残就业补助金"
+                };
+            }
+
+            // 2. 未构成伤残等级
+            if (level === 0) {
+                return {
+                    medical: 0, employment: 0,
+                    medicalFormula: "未达伤残等级不发放",
+                    employmentFormula: "未达伤残等级不发放",
+                    medicalProcess: "未达到伤残等级，该项目无需计算",
+                    employmentProcess: "未达到伤残等级，该项目无需计算"
+                };
+            }
+
+            // 3. 1-4级伤残，无论是否离职，法定保留劳动关系、不支付两项一次性补助金
+            if (level < 5) {
+                return {
+                    medical: 0, employment: 0,
+                    medicalFormula: "1-4级伤残不发放",
+                    employmentFormula: "1-4级伤残不发放",
+                    medicalProcess: "保留劳动关系，按月领取伤残津贴，不享受一次性医疗补助金",
+                    employmentProcess: "保留劳动关系，按月领取伤残津贴，不享受一次性就业补助金"
+                };
+            }
+
+            // 4. 5~10级前提下，未解除劳动关系，两金不发放
+            if (!isResigned) {
+                return {
+                    medical: 0, employment: 0,
+                    medicalFormula: "未离职不发放",
+                    employmentFormula: "未离职不发放",
+                    medicalProcess: "未离职，该项目无需计算",
+                    employmentProcess: "未离职，该项目无需计算"
+                };
+            }
+
+            // 初始化递减比例变量，仅声明一次，解决重复定义报错
+            let medRatio = 1;
+            let empRatio = 1;
+
+            // ===================== 重庆独立分支 =====================
+            if (std.baseType === "chongqing_salary") {
+                medRatio = 1; // 重庆医疗补助金不参与年龄递减
+                // 就业补助金递减逻辑：向下取整年，不足10年逐年递减10%，最低10%
+                if (yearsToRetire >= 10) {
+                    empRatio = 1;
+                } else if (yearsToRetire > 0) {
+                    const fullYear = Math.floor(yearsToRetire);
+                    empRatio = fullYear / 10;
+                    empRatio = Math.max(empRatio, std.minRatio);
+                } else {
+                    empRatio = 0;
+                }
+
+                let baseMedMonths = std.medical[level] || 0;
+                const baseEmpMonths = std.employment[level] || 0;
+                let odRateMed = 1;
+                let odAddTextMed = "";
+                let odRateEmp = 1;
+                let odAddTextEmp = "";
+
+                // 职业病系数运算（重庆仅医疗增发30%）
+                if (isOD && std.odAdd) {
+                    if (std.odAdd.type === "ratio" && std.odAdd.target === "medical") {
+                        odRateMed = 1 + std.odAdd.value;
+                        odAddTextMed = `<br><span style="color:#d97706;">⚠️ 职业病增发${(std.odAdd.value * 100).toFixed(0)}%</span>`;
+                    }
+                }
+
+                // 统一公式计算
+                const medicalBase = avgSalary;
+                const employmentBase = avgSalary;
+                const medicalMonthTotal = baseMedMonths * medRatio * odRateMed;
+                const employmentMonthTotal = baseEmpMonths * empRatio * odRateEmp;
+                const medicalAmount = medicalBase * medicalMonthTotal;
+                const employmentAmount = employmentBase * employmentMonthTotal;
+
+                // 公式文案（严格你指定格式）
+                const medicalFormula = `计算基数 × 月数 × 递减比例 × (1+职业病增发比例)`;
+                const employmentFormula = `计算基数 × 月数 × 递减比例`;
+
+                // 计算过程，月数强制保留2位小数，消除浮点长尾
+                let chongqingMedTip = medRatio !== 1 ? `<br><span style="color:#d97706; font-weight:bold;">⚠️ 重庆医疗补助金固定不递减</span>` : '';
+                const medicalProcess = `${fmt(medicalBase)} 元 × ${baseMedMonths} 个月 × ${(medRatio * 100).toFixed(0)}% × ${odRateMed.toFixed(2)}${odAddTextMed}<br>= ${fmt(medicalBase)} × ${medicalMonthTotal.toFixed(2)} = ${fmt(medicalAmount)} 元${chongqingMedTip}`;
+                let chongqingEmpTip = empRatio !== 1 ? `<br><span style="color:#d97706; font-weight:bold;">⚠️ 重庆就业补助金距退休不足10年逐年递减，本次递减比例${(empRatio*100).toFixed(1)}%</span>` : '';
+                const employmentProcess = `${fmt(employmentBase)} 元 × ${baseEmpMonths} 个月 × ${(empRatio * 100).toFixed(0)}%<br>= ${fmt(employmentBase)} × ${employmentMonthTotal.toFixed(2)} = ${fmt(employmentAmount)} 元${chongqingEmpTip}`;
+                return { medical: medicalAmount, employment: employmentAmount, medicalFormula, employmentFormula, medicalProcess, employmentProcess };
+            } else {
+                // 其余省份通用递减赋值
+                medRatio = std.reduction === "both" ? getReductionRatio(std, yearsToRetire) : 1;
+                empRatio = (std.reduction === "both" || std.reduction === "employment") ? getReductionRatio(std, yearsToRetire) : 1;
+            }
+
+            // ===================== 贵州特殊模式分支 =====================
+            if (std.baseType === "guizhou_special") {
+                const medMonths = std.medicalFixed[level] || 0;
+                const medicalAmount = avgSalary * medMonths;
+                const medicalFormula = `全市社平工资 × ${medMonths}个月`;
+                const medicalProcess = `${fmt(avgSalary)} 元 × ${medMonths} 个月<br><span style="color:#16a34a;">贵州法定固定标准，不随年龄递减，无职业病增发</span>
+                <br><span style="color:#d97706; font-weight:bold;">⚠️ 贵州省一次性医疗补助金固定月数，不执行年龄递减</span>`;
+                const limits = std.employmentLimits[level] || { max: 0, min: 0 };
+                let empMonths;
+                let employmentProcess;
+                if (monthsToRetire >= limits.max) {
+                    empMonths = limits.max;
+                    employmentProcess = `距退休剩余 ${monthsToRetire} 个月 ≥ 最高 ${limits.max} 个月<br>按最高月数计发：${empMonths} 个月`;
+                } else if (monthsToRetire <= limits.min) {
+                    empMonths = limits.min;
+                    employmentProcess = `距退休剩余 ${monthsToRetire} 个月 ≤ 最低 ${limits.min} 个月<br>按最低月数保底：${empMonths} 个月`;
+                } else {
+                    empMonths = monthsToRetire;
+                    employmentProcess = `距退休剩余 ${monthsToRetire} 个月<br>在上下限之间，按实际剩余月数计发`;
+                }
+                const employmentAmount = avgSalary * empMonths;
+                const employmentFormula = `全市社平工资 × 计发月数（封顶保底）`;
+                    employmentProcess += `<br>最终金额：${fmt(avgSalary)} × ${empMonths} = ${fmt(employmentAmount)} 元
+                    <br><span style="color:#d97706; font-weight:bold;">⚠️ 贵州省就业补助金按剩余退休月数动态核算，设置上下限保底封顶，非常规比例递减</span>`;
+                return { medical: medicalAmount, employment: employmentAmount, medicalFormula, employmentFormula, medicalProcess, employmentProcess };
+            }
+
+            // ===================== 福建预期寿命系数分支 =====================
+            if (std.baseType === "avg_salary_age") {
+                const gender = document.getElementById("gender").value;
+                const leaveStr = document.getElementById("leaveDate").value;
+                const retireStr = document.getElementById("retireDateShow").value;
+
+                const [birthY, birthM] = birthStr.split("-").map(Number);
+                const [leaveY, leaveM] = leaveStr.split("-").map(Number);
+                const [retireY, retireM] = retireStr.split("-").map(Number);
+
+                const leaveAge = leaveY - birthY + (leaveM - birthM) / 12;
+                const lifeExp = gender === "男" ? std.lifeExpectancy.male : std.lifeExpectancy.female;
+                let ageDiff = Math.ceil(lifeExp - leaveAge);
+
+                let medicalMonths = ageDiff * std.medicalCoeff[level];
+                let employmentMonths = ageDiff * std.employmentCoeff[level];
+
+                // 第一步：保底校验
+                const baseMedAfterFloor = Math.max(medicalMonths, std.minMedical[level]);
+                const baseEmpAfterFloor = Math.max(employmentMonths, std.minEmployment[level]);
+                medicalMonths = baseMedAfterFloor;
+                employmentMonths = baseEmpAfterFloor;
+
+                const retireDiff = yearsToRetire;
+                let medReduceMonth = medicalMonths;
+                let empReduceMonth = employmentMonths;
+                let ratio = 1;
+                let floorYear = retireDiff;
+
+                if (retireDiff < 5 && retireDiff >= 0) {
+                    floorYear = Math.floor(retireDiff);
+                    ratio = 1 - (5 - floorYear) * std.reductionRate;
+                    ratio = Math.max(ratio, std.minRatio);
+
+                    if (std.reduction === "both") {
+                        medReduceMonth = medicalMonths * ratio;
+                        medicalMonths = medReduceMonth;
+                    }
+                    empReduceMonth = employmentMonths * ratio;
+                    employmentMonths = empReduceMonth;
+                }
+                if (retireDiff < 0) {
+                    employmentMonths = 0;
+                }
+
+                let odMultiMedical = 1;
+                let odMultiEmployment = 1;
+                let odAddTextMedical = "";
+                let odAddTextEmployment = "";
+
+                if (isOD && std.odAdd && std.odAdd.target === "medical") {
+                    odMultiMedical = 1 + std.odAdd.value;
+                    medicalMonths = medicalMonths * odMultiMedical;
+                    odAddTextMedical = `<br><span style="color:#d97706;">⚠️ 职业病工伤，医疗补助金增发${(std.odAdd.value * 100).toFixed(0)}%</span>`;
+                }
+
+                const medicalAmount = medicalMonths * avgSalary;
+                const employmentAmount = employmentMonths * avgSalary;
+
+                const medicalFormula = "（预期寿命-离职年龄）× 等级系数 → 保底校验 → 剩余年限向下取整后递减 → ×(1+职业病增发比例) × 计发基数";
+                const employmentFormula = "（预期寿命-离职年龄）× 等级系数 → 保底校验 → 剩余年限向下取整后递减 × 计发基数";
+
+                const medicalProcess = `预期寿命：${lifeExp}岁（${gender}性）
+                            <br>离职年龄：${leaveAge.toFixed(1)}岁
+                            <br>年龄差：${(lifeExp - leaveAge).toFixed(2)}年 → 向上取整 ${ageDiff}年
+                            <br>基础月数：${ageDiff} × ${std.medicalCoeff[level]} = ${(ageDiff * std.medicalCoeff[level]).toFixed(2)}月
+                            <br>保底校验：取最大值 ${baseMedAfterFloor.toFixed(2)} 个月
+                            ${retireDiff < 5 ? `<br>距退休原始年限${retireDiff.toFixed(2)}年，向下取整为${floorYear}年，递减比例${(ratio*100).toFixed(1)}%，递减后月数：${medReduceMonth.toFixed(2)} 月<br><span style="color:#d97706; font-weight:bold;">⚠️ 福建两项补助金距退休不足5年均执行逐年递减，本次医疗递减比例${(ratio*100).toFixed(1)}%</span>` : ''}                            ${odAddTextMedical}
+                            <br>最终：${medicalMonths.toFixed(2)}月 × ${fmt(avgSalary)} = ${fmt(medicalAmount)} 元`;
+
+                const employmentProcess = `预期寿命：${lifeExp}岁（${gender}性）
+                            <br>离职年龄：${leaveAge.toFixed(1)}岁
+                            <br>年龄差：${(lifeExp - leaveAge).toFixed(2)}年 → 向上取整 ${ageDiff}年
+                            <br>基础月数：${ageDiff} × ${std.employmentCoeff[level]} = ${(ageDiff * std.employmentCoeff[level]).toFixed(2)}月
+                            <br>保底校验：≥ ${std.minEmployment[level]}个月
+                            ${retireDiff < 5 ? `<br>距退休原始年限${retireDiff.toFixed(2)}年，向下取整为${floorYear}年，递减后 ${empReduceMonth.toFixed(2)}月${odAddTextEmployment}<br><span style="color:#d97706; font-weight:bold;">⚠️ 福建两项补助金距退休不足5年均执行逐年递减，本次就业递减比例${(ratio*100).toFixed(1)}%</span>` : ''}                            <br>最终：${employmentMonths.toFixed(2)}月 × ${fmt(avgSalary)} = ${fmt(employmentAmount)} 元`;
+
+                return { medical: medicalAmount, employment: employmentAmount, medicalFormula, employmentFormula, medicalProcess, employmentProcess };
+            }
+
+            // ===================== 全国通用省份分支（江苏定额、山东、吉林、江西、云南、内蒙古、宁夏、四川等） =====================
+            let baseMedValue = (std.medical && std.medical[level]) || 0;
+            let baseEmpValue = (std.employment && std.employment[level]) || 0;
+
+            // 职业病系数初始化
+            let odRateMed = 1;
+            let odRateEmp = 1;
+            let odAddTextMed = "";
+            let odAddTextEmp = "";
+
+            if (isOD && std.odAdd) {
+                // 比例型增发（绝大多数省份：渝/鲁/苏/赣/吉/云/内蒙/宁夏）
+                if (std.odAdd.type === "ratio") {
+                    if (std.odAdd.target === "medical") {
+                        odRateMed = 1 + std.odAdd.value;
+                        odAddTextMed = `<br><span style="color:#d97706;">⚠️ 职业病增发${(std.odAdd.value * 100).toFixed(0)}%</span>`;
+                    }
+                    // 宁夏 target=both 医疗就业同步上浮
+                    if (std.odAdd.target === "both") {
+                        odRateMed = 1 + std.odAdd.value;
+                        odRateEmp = 1 + std.odAdd.value;
+                        odAddTextMed = `<br><span style="color:#d97706;">职业病两项补助金同步增发${(std.odAdd.value * 100).toFixed(0)}%</span>`;
+                        odAddTextEmp = `<br><span style="color:#d97706;">职业病两项补助金同步增发${(std.odAdd.value * 100).toFixed(0)}%</span>`;
+                    }
+                }
+                // 四川 按月增发：仅5、6级医疗额外加6个月，7-10级无增发
+                else if (std.odAdd.type === "month" && std.odAdd.target === "medical") {
+                    if (level === 5 || level === 6) {
+                        baseMedValue = baseMedValue + std.odAdd.value;
+                        odAddTextMed = `<br><span style="color:#d97706;">职业病5/6级医疗补助金额外增发${std.odAdd.value}个月</span>`;
+                    } else {
+                        odAddTextMed = `<br><span style="color:#d97706;">本省7~10级职业病无额外增发</span>`;
+                    }
+                }
+            }
+
+            let medicalAmount, employmentAmount;
+            let medicalFormula, employmentFormula;
+            let medicalProcess, employmentProcess;
+
+            // 全局提前声明基数变量，作用域全覆盖，杜绝undefined
+            let medicalBase;
+            let employmentBase;
+
+            // 广东专属逻辑：强制三一次性基数完全统一
+            if (province === "广东省") {
+                medicalBase = baseSalary;
+                employmentBase = baseSalary;
+            } else {
+                // 外省原有判断逻辑 100%原样保留，未做任何修改
+                medicalBase = std.medicalBase === "personal_salary" ? baseSalary : avgSalary;
+                employmentBase = std.employmentBase === "personal_salary" ? baseSalary : avgSalary;
+            }
+
+            // 江苏定额模式判断
+            if (std.baseType === "fixed") {
+                const medicalMonthTotal = baseMedValue * medRatio * odRateMed;
+                const employmentMonthTotal = baseEmpValue * empRatio * odRateEmp;
+                medicalAmount = medicalMonthTotal;
+                employmentAmount = employmentMonthTotal;
+
+                medicalFormula = `定额标准 × 递减比例 × (1+职业病增发比例)`;
+                employmentFormula = `定额标准 × 递减比例`;
+
+                medicalProcess = `定额标准：${fmt(baseMedValue)} 元<br>递减比例：${(medRatio*100).toFixed(0)}% × ${odRateMed.toFixed(2)}${odAddTextMed}<br> = ${fmt(medicalAmount)} 元`;
+                employmentProcess = `定额标准：${fmt(baseEmpValue)} 元<br>递减比例：${(empRatio*100).toFixed(0)}%${odAddTextEmp}<br> = ${fmt(employmentAmount)} 元`;
+            } else {
+                // 常规基数运算模式
+                const medicalMonthTotal = baseMedValue * medRatio * odRateMed;
+                const employmentMonthTotal = baseEmpValue * empRatio * odRateEmp;
+                medicalAmount = medicalBase * medicalMonthTotal;
+                employmentAmount = employmentBase * employmentMonthTotal;
+
+            // ========== 动态自适应公式文案（区分广东/外省、是否职业病） ==========
+            // 医疗补助金公式
+            if (province === "广东省") {
+                if (isOD && std.odAdd) {
+                    medicalFormula = `【广东三基数统一规则】核定基数 × 月数 × 递减比例 × (1+职业病增发比例)`;
+                } else {
+                    medicalFormula = `【广东三基数统一规则】核定基数 × 月数 × 递减比例`;
+                }
+            } else {
+                if (isOD && std.odAdd) {
+                    medicalFormula = `计算基数 × 月数 × 递减比例 × (1+职业病增发比例)`;
+                } else {
+                    medicalFormula = `计算基数 × 月数 × 递减比例`;
+                }
+            }
+
+            // 就业补助金公式（绝大多数省份就业无职业病增发）
+            employmentFormula = `计算基数 × 月数 × 递减比例`;
+
+            // ========== 医疗补助金计算过程 + 动态广东提示 ==========
+            let medTipHtml = "";
+            if (province === "广东省") {
+                medTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与一次性伤残补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+            }
+            let medReduceTip = '';
+            if(medRatio !== 1){
+                medReduceTip = `<br><span style="color:#d97706; font-weight:bold;">⚠️ 本省份医疗补助金执行距退休年限递减规则，本次递减比例${(medRatio*100).toFixed(1)}%</span>`;
+            }
+            medicalProcess = `${fmt(medicalBase)} 元 × ${baseMedValue} 个月 × ${(medRatio*100).toFixed(0)}% × ${odRateMed.toFixed(2)}${odAddTextMed}<br> = ${fmt(medicalBase)} × ${medicalMonthTotal.toFixed(2)} = ${fmt(medicalAmount)} 元${medTipHtml}${medReduceTip}`;
+
+            // ========== 就业补助金计算过程 + 动态广东提示 ==========
+            let empTipHtml = "";
+            if (province === "广东省") {
+                empTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与另外两项一次性补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+            }
+        let empReduceTip = '';
+            if(empRatio !== 1){
+                empReduceTip = `<br><span style="color:#d97706; font-weight:bold;">⚠️ 本省份就业补助金执行距退休年限递减规则，本次递减比例${(empRatio*100).toFixed(1)}%</span>`;
+            }
+            employmentProcess = `${fmt(employmentBase)} 元 × ${baseEmpValue} 个月 × ${(empRatio*100).toFixed(0)}%${odAddTextEmp}<br> = ${fmt(employmentBase)} × ${employmentMonthTotal.toFixed(2)} = ${fmt(employmentAmount)} 元${empTipHtml}${empReduceTip}`;
+            }
+
+            return { medical: medicalAmount, employment: employmentAmount, medicalFormula, employmentFormula, medicalProcess, employmentProcess };
+        }
+
+        // ===================== 主计算函数（含容错） =====================
+        function calculate() {
+            try {
+                // 读取输入，全部兜底
+                const province = document.getElementById('province').value || '山东省';
+                const std = PROVINCE_STANDARDS[province] || PROVINCE_STANDARDS['山东省'];
+                const level = parseInt(document.getElementById('disabilityLevel').value) || 0;
+                const salary = parseFloat(document.getElementById('monthlySalary').value) || 0;
+                const avgSalary = parseFloat(document.getElementById('localAvgSalary').value) || 0;
+                const birthStr = document.getElementById('birthDate').value || '1969-01';
+                const leaveStr = document.getElementById('leaveDate').value || '';
+                const stopDays = parseFloat(document.getElementById('stopWorkDays').value) || 0;
+                const dailyWage = parseFloat(document.getElementById('dailyWage').value) || 0;
+                const deductDays = parseFloat(document.getElementById('deductDays').value) || 0;
+                const medTotal = parseFloat(document.getElementById('medicalTotal').value) || 0;
+                const medReimbursed = parseFloat(document.getElementById('medicalReimbursed').value) || 0;
+                const medDeductible = parseFloat(document.getElementById('medicalDeductible').value) || 0;
+                const nonMedRatio = (parseFloat(document.getElementById('nonMedicalRatio').value) || 0) / 100;
+                const medRatio = (parseFloat(document.getElementById('medicalRatio').value) || 0) / 100;
+                const isOD = document.getElementById('isOccupationalDisease').checked || false;
+                const isResigned = document.getElementById('isResigned').value === '1';
+                const useDelay = document.getElementById('useDelayRetire').checked || false;
+                const gender = document.getElementById('gender').value || '男';
+                const postType = document.getElementById('postType').value || '工人';
+
+                // 计算基准日期
+                let calcDateStr;
+                if (isResigned && leaveStr) {
+                    calcDateStr = leaveStr;
+                } else {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    calcDateStr = `${year}-${month}`;
+                }
+
+                // 年龄计算
+                const ageMonths = getMonthDiff(birthStr, calcDateStr);
+                const ageYears = ageMonths / 12;
+                const ageInput = document.getElementById('age');
+                if (ageInput) ageInput.value = `${ageYears.toFixed(1)} 岁`;
+
+                // 退休时间与距退休月数
+                const retireInfo = calcRetireDate(birthStr, gender, postType, useDelay);
+                const monthsToRetire = getMonthDiff(calcDateStr, retireInfo.retireDateStr);
+                const yearsToRetire = monthsToRetire / 12;
+
+                // 离职距退休时长显示
+                const retireDiffItem = document.getElementById('retireDiffItem');
+                const retireDiffShow = document.getElementById('retireDiffShow');
+                if (retireDiffItem && retireDiffShow) {
+                    if (isResigned && leaveStr) {
+                        retireDiffItem.style.display = 'flex';
+                        retireDiffShow.value = formatMonthsToYearMonth(monthsToRetire);
+                    } else {
+                        retireDiffItem.style.display = 'none';
+                    }
+                }
+
+                // 本人工资保底封顶
+                const minBase = avgSalary * 0.6;
+                const maxBase = avgSalary * 3;
+                const baseSalary = Math.min(Math.max(salary, minBase), maxBase);
+
+                // 1. 一次性伤残补助金
+                let disBonus = 0;
+                let disBonusProcess = '';
+                if (level === 0) {
+                    disBonusProcess = '未达到伤残等级，该项目无需计算';
+                } else {
+                    const disBonusMonths = DISABILITY_BONUS_MONTHS[level] || 0;
+                    disBonus = baseSalary * disBonusMonths;
+                    disBonusProcess = `原始缴费工资：${fmt(salary)} 元，上下限基准社平：${fmt(avgSalary)} 元
+                    保底下限：${fmt(minBase)} 元（社平60%），封顶上限：${fmt(maxBase)} 元（社平300%）
+                    核定计发基数：${fmt(baseSalary)} 元 × ${disBonusMonths} 个月`;
+                    if (salary < minBase && avgSalary > 0) {
+                        disBonusProcess += `<br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                    } else if (salary > maxBase && avgSalary > 0) {
+                        disBonusProcess += `<br><span style="color:#d97706;">⚠️ 本人工资高于社平工资300%的，按封顶基数社平工资的300%计算</span>`;
+                    }
+                }
+
+                // 2. 1-4级伤残津贴
+                let allowanceHtml = '';
+                let allowanceTotal = 0;
+                if (level >= 1 && level <= 4) {
+                    const ratio = DISABILITY_ALLOWANCE_RATIO[level] || 0;
+                    const allowanceMonthly = baseSalary * ratio;
+                    
+                    const accidentMonth = leaveStr || calcDateStr;
+                    const stopWorkEndMonth = addDaysToMonth(accidentMonth, stopDays);
+                    const allowanceStartMonth = stopWorkEndMonth;
+                    let allowancePayMonths = getMonthDiff(allowanceStartMonth, retireInfo.retireDateStr);
+                    allowancePayMonths = Math.max(0, allowancePayMonths);
+                    allowanceTotal = allowanceMonthly * allowancePayMonths;
+
+                    let allowanceProcess = '';
+                    if (allowancePayMonths <= 0) {
+                        allowanceProcess = '事故发生后经停工留薪期，已达到法定退休年龄，停发伤残津贴，按规定享受基本养老保险待遇<br><span style="color:#6b7280; font-size:11px;">注：基本养老保险待遇低于伤残津贴的，由工伤保险基金补足差额</span>';
+                    } else {
+                        allowanceProcess = `
+                            事故发生年月：${accidentMonth}<br>
+                            停工留薪期：${stopDays} 天，结束于 ${stopWorkEndMonth}<br>
+                            伤残津贴起始年月：${allowanceStartMonth}<br>
+                            法定退休年月：${retireInfo.retireDateStr}<br>
+                            计发月数：${allowancePayMonths} 个月<br>
+                            月标准公式：缴费工资基数 × 对应等级比例<br>
+                            月标准计算：${fmt(baseSalary)} 元 × ${(ratio*100).toFixed(0)}% = ${fmt(allowanceMonthly)} 元/月<br>
+                            一次性支付公式：月伤残津贴标准 × 计发月数<br>
+                            一次性支付总额：${fmt(allowanceMonthly)} 元/月 × ${allowancePayMonths} 个月 = ${fmt(allowanceTotal)} 元<br>
+                            <span style="color:#6b7280; font-size:11px;">注1：退休后转基本养老保险待遇，低于伤残津贴的由基金补足差额<br>
+                            注2：伤残津贴实际金额低于当地最低工资标准的，由工伤保险基金补足差额</span>
+                        `;
+                    }
+
+                    allowanceHtml = `
+                    <tr>
+                        <td class="item-name">伤残津贴（一次性计发）</td>
+                        <td class="legal-basis">
+                            <span class="basis-title">《工伤保险条例》第35条</span>
+                            1-4级伤残保留劳动关系、退出工作岗位，由工伤保险基金按月支付伤残津贴，退休后停发并转基本养老保险待遇，待遇差额由基金补足。本次按一次性方式核算至法定退休年龄。
+                        </td>
+                        <td><span class="formula">月伤残津贴标准 × 计发月数</span></td>
+                        <td class="process">${allowanceProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(allowanceTotal)}</td>
+                    </tr>`;
+                }
+
+                // 3. 医疗+就业补助金
+                const me = calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr);
+
+                // 4. 停工留薪期工资
+                const actualStopDays = Math.max(0, stopDays - deductDays);
+                const stopWorkPay = dailyWage * actualStopDays;
+
+                // 5. 医疗费
+                const selfPayNonMed = medTotal * nonMedRatio;
+                const medPayable = Math.max(0, (medTotal - medReimbursed - selfPayNonMed - medDeductible) * medRatio);
+
+                // 汇总金额
+                const socialTotal = disBonus + me.medical + medPayable + allowanceTotal;
+                const companyTotal = me.employment + stopWorkPay;
+                const grandTotal = socialTotal + companyTotal;
+
+                // 渲染表格
+                const tbody = document.getElementById('resultBody');
+                if (!tbody) return;
+                
+                tbody.innerHTML = `
+                    <tr>
+                        <td class="item-name">一次性伤残补助金（${level === 0 ? '未达伤残' : level+'级'}）</td>
+                        <td class="legal-basis">
+                            <span class="basis-title">《工伤保险条例》第35-37条、第64条</span>
+                            全国统一标准，按伤残等级对应月数计发，本人工资保底60%封顶300%
+                        </td>
+                        <td><span class="formula">缴费工资基数 × 等级对应月数</span></td>
+                        <td class="process">${disBonusProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(disBonus)}</td>
+                    </tr>
+
+                    ${allowanceHtml}
+
+                    <tr>
+                        <td class="item-name">一次性工伤医疗补助金</td>
+                        <td class="legal-basis">
+                            ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
+                        </td>
+                        <td><span class="formula">${me.medicalFormula}</span></td>
+                        <td class="process">${me.medicalProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(me.medical)}</td>
+                    </tr>
+                    <tr>
+                        <td class="item-name">一次性伤残就业补助金</td>
+                        <td class="legal-basis">
+                            ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
+                        </td>
+                        <td><span class="formula">${me.employmentFormula}</span></td>
+                        <td class="process">${me.employmentProcess}</td>
+                        <td class="payer payer-company">用人单位</td>
+                        <td class="amount">${fmt(me.employment)}</td>
+                    </tr>
+                    <tr>
+                        <td class="item-name">停工留薪期工资</td>
+                        <td class="legal-basis">
+                            <span class="basis-title">《工伤保险条例》第33条</span>
+                            停工留薪期内原工资福利待遇不变，由所在单位按月支付
+                        </td>
+                        <td><span class="formula">日工资标准 × (总天数 - 免赔天数)</span></td>
+                        <td class="process">${fmt(dailyWage)} 元/天 × (${stopDays} - ${deductDays}) 天<br>= ${fmt(dailyWage)} × ${actualStopDays} 天</td>
+                        <td class="payer payer-company">用人单位</td>
+                        <td class="amount">${fmt(stopWorkPay)}</td>
+                    </tr>
+                    <tr>
+                        <td class="item-name">医疗费</td>
+                        <td class="legal-basis">
+                            <span class="basis-title">《工伤保险条例》第30条</span>
+                            符合目录的医疗费用从工伤保险基金支付
+                        </td>
+                        <td><span class="formula">(总花费-报销-非医保部分-免赔额)×赔付比例</span></td>
+                        <td class="process">(${fmt(medTotal)} - ${fmt(medReimbursed)} - ${fmt(medTotal)}×${(nonMedRatio*100).toFixed(0)}% - ${fmt(medDeductible)}) × ${(medRatio*100).toFixed(0)}%</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(medPayable)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td class="item-name">社保基金支付合计</td>
+                        <td colspan="4"></td>
+                        <td class="amount">${fmt(socialTotal)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td class="item-name">用人单位支付合计</td>
+                        <td colspan="4"></td>
+                        <td class="amount">${fmt(companyTotal)}</td>
+                    </tr>
+                    <tr class="total-row grand-total">
+                        <td class="item-name">赔偿总金额</td>
+                        <td colspan="4"></td>
+                        <td class="amount">${fmt(grandTotal)}</td>
+                    </tr>
+                `;
+            } catch (e) {
+                console.error('计算异常：', e);
+                const tbody = document.getElementById('resultBody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#dc2626; padding:30px;">
+                        计算出现异常，请检查输入数据。错误信息：${e.message}
+                    </td></tr>`;
+                }
+            }
+        }
+
+        // 导出Excel（自动换行修复版：全单元格自动换行+列宽自适应+表头全居中）
+        function exportExcel() {
+            try {
+                const table = document.getElementById('resultTable');
+                if (!table) {
+                    alert('未找到结果表格，无法导出');
+                    return;
+                }
+
+                // 1. 克隆表格，保留原生合并单元格结构
+                const cloneTable = table.cloneNode(true);
+
+                // 定义样式集合（新增Excel特有的自动换行属性mso-wrap-text:auto）
+                // 表头样式：全水平垂直居中+浅蓝底色+加粗+自动换行
+                const headerStyle = `
+                    background-color: #f0f9ff;
+                    font-weight: bold;
+                    border: 1px solid #000;
+                    padding: 6px 8px;
+                    font-family: 微软雅黑;
+                    font-size: 11pt;
+                    vertical-align: middle;
+                    text-align: center;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    mso-wrap-text: auto; /* Excel特有的自动换行属性，必须加 */
+                `;
+                // 合计/总金额行样式：浅蓝底色+加粗左对齐+自动换行
+                const totalRowStyle = `
+                    background-color: #f0f9ff;
+                    font-weight: bold;
+                    border: 1px solid #000;
+                    padding: 6px 8px;
+                    font-family: 微软雅黑;
+                    font-size: 11pt;
+                    vertical-align: middle;
+                    text-align: left;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    mso-wrap-text: auto; /* Excel特有的自动换行属性，必须加 */
+                `;
+                // 合计行金额列样式：浅蓝底色+加粗右对齐+自动换行
+                const totalAmountStyle = `
+                    background-color: #f0f9ff;
+                    font-weight: bold;
+                    border: 1px solid #000;
+                    padding: 6px 8px;
+                    font-family: 微软雅黑;
+                    font-size: 11pt;
+                    vertical-align: middle;
+                    text-align: right;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    mso-wrap-text: auto; /* Excel特有的自动换行属性，必须加 */
+                `;
+                // 普通单元格样式：左对齐+自动换行
+                const normalCellStyle = `
+                    border: 1px solid #000;
+                    padding: 6px 8px;
+                    font-family: 微软雅黑;
+                    font-size: 11pt;
+                    vertical-align: middle;
+                    text-align: left;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    mso-wrap-text: auto; /* Excel特有的自动换行属性，必须加 */
+                `;
+                // 普通行金额列样式：右对齐+自动换行
+                const normalAmountStyle = `
+                    border: 1px solid #000;
+                    padding: 6px 8px;
+                    font-family: 微软雅黑;
+                    font-size: 11pt;
+                    vertical-align: middle;
+                    text-align: right;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    mso-wrap-text: auto; /* Excel特有的自动换行属性，必须加 */
+                `;
+
+                // 2. 遍历所有行与单元格，赋值行内样式，同时计算列宽适配值
+                const allRows = cloneTable.querySelectorAll('tr');
+                const colContentLengths = []; // 记录每列的最大内容长度，用于列宽自适应
+
+                allRows.forEach((row, rowIndex) => {
+                    const rowText = (row.textContent || '').trim();
+                    const isHeaderRow = rowIndex === 0;
+                    const isTotalRow = rowText.includes('合计') || rowText.includes('总金额');
+                    const allCells = row.querySelectorAll('th, td');
+
+                    allCells.forEach((cell, cellIndex) => {
+                        const isLastCol = cellIndex === allCells.length - 1;
+                        const cellContent = (cell.textContent || '').trim();
+                        
+                        // 赋值行内样式（所有单元格都包含自动换行属性）
+                        if (isHeaderRow) {
+                            cell.setAttribute('style', headerStyle);
+                        } else if (isTotalRow) {
+                            cell.setAttribute('style', isLastCol ? totalAmountStyle : totalRowStyle);
+                        } else {
+                            cell.setAttribute('style', isLastCol ? normalAmountStyle : normalCellStyle);
+                        }
+
+                        // 计算内容长度（中文按2字符，英文/数字按1字符），用于列宽自适应
+                        let contentLength = 0;
+                        for (let i = 0; i < cellContent.length; i++) {
+                            contentLength += /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(cellContent.charAt(i)) ? 2 : 1;
+                        }
+                        // 更新列最大长度
+                        if (!colContentLengths[cellIndex] || contentLength > colContentLengths[cellIndex]) {
+                            colContentLengths[cellIndex] = contentLength;
+                        }
+                    });
+                });
+
+                // 3. 生成列宽自适应配置（Excel列宽单位：字符）
+                const colWidthConfig = colContentLengths.map(length => {
+                    // 最小列宽8字符，最大列宽60字符，内容长度+2字符padding，确保内容不会溢出
+                    const finalWidth = Math.min(Math.max(length + 2, 8), 60);
+                    return { wch: finalWidth };
+                });
+
+                // 4. 构造带Excel命名空间的HTML文档，注入列宽+自动行高配置
+                const excelHtml = `
+                    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                          xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                          xmlns="http://www.w3.org/TR/REC-html40">
+                    <head>
+                        <meta charset="UTF-8">
+                        <!--[if gte mso 9]>
+                        <xml>
+                            <x:ExcelWorkbook>
+                                <x:ExcelWorksheets>
+                                    <x:ExcelWorksheet>
+                                        <x:Name>工伤赔偿明细</x:Name>
+                                        <x:WorksheetOptions>
+                                            <x:DisplayGridlines/>
+                                        </x:WorksheetOptions>
+                                        <!-- 列宽自适应配置 -->
+                                        <x:Table>
+                                            <x:Column>
+                                                ${colWidthConfig.map((col, i) => `<x:Column${i+1} wch="${col.wch}"/>`).join('')}
+                                            </x:Column>
+                                            <!-- 行高自动适配配置（核心：AutoFit，Excel自动根据内容调整行高） -->
+                                            <x:Row>
+                                                <x:RowAutoFit/>
+                                            </x:Row>
+                                        </x:Table>
+                                    </x:ExcelWorksheet>
+                                </x:ExcelWorksheets>
+                            </x:ExcelWorkbook>
+                        </xml>
+                        <![endif]-->
+                    </head>
+                    <body>
+                        ${cloneTable.outerHTML}
+                    </body>
+                    </html>
+                `;
+
+                // 5. 生成文件并下载
+                const blob = new Blob(['\ufeff' + excelHtml], { 
+                    type: 'application/vnd.ms-excel;charset=utf-8' 
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `工伤赔偿计算结果_${new Date().toLocaleDateString()}.xls`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+            } catch (e) {
+                alert('导出失败：' + e.message);
+                console.error(e);
+            }
+        }
+
+        // 页面初始化
+        window.onload = function() {
+            initProvinceSelect();
+            updateResignStatus();
+            updatePostAndRetire();
+            onProvinceChange();
+
+            // ========== 新增：初始化所有金额输入框为两位小数 ==========
+            const decimalInputs = [
+                'monthlySalary', 'localAvgSalary', 
+                'medicalTotal', 'medicalReimbursed', 'medicalDeductible',
+                'nonMedicalRatio', 'medicalRatio', 'dailyWage'
+            ];
+            decimalInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) fixDecimalOnBlur(el);
+            });
+
+                // 初始化保单下拉状态 + 日工资计算
+                handleInsuranceLimitChange();
+                recalcDailyWageNewRule();
+        };
+
+        // 保单限额下拉切换逻辑
+        // 保单限额下拉切换逻辑
+        function handleInsuranceLimitChange() {
+            const selectEl = document.getElementById('insuranceDayLimitSelect');
+            const inputEl = document.getElementById('insuranceDayLimitInput');
+            const val = selectEl.value;
+
+            if (val === 'other') {
+                // 选其他：解除禁用，默认赋值0.00
+                inputEl.disabled = false;
+                inputEl.value = "0.00";
+            } else {
+                // 固定档位：禁用输入框，填充对应金额
+                inputEl.disabled = true;
+                inputEl.value = parseFloat(val).toFixed(2);
+            }
+            // 切换下拉立刻重算日工资 + 刷新整张赔偿明细
+            recalcDailyWageNewRule();
+            calculate();
+        }
+
+        // 停工留薪日工资自动计算：低于100取计算值，大于等于100封顶100
+        // 新版日工资规则：本人月工资/30 与保单限额取较小值
+        function recalcDailyWageNewRule() {
+            const monthSalEl = document.getElementById('monthlySalary');
+            const limitInput = document.getElementById('insuranceDayLimitInput');
+            const dailyWageEl = document.getElementById('dailyWage');
+
+            if (!monthSalEl || !limitInput || !dailyWageEl) return;
+
+            // 取值容错
+            let monthWage = parseFloat(monthSalEl.value) || 0;
+            let policyLimit = parseFloat(limitInput.value) || 0;
+            let wageByMonth = monthWage / 30;
+
+            // 核心规则：取二者较小值
+            let finalDayWage = Math.min(wageByMonth, policyLimit);
+            dailyWageEl.value = finalDayWage.toFixed(2);
+        }
+    </script>
+</body>
+</html>
