@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V4.2.0 稳定版</title>
+    <title>全国工伤赔偿计算器 V4.3.2 20260708</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -189,6 +189,24 @@
             background: #f9fafb;
             padding: 12px;
             border-radius: 8px;
+        }
+
+        /* 双行项目浅蓝色横向分组边框样式 */
+        /* 双行项目浅蓝色横向分组边框样式 */
+        .bonus-group-row td {
+            background-color: #f9fafb;
+        }
+        .bonus-group-row.first td {
+            border-top: 2px solid #60a5fa;
+            padding-top: 16px; /* 用内边距拉开组间距，不影响边框显示 */
+        }
+        .bonus-group-row.last td {
+            border-bottom: 2px solid #60a5fa;
+            padding-bottom: 16px; /* 底部内边距，视觉更均衡 */
+        }
+        /* 第一个分组顶部保持默认间距，避免和表头距离过大 */
+        tbody tr:first-child.bonus-group-row.first td {
+            padding-top: 12px;
         }
     </style>
 </head>
@@ -933,7 +951,6 @@
         }
 
         // 计算两个日期的月差（仅用于核算逻辑，保留原政策口径）
-        // 计算两个日期的整月差（向下取整，兼容YYYY-MM和YYYY-MM-DD两种格式）
         function getMonthDiff(startStr, endStr) {
             if (!startStr || !endStr) return 0;
             const startParts = startStr.split('-').map(Number);
@@ -944,7 +961,6 @@
             if (isNaN(sy) || isNaN(sm) || isNaN(ey) || isNaN(em)) return 0;
     
             let months = (ey * 12 + em) - (sy * 12 + sm);
-            // 结束日小于开始日，说明不足一个整月，月份数减1
             if (ed < sd) {
                 months--;
             }
@@ -1011,7 +1027,6 @@
             const [birthYear, birthMonth, birthDay] = birthStr.split('-').map(Number);
             const birthDate = new Date(birthYear, birthMonth - 1, birthDay || 1);
 
-            // 原法定退休年龄（月）
             let baseRetireAgeMonths;
             if (gender === '男') {
                 baseRetireAgeMonths = 60 * 12;
@@ -1023,11 +1038,9 @@
                 }
             }
 
-            // 原退休日期：出生日 + 退休年龄月数
             const originalRetire = new Date(birthDate);
             originalRetire.setMonth(originalRetire.getMonth() + baseRetireAgeMonths);
 
-            // 不启用延迟退休
             if (!useDelay) {
                 const y = originalRetire.getFullYear();
                 const m = String(originalRetire.getMonth() + 1).padStart(2, '0');
@@ -1039,7 +1052,6 @@
                 };
             }
 
-            // 渐进式延迟退休规则
             let stepMonths, maxDelayMonths;
             if (gender === '男') {
                 stepMonths = 4;
@@ -1063,7 +1075,6 @@
                 delayMonths = Math.min(delayMonths, maxDelayMonths);
             }
 
-            // 最终退休日期
             const finalRetire = new Date(originalRetire);
             finalRetire.setMonth(finalRetire.getMonth() + delayMonths);
             
@@ -1087,6 +1098,18 @@
             let ratio = 1 - reduceYears * (std.reductionRate || 0.2);
             ratio = Math.max(ratio, std.minRatio || 0.1);
             return Math.max(0, Math.min(1, ratio));
+        }
+
+        // 三组一次性补助金单选全局联动
+        function syncAllBonusTypes(type) {
+            const targets = [
+                document.querySelector(`input[name="disBonusType"][value="${type}"]`),
+                document.querySelector(`input[name="medicalBonusType"][value="${type}"]`),
+                document.querySelector(`input[name="employmentBonusType"][value="${type}"]`)
+            ];
+            targets.forEach(radio => {
+                if (radio) radio.checked = true;
+            });
         }
 
         // ===================== 页面交互函数 =====================
@@ -1259,7 +1282,7 @@
         }
 
         // ===================== 补助金核心计算 =====================
-        function calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireCalcStr) {
+        function calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireCalcStr, isActualVersion = false) {
             // 1. 达到退休年龄直接归零
             if (yearsToRetire <= 0) {
                 return {
@@ -1473,7 +1496,7 @@
             let baseMedValue = (std.medical && std.medical[level]) || 0;
             let baseEmpValue = (std.employment && std.employment[level]) || 0;
 
-            // ========== 辽宁专属逻辑移动到此处 ==========
+            // 辽宁专属逻辑
             if (province === "辽宁省") {
                 medRatio = 1;
                 const fullYears = Math.floor(yearsToRetire);
@@ -1489,12 +1512,11 @@
                 } else if (yearsToRetire > 0) {
                     reduceMonths = 7;
                 } else {
-                    reduceMonths = baseEmpValue; // 退休归零
+                    reduceMonths = baseEmpValue;
                 }
                 const finalEmpMonths = Math.max(0, baseEmpValue - reduceMonths);
                 empRatio = baseEmpValue > 0 ? finalEmpMonths / baseEmpValue : 0;
             }
-            // ==========================================
 
             let odRateMed = 1;
             let odRateEmp = 1;
@@ -1570,7 +1592,7 @@
                 employmentFormula = `计算基数 × 月数 × 递减比例`;
 
                 let medTipHtml = "";
-                if (province === "广东省") {
+                if (province === "广东省" && !isActualVersion) {
                     medTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与一次性伤残补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
                 }
                 let medReduceTip = '';
@@ -1580,7 +1602,7 @@
                 medicalProcess = `${fmt(medicalBase)} 元 × ${baseMedValue} 个月 × ${(medRatio*100).toFixed(0)}% × ${odRateMed.toFixed(2)}${odAddTextMed}<br> = ${fmt(medicalBase)} × ${medicalMonthTotal.toFixed(2)} = ${fmt(medicalAmount)} 元${medTipHtml}${medReduceTip}`;
 
                 let empTipHtml = "";
-                if (province === "广东省") {
+                if (province === "广东省" && !isActualVersion) {
                     empTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与另外两项一次性补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
                 }
                 let empReduceTip = '';
@@ -1641,7 +1663,6 @@
 
                 // 退休时间
                 const retireInfo = calcRetireDate(birthStr, gender, postType, useDelay);
-                // 核算用月差（保留原政策口径）
                 const monthsToRetire = getMonthDiff(calcDateStr, retireInfo.retireDateStr);
                 const yearsToRetire = monthsToRetire / 12;
 
@@ -1664,32 +1685,13 @@
                 const baseSalary = Math.min(Math.max(salary, minBase), maxBase);
 
                 // 1. 一次性伤残补助金
-                //let disBonus = 0;
-                //let disBonusProcess = '';
-                //if (level === 0) {
-                //    disBonusProcess = '未达到伤残等级，该项目无需计算';
-                //} else {
-                //    const disBonusMonths = DISABILITY_BONUS_MONTHS[level] || 0;
-                //    disBonus = baseSalary * disBonusMonths;
-                //    disBonusProcess = `原始缴费工资：${fmt(salary)} 元，上下限基准社平：${fmt(avgSalary)} 元
-                //    保底下限：${fmt(minBase)} 元（社平60%），封顶上限：${fmt(maxBase)} 元（社平300%）
-                //    核定计发基数：${fmt(baseSalary)} 元 × ${disBonusMonths} 个月`;
-                //    if (salary < minBase && avgSalary > 0) {
-                //        disBonusProcess += `<br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
-                //    } else if (salary > maxBase && avgSalary > 0) {
-                //        disBonusProcess += `<br><span style="color:#d97706;">⚠️ 本人工资高于社平工资300%的，按封顶基数社平工资的300%计算</span>`;
-                //    }
-                //}
-
-                // 1. 一次性伤残补助金
-                let disBonusStandard = 0; // 法定标准（社平60%保底/300%封顶）
-                let disBonusActual = 0;   // 按本人实际工资计算
+                let disBonusStandard = 0;
+                let disBonusActual = 0;
                 let disBonusProcessStandard = '';
                 let disBonusProcessActual = '';
-                let isBelow60Percent = false; // 是否低于社平60%
-                let selectedDisBonusType = 'actual'; // 默认选中实际工资版本
+                let isBelow60Percent = false;
+                let selectedDisBonusType = 'actual';
 
-                // 读取当前单选选中状态，保留用户切换后的选择
                 const selectedRadio = document.querySelector('input[name="disBonusType"]:checked');
                 if (selectedRadio) {
                     selectedDisBonusType = selectedRadio.value;
@@ -1711,7 +1713,6 @@
                     <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%，本条按实际工资核算，供与客户沟通参考（首选）</span>`;
                 }
 
-                // 最终计入合计的伤残补助金金额（与单选选中结果联动）
                 const disBonus = selectedDisBonusType === 'standard' ? disBonusStandard : disBonusActual;
 
                 // 2. 1-4级伤残津贴
@@ -1761,8 +1762,31 @@
                     </tr>`;
                 }
 
-                // 3. 医疗+就业补助金
-                const me = calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireInfo.retireDateStr);
+                // 3. 医疗+就业补助金（双版本核算）
+                const meStandard = calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireInfo.retireDateStr, false);
+                const meActual = calcMedicalAndEmployment(province, std, level, avgSalary, salary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireInfo.retireDateStr, true);
+
+                // 判断两项补助金是否为本人工资基数
+                const isMedicalPersonalBase = std.medicalBase === "personal_salary" || province === "广东省";
+                const isEmploymentPersonalBase = std.employmentBase === "personal_salary" || province === "广东省";
+
+                // 读取医疗补助金单选状态
+                let selectedMedicalType = 'actual';
+                const selectedMedicalRadio = document.querySelector('input[name="medicalBonusType"]:checked');
+                if (selectedMedicalRadio) selectedMedicalType = selectedMedicalRadio.value;
+
+                // 读取就业补助金单选状态
+                let selectedEmploymentType = 'actual';
+                const selectedEmploymentRadio = document.querySelector('input[name="employmentBonusType"]:checked');
+                if (selectedEmploymentRadio) selectedEmploymentType = selectedEmploymentRadio.value;
+
+                // 最终计入合计的金额（与单选联动）
+                const finalMedical = (isMedicalPersonalBase && isBelow60Percent && level >= 5 && isResigned)
+                    ? (selectedMedicalType === 'standard' ? meStandard.medical : meActual.medical)
+                    : meStandard.medical;
+                const finalEmployment = (isEmploymentPersonalBase && isBelow60Percent && level >= 5 && isResigned)
+                    ? (selectedEmploymentType === 'standard' ? meStandard.employment : meActual.employment)
+                    : meStandard.employment;
 
                 // 4. 停工留薪期工资
                 const actualStopDays = Math.max(0, stopDays - deductDays);
@@ -1773,8 +1797,8 @@
                 const medPayable = Math.max(0, (medTotal - medReimbursed - selfPayNonMed - medDeductible) * medRatio);
 
                 // 汇总金额
-                const socialTotal = disBonus + me.medical + medPayable + allowanceTotal;
-                const companyTotal = me.employment + stopWorkPay;
+                const socialTotal = disBonus + finalMedical + medPayable + allowanceTotal;
+                const companyTotal = finalEmployment + stopWorkPay;
                 const grandTotal = socialTotal + companyTotal;
 
                 // 渲染表格
@@ -1783,9 +1807,9 @@
                 
                 tbody.innerHTML = `
                     ${isBelow60Percent && level > 0 ? `
-                    <tr>
+                    <tr class="bonus-group-row first">
                         <td class="item-name" style="padding-left: 8px;">
-                            <input type="radio" name="disBonusType" value="actual" ${selectedDisBonusType === 'actual' ? 'checked' : ''} onchange="calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            <input type="radio" name="disBonusType" value="actual" ${selectedDisBonusType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
                             一次性伤残补助金（按本人实际工资）
                         </td>
                         <td class="legal-basis">
@@ -1797,9 +1821,9 @@
                         <td class="payer payer-social">社保基金</td>
                         <td class="amount">${fmt(disBonusActual)}</td>
                     </tr>
-                    <tr>
+                    <tr class="bonus-group-row last">
                         <td class="item-name" style="padding-left: 8px;">
-                            <input type="radio" name="disBonusType" value="standard" ${selectedDisBonusType === 'standard' ? 'checked' : ''} onchange="calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            <input type="radio" name="disBonusType" value="standard" ${selectedDisBonusType === 'standard' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
                             一次性伤残补助金（法定保底标准）
                         </td>
                         <td class="legal-basis">
@@ -1827,26 +1851,88 @@
 
                     ${allowanceHtml}
 
+                    ${isMedicalPersonalBase && isBelow60Percent && level >= 5 && isResigned ? `
+                    <tr class="bonus-group-row first">
+                        <td class="item-name" style="padding-left: 8px;">
+                            <input type="radio" name="medicalBonusType" value="actual" ${selectedMedicalType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            一次性工伤医疗补助金（按本人实际工资）
+                        </td>
+                        <td class="legal-basis">
+                            <span class="basis-title">实际工资核算参考</span>
+                            按本人实际月工资直接计算，低于法定保底标准，非法定计发口径
+                        </td>
+                        <td><span class="formula">本人实际月工资 × 月数 × 递减比例 × (1+职业病增发比例)</span></td>
+                        <td class="process">${meActual.medicalProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(meActual.medical)}</td>
+                    </tr>
+                    <tr class="bonus-group-row last">
+                        <td class="item-name" style="padding-left: 8px;">
+                            <input type="radio" name="medicalBonusType" value="standard" ${selectedMedicalType === 'standard' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            一次性工伤医疗补助金（法定保底标准）
+                        </td>
+                        <td class="legal-basis">
+                            ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
+                        </td>
+                        <td><span class="formula">${meStandard.medicalFormula}</span></td>
+                        <td class="process">${meStandard.medicalProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(meStandard.medical)}</td>
+                    </tr>
+                    ` : `
                     <tr>
                         <td class="item-name">一次性工伤医疗补助金</td>
                         <td class="legal-basis">
                             ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
                         </td>
-                        <td><span class="formula">${me.medicalFormula}</span></td>
-                        <td class="process">${me.medicalProcess}</td>
+                        <td><span class="formula">${meStandard.medicalFormula}</span></td>
+                        <td class="process">${meStandard.medicalProcess}</td>
                         <td class="payer payer-social">社保基金</td>
-                        <td class="amount">${fmt(me.medical)}</td>
+                        <td class="amount">${fmt(meStandard.medical)}</td>
                     </tr>
+                    `}
+
+                    ${isEmploymentPersonalBase && isBelow60Percent && level >= 5 && isResigned ? `
+                    <tr class="bonus-group-row first" style="border-top: 16px solid transparent;">
+                        <tr class="bonus-group-row first">
+                            <td class="item-name" style="padding-left: 8px;">
+                                <input type="radio" name="employmentBonusType" value="actual" ${selectedEmploymentType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                                一次性伤残就业补助金（按本人实际工资）
+                            </td>
+                        <td class="legal-basis">
+                            <span class="basis-title">实际工资核算参考</span>
+                            按本人实际月工资直接计算，低于法定保底标准，非法定计发口径
+                        </td>
+                        <td><span class="formula">本人实际月工资 × 月数 × 递减比例</span></td>
+                        <td class="process">${meActual.employmentProcess}</td>
+                        <td class="payer payer-company">用人单位</td>
+                        <td class="amount">${fmt(meActual.employment)}</td>
+                    </tr>
+                    <tr class="bonus-group-row last">
+                        <td class="item-name" style="padding-left: 8px;">
+                            <input type="radio" name="employmentBonusType" value="standard" ${selectedEmploymentType === 'standard' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            一次性伤残就业补助金（法定保底标准）
+                        </td>
+                        <td class="legal-basis">
+                            ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
+                        </td>
+                        <td><span class="formula">${meStandard.employmentFormula}</span></td>
+                        <td class="process">${meStandard.employmentProcess}</td>
+                        <td class="payer payer-company">用人单位</td>
+                        <td class="amount">${fmt(meStandard.employment)}</td>
+                    </tr>
+                    ` : `
                     <tr>
                         <td class="item-name">一次性伤残就业补助金</td>
                         <td class="legal-basis">
                             ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
                         </td>
-                        <td><span class="formula">${me.employmentFormula}</span></td>
-                        <td class="process">${me.employmentProcess}</td>
+                        <td><span class="formula">${meStandard.employmentFormula}</span></td>
+                        <td class="process">${meStandard.employmentProcess}</td>
                         <td class="payer payer-company">用人单位</td>
-                        <td class="amount">${fmt(me.employment)}</td>
+                        <td class="amount">${fmt(meStandard.employment)}</td>
                     </tr>
+                    `}
                     <tr>
                         <td class="item-name">停工留薪期工资</td>
                         <td class="legal-basis">
