@@ -508,7 +508,7 @@
                 baseType: "avg_salary",
                 medical: {5:30, 6:25, 7:10, 8:7, 9:4, 10:2},
                 employment: {5:30, 6:25, 7:10, 8:7, 9:4, 10:2},
-                reduction: "employment", reductionRate: 0.2, minRatio: 0,
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
                 defaultAvg: 8433, odAdd: null,
                 legalBasis: [
                     {title:"《浙江省工伤保险条例》第27条", text:"医疗补助金全额支付不递减；就业补助金距退休不足5年每满一周年递减20%。达到退休年龄的，不享受两项补助金。"}
@@ -519,7 +519,7 @@
                 baseType: "avg_salary",
                 medical: {5:24, 6:18, 7:10, 8:8, 9:6, 10:4},
                 employment: {5:40, 6:34, 7:20, 8:15, 9:10, 10:5},
-                reduction: "employment", reductionRate: 0.1, minRatio: 0.3,
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
                 defaultAvg: 7999, odAdd: null,
                 legalBasis: [
                     {title:"《安徽省实施〈工伤保险条例〉办法》第26条", text:"就业补助金距退休不足5年逐年递减10%，不足1年按30%支付。达到退休年龄的，不予支付两项补助金。"}
@@ -602,7 +602,8 @@
                 medical: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
                 employment: {5:56, 6:46, 7:36, 8:26, 9:16, 10:6},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
-                defaultAvg: 7183, odAdd: null,
+                defaultAvg: 7183,
+                odAdd: { type: "ratio", target: "medical", value: 0.3 },
                 legalBasis: [
                     {title:"《河南省工伤保险条例》第27条", text:"就业补助金距退休不足五年递减，不足一年按10%支付。达到退休年龄的，不予支付两项补助金。"}
                 ],
@@ -612,7 +613,7 @@
                 baseType: "avg_salary",
                 medical: {5:18, 6:16, 7:14, 8:12, 9:10, 10:8},
                 employment: {5:34, 6:28, 7:20, 8:16, 9:12, 10:8},
-                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
                 defaultAvg: 6948, odAdd: null,
                 legalBasis: [
                     {title:"《湖北省工伤保险实施办法》第36条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
@@ -621,9 +622,11 @@
             },
             "湖南省": {
                 baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:24, 6:18, 7:15, 8:10, 9:8, 10:6},
                 employment: {5:36, 6:30, 7:15, 8:10, 9:8, 10:6},
-                reduction: "both", reductionRate: 0.1, minRatio: 0.5,
+                reduction: "employment", reductionRate: 0.1, minRatio: 0.5,
                 defaultAvg: 6711, odAdd: null,
                 legalBasis: [
                     {title:"《湖南省实施〈工伤保险条例〉办法》第23条", text:"距退休不足5年的两项补助金每减少1年递减10%。达到退休年龄的，不予支付。"}
@@ -645,6 +648,8 @@
             },
             "山西省": {
                 baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:36, 6:33, 7:24, 8:21, 9:18, 10:15},
                 employment: {5:24, 6:21, 7:15, 8:12, 9:9, 10:6},
                 reduction: "both", reductionRate: 0.1, minRatio: 0.5,
@@ -681,7 +686,9 @@
                 desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
             },
             "吉林省": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
                 employment: {5:16, 6:14, 7:11, 8:9, 9:7, 10:5},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
@@ -694,6 +701,8 @@
             },
             "黑龙江省": {
                 baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:30, 6:25, 7:20, 8:15, 9:10, 10:5},
                 employment: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
@@ -719,7 +728,10 @@
             },
             "贵州省": {
                 baseType: "guizhou_special",
-                medicalFixed: {5:36, 6:26, 7:12, 8:9, 9:6, 10:3},
+                medicalLimits: {
+                    5: {max:36}, 6: {max:26}, 7: {max:12},
+                    8: {max:9}, 9: {max:6}, 10: {max:3}
+                },
                 employmentLimits: {
                     5: {max:36, min:11},
                     6: {max:26, min:8},
@@ -772,7 +784,9 @@
                 desc: "两项补助金同步递减，最低10%，退休后不予支付"
             },
             "甘肃省": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
                 employment: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
                 reduction: "both", reductionRate: 0.2, minRatio: 0.1,
@@ -783,7 +797,9 @@
                 desc: "两项补助金同步递减，最低10%，退休后不予支付"
             },
             "青海省": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:15, 6:13, 7:11, 8:9, 9:7, 10:5},
                 employment: {5:15, 6:13, 7:11, 8:9, 9:7, 10:5},
                 reduction: "both", reductionRate: 0.2, minRatio: 0.1,
@@ -794,7 +810,9 @@
                 desc: "两项补助金同步递减，最低10%，退休后不予支付"
             },
             "宁夏回族自治区": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:22, 6:19, 7:15, 8:12, 9:9, 10:6},
                 employment: {5:22, 6:19, 7:15, 8:12, 9:9, 10:6},
                 reduction: "both", reductionRate: 0.2, minRatio: 0.1,
@@ -1337,11 +1355,23 @@
 
             // 贵州特殊模式
             if (std.baseType === "guizhou_special") {
-                const medMonths = std.medicalFixed[level] || 0;
+                const medLimits = std.medicalLimits[level] || { max: 0, min: 0 };
+                let medMonths;
+                let medicalProcess;
+                if (monthsToRetire >= medLimits.max) {
+                    medMonths = medLimits.max;
+                    medicalProcess = `距退休剩余 ${monthsToRetire} 个月 ≥ 最高 ${medLimits.max} 个月<br>按最高月数计发：${medMonths} 个月`;
+                } else if (monthsToRetire <= 0) {
+                    medMonths = 0;
+                    medicalProcess = `已达到法定退休年龄，不享受一次性工伤医疗补助金`;
+                } else {
+                    medMonths = monthsToRetire;
+                    medicalProcess = `距退休剩余 ${monthsToRetire} 个月<br>在上下限之间，按实际剩余月数计发`;
+                }
                 const medicalAmount = avgSalary * medMonths;
-                const medicalFormula = `全市社平工资 × ${medMonths}个月`;
-                const medicalProcess = `${fmt(avgSalary)} 元 × ${medMonths} 个月<br><span style="color:#16a34a;">贵州法定固定标准，不随年龄递减，无职业病增发</span>
-                <br><span style="color:#d97706; font-weight:bold;">⚠️ 贵州省一次性医疗补助金固定月数，不执行年龄递减</span>`;
+                const medicalFormula = `全市社平工资 × 计发月数（封顶保底）`;
+                medicalProcess += `<br>最终金额：${fmt(avgSalary)} × ${medMonths} = ${fmt(medicalAmount)} 元
+                <br><span style="color:#d97706; font-weight:bold;">⚠️ 贵州省医疗补助金按剩余退休月数动态核算，设置上限封顶，非常规固定月数</span>`;
                 const limits = std.employmentLimits[level] || { max: 0, min: 0 };
                 let empMonths;
                 let employmentProcess;
@@ -1443,6 +1473,29 @@
             let baseMedValue = (std.medical && std.medical[level]) || 0;
             let baseEmpValue = (std.employment && std.employment[level]) || 0;
 
+            // ========== 辽宁专属逻辑移动到此处 ==========
+            if (province === "辽宁省") {
+                medRatio = 1;
+                const fullYears = Math.floor(yearsToRetire);
+                let reduceMonths = 0;
+                if (yearsToRetire >= 5) {
+                    reduceMonths = 0;
+                } else if (yearsToRetire >= 4) {
+                    reduceMonths = 2;
+                } else if (yearsToRetire >= 3) {
+                    reduceMonths = 4;
+                } else if (yearsToRetire >= 2) {
+                    reduceMonths = 6;
+                } else if (yearsToRetire > 0) {
+                    reduceMonths = 7;
+                } else {
+                    reduceMonths = baseEmpValue; // 退休归零
+                }
+                const finalEmpMonths = Math.max(0, baseEmpValue - reduceMonths);
+                empRatio = baseEmpValue > 0 ? finalEmpMonths / baseEmpValue : 0;
+            }
+            // ==========================================
+
             let odRateMed = 1;
             let odRateEmp = 1;
             let odAddTextMed = "";
@@ -1462,12 +1515,8 @@
                     }
                 }
                 else if (std.odAdd.type === "month" && std.odAdd.target === "medical") {
-                    if (level === 5 || level === 6) {
-                        baseMedValue = baseMedValue + std.odAdd.value;
-                        odAddTextMed = `<br><span style="color:#d97706;">职业病5/6级医疗补助金额外增发${std.odAdd.value}个月</span>`;
-                    } else {
-                        odAddTextMed = `<br><span style="color:#d97706;">本省7~10级职业病无额外增发</span>`;
-                    }
+                    baseMedValue = baseMedValue + std.odAdd.value;
+                    odAddTextMed = `<br><span style="color:#d97706;">⚠️ 职业病工伤医疗补助金增发${std.odAdd.value}个月</span>`;
                 }
             }
 
