@@ -18,7 +18,7 @@
         .header { text-align: center; margin-bottom: 30px; }
         .header h1 { font-size: 28px; color: #1a56db; margin-bottom: 8px; }
         .header p { color: #6b7280; font-size: 14px; }
-
+    
         .card {
             background: #fff;
             border-radius: 12px;
@@ -50,7 +50,7 @@
             transition: background 0.2s;
         }
         .export-btn:hover { background: #1e40af; }
-
+    
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -108,7 +108,7 @@
         }
         .checkbox-item input { width: 16px; height: 16px; }
         .checkbox-item label { margin: 0; font-size: 14px; color: #4b5563; }
-
+    
         .salary-note {
             background: #eff6ff;
             border-left: 3px solid #1a56db;
@@ -118,10 +118,10 @@
             color: #1e40af;
             border-radius: 0 6px 6px 0;
         }
-
+    
         .detail-table {
             width: 100%;
-            table-layout: fixed; /* 开启固定布局，百分比列宽生效 */
+            table-layout: fixed;
             border-collapse: collapse;
             font-size: 13px;
             margin-top: 10px;
@@ -132,21 +132,23 @@
             border-bottom: 1px solid #e5e7eb;
             vertical-align: top;
         }
+        /* 所有表头统一居中 */
         .detail-table th {
             background: #f9fafb;
             font-weight: 600;
             color: #374151;
             position: sticky;
             top: 0;
+            text-align: center;
         }
-        /* 赔偿项目列：固定比例宽度 */
+        /* 赔偿项目列：固定比例宽度，左对齐 */
         .item-name { font-weight: 600; color: #111827; min-width: 160px; width: 18%; }
-        /* 法律依据列：收窄宽度，长文本自动换行 */
+        /* 法律依据列：放宽宽度，长文本自动换行，左对齐 */
         .legal-basis { 
             font-size: 12px; 
             color: #6b7280; 
             line-height: 1.5;
-            width: 22%;
+            width: 25%;
             word-break: break-word;
         }
         .legal-basis .basis-title {
@@ -154,6 +156,10 @@
             color: #1a56db;
             display: block;
             margin-bottom: 2px;
+        }
+        /* 计算公式列：固定宽度 */
+        .detail-table th:nth-child(3), .detail-table td:nth-child(3) {
+            width: 14%;
         }
         .formula {
             font-family: Consolas, Monaco, monospace;
@@ -164,36 +170,32 @@
             border-radius: 4px;
             display: inline-block;
         }
+        /* 计算过程列：放宽宽度 */
+        .detail-table th:nth-child(4), .detail-table td:nth-child(4) {
+            width: 25%;
+        }
         .process { font-size: 12px; color: #4b5563; line-height: 1.8; }
-        /* 支付主体列：加宽并居中对齐 */
+        /* 支付主体列：固定宽度，所有数据居中 */
         .payer { 
             font-size: 12px; 
             font-weight: 500;
             width: 10%;
-            text-align: center;
+            text-align: center !important;
         }
         .payer-social { color: #047857; }
         .payer-company { color: #dc2626; }
-        /* 金额列：保持靠右对齐，适当加宽 */
+        /* 金额列：收窄宽度，所有数据靠右对齐 */
         .amount {
             font-weight: 600;
             color: #111827;
-            text-align: right !important; /* 强制所有金额单元格右对齐 */
-            font-size: 14px;
-            min-width: 110px;
-            width: 12%;
-            padding-right: 10px; /* 右侧留空，数字不贴边更美观 */
-        }
-        /* 金额列表头同步靠右，支付主体列表头同步居中，视觉统一 */
-        .detail-table th:last-child {
             text-align: right !important;
-            padding-right: 10px; /* 和数据列对齐，视觉统一 */
-        }
-        .detail-table th:nth-last-child(2) {
-            text-align: center;
+            font-size: 14px;
+            min-width: 90px;
+            width: 8%;
+            padding-right: 10px;
         }
         .amount .unit { font-size: 11px; font-weight: normal; color: #6b7280; }
-
+    
         .total-row {
             background: #f0f9ff;
             font-weight: 700;
@@ -206,7 +208,7 @@
             background: #eff6ff;
             font-size: 15px;
         }
-
+    
         .tip {
             font-size: 12px;
             color: #6b7280;
@@ -216,19 +218,18 @@
             padding: 12px;
             border-radius: 8px;
         }
-
-        /* 双行项目浅蓝色横向分组边框样式 */
+    
         /* 双行项目浅蓝色横向分组边框样式 */
         .bonus-group-row td {
             background-color: #f9fafb;
         }
         .bonus-group-row.first td {
             border-top: 2px solid #60a5fa;
-            padding-top: 16px; /* 用内边距拉开组间距，不影响边框显示 */
+            padding-top: 16px;
         }
         .bonus-group-row.last td {
             border-bottom: 2px solid #60a5fa;
-            padding-bottom: 16px; /* 底部内边距，视觉更均衡 */
+            padding-bottom: 16px;
         }
         /* 第一个分组顶部保持默认间距，避免和表头距离过大 */
         tbody tr:first-child.bonus-group-row.first td {
