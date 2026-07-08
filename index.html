@@ -1632,7 +1632,7 @@
 
                 let medTipHtml = "";
                 if (province === "广东省" && !isActualVersion) {
-                    medTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与一次性伤残补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                    medTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与一次性伤残补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>`;
                 }
                 let medReduceTip = '';
                 if(medRatio !== 1){
@@ -1642,7 +1642,7 @@
 
                 let empTipHtml = "";
                 if (province === "广东省" && !isActualVersion) {
-                    empTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与另外两项一次性补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                    empTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与另外两项一次性补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>`;
                 }
                 let empReduceTip = '';
                 if(empRatio !== 1){
@@ -1746,7 +1746,7 @@
                     isBelow60Percent = salary < minBase && avgSalary > 0;
 
                     disBonusProcessStandard = `法定计发基数（社平60%保底）：${fmt(baseSalary)} 元 × ${disBonusMonths} 个月
-                    <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                    <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>`;
 
                     disBonusProcessActual = `本人实际月工资：${fmt(salary)} 元 × ${disBonusMonths} 个月
                     <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%，本条按实际工资核算，供与客户沟通参考（首选）</span>`;
