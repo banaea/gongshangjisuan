@@ -121,6 +121,7 @@
 
         .detail-table {
             width: 100%;
+            table-layout: fixed; /* 开启固定布局，百分比列宽生效 */
             border-collapse: collapse;
             font-size: 13px;
             margin-top: 10px;
@@ -177,14 +178,16 @@
         .amount {
             font-weight: 600;
             color: #111827;
-            text-align: right;
+            text-align: right !important; /* 强制所有金额单元格右对齐 */
             font-size: 14px;
             min-width: 110px;
             width: 12%;
+            padding-right: 10px; /* 右侧留空，数字不贴边更美观 */
         }
         /* 金额列表头同步靠右，支付主体列表头同步居中，视觉统一 */
         .detail-table th:last-child {
-            text-align: right;
+            text-align: right !important;
+            padding-right: 10px; /* 和数据列对齐，视觉统一 */
         }
         .detail-table th:nth-last-child(2) {
             text-align: center;
