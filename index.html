@@ -138,8 +138,16 @@
             position: sticky;
             top: 0;
         }
-        .item-name { font-weight: 600; color: #111827; min-width: 160px; }
-        .legal-basis { font-size: 12px; color: #6b7280; line-height: 1.5; }
+        /* 赔偿项目列：固定比例宽度 */
+        .item-name { font-weight: 600; color: #111827; min-width: 160px; width: 18%; }
+        /* 法律依据列：收窄宽度，长文本自动换行 */
+        .legal-basis { 
+            font-size: 12px; 
+            color: #6b7280; 
+            line-height: 1.5;
+            width: 22%;
+            word-break: break-word;
+        }
         .legal-basis .basis-title {
             font-weight: 600;
             color: #1a56db;
@@ -156,15 +164,30 @@
             display: inline-block;
         }
         .process { font-size: 12px; color: #4b5563; line-height: 1.8; }
-        .payer { font-size: 12px; font-weight: 500; }
+        /* 支付主体列：加宽并居中对齐 */
+        .payer { 
+            font-size: 12px; 
+            font-weight: 500;
+            width: 10%;
+            text-align: center;
+        }
         .payer-social { color: #047857; }
         .payer-company { color: #dc2626; }
+        /* 金额列：保持靠右对齐，适当加宽 */
         .amount {
             font-weight: 600;
             color: #111827;
             text-align: right;
             font-size: 14px;
-            min-width: 100px;
+            min-width: 110px;
+            width: 12%;
+        }
+        /* 金额列表头同步靠右，支付主体列表头同步居中，视觉统一 */
+        .detail-table th:last-child {
+            text-align: right;
+        }
+        .detail-table th:nth-last-child(2) {
+            text-align: center;
         }
         .amount .unit { font-size: 11px; font-weight: normal; color: #6b7280; }
 
