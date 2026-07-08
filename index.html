@@ -141,59 +141,71 @@
             top: 0;
             text-align: center;
         }
-        /* 赔偿项目列：固定比例宽度，左对齐 */
-        .item-name { font-weight: 600; color: #111827; min-width: 160px; width: 18%; }
-        /* 法律依据列：放宽宽度，长文本自动换行，左对齐 */
-        .legal-basis { 
-            font-size: 12px; 
-            color: #6b7280; 
-            line-height: 1.5;
-            width: 25%;
-            word-break: break-word;
-        }
-        .legal-basis .basis-title {
-            font-weight: 600;
-            color: #1a56db;
-            display: block;
-            margin-bottom: 2px;
-        }
-        /* 计算公式列：固定宽度 */
-        .detail-table th:nth-child(3), .detail-table td:nth-child(3) {
-            width: 14%;
-        }
-        .formula {
-            font-family: Consolas, Monaco, monospace;
-            font-size: 12px;
-            color: #047857;
-            background: #ecfdf5;
-            padding: 4px 6px;
-            border-radius: 4px;
-            display: inline-block;
-        }
-        /* 计算过程列：放宽宽度 */
-        .detail-table th:nth-child(4), .detail-table td:nth-child(4) {
-            width: 25%;
-        }
-        .process { font-size: 12px; color: #4b5563; line-height: 1.8; }
-        /* 支付主体列：固定宽度，所有数据居中 */
-        .payer { 
-            font-size: 12px; 
-            font-weight: 500;
-            width: 10%;
-            text-align: center !important;
-        }
-        .payer-social { color: #047857; }
-        .payer-company { color: #dc2626; }
-        /* 金额列：收窄宽度，所有数据靠右对齐 */
-        .amount {
-            font-weight: 600;
-            color: #111827;
-            text-align: right !important;
-            font-size: 14px;
-            min-width: 90px;
-            width: 8%;
-            padding-right: 10px;
-        }
+
+
+
+
+
+        /* ========== 统一6列宽度（严格按比例分配，表头+数据行同步生效） ========== */
+/* 第1列：赔偿项目 */
+.detail-table th:nth-child(1), .detail-table td:nth-child(1) { width: 17%; }
+/* 第2列：法律依据 */
+.detail-table th:nth-child(2), .detail-table td:nth-child(2) { width: 28%; }
+/* 第3列：计算公式 */
+.detail-table th:nth-child(3), .detail-table td:nth-child(3) { width: 13%; }
+/* 第4列：计算过程 */
+.detail-table th:nth-child(4), .detail-table td:nth-child(4) { width: 27%; }
+/* 第5列：支付主体 */
+.detail-table th:nth-child(5), .detail-table td:nth-child(5) { width: 7%; }
+/* 第6列：金额 */
+.detail-table th:nth-child(6), .detail-table td:nth-child(6) { width: 8%; }
+
+/* 赔偿项目列样式 */
+.item-name { font-weight: 600; color: #111827; min-width: 140px; }
+/* 法律依据列样式 */
+.legal-basis { 
+    font-size: 12px; 
+    color: #6b7280; 
+    line-height: 1.5;
+    word-break: break-word;
+}
+.legal-basis .basis-title {
+    font-weight: 600;
+    color: #1a56db;
+    display: block;
+    margin-bottom: 2px;
+}
+.formula {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+    color: #047857;
+    background: #ecfdf5;
+    padding: 4px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+.process { font-size: 12px; color: #4b5563; line-height: 1.8; }
+/* 支付主体列样式 */
+.payer { 
+    font-size: 12px; 
+    font-weight: 500;
+    text-align: center !important;
+}
+.payer-social { color: #047857; }
+.payer-company { color: #dc2626; }
+/* 金额列样式 */
+.amount {
+    font-weight: 600;
+    color: #111827;
+    text-align: right !important;
+    font-size: 14px;
+    padding-right: 10px;
+}
+
+
+
+
+
         .amount .unit { font-size: 11px; font-weight: normal; color: #6b7280; }
     
         .total-row {
@@ -442,7 +454,7 @@
                         <th>计算公式</th>
                         <th>计算过程</th>
                         <th>支付主体</th>
-                        <th style="text-align:right;">金额</th>
+                        <th>金额</th>
                     </tr>
                 </thead>
                 <tbody id="resultBody"></tbody>
@@ -1920,8 +1932,7 @@
                     `}
 
                     ${isEmploymentPersonalBase && isBelow60Percent && level >= 5 && isResigned ? `
-                    <tr class="bonus-group-row first" style="border-top: 16px solid transparent;">
-                        <tr class="bonus-group-row first">
+                    <tr class="bonus-group-row first">
                             <td class="item-name" style="padding-left: 8px;">
                                 <input type="radio" name="employmentBonusType" value="actual" ${selectedEmploymentType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
                                 一次性伤残就业补助金（按本人实际工资）
