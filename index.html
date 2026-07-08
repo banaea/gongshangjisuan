@@ -543,20 +543,20 @@
                 ],
                 desc: "按预期寿命与年龄差动态计算月数（不满1年按1年算），设最低保底；职业病医疗补助金增发30%；距退休不足5年两项补助金均递减（最低10%），退休后两项均不予支付"
             },
-            "江西省": {
-                baseType: "personal_salary",
-                medicalBase: "personal_salary",
-                employmentBase: "personal_salary",
-                medical: {5:21, 6:18, 7:14, 8:11, 9:8, 10:5},
-                employment: {5:32, 6:28, 7:18, 8:13, 9:9, 10:6},
-                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
-                defaultAvg: 6525,
-                odAdd: { type: "ratio", target: "medical", value: 0.3 },
-                legalBasis: [
-                    {title:"《江西省实施〈工伤保险条例〉办法》（2023修订）第22条", text:"两项补助金均以本人工资为基数。距法定退休年龄不足五年的，仅一次性伤残就业补助金按年限递减：不足1年按10%、满1年不足2年按20%、满2年不足3年按40%、满3年不足4年按60%、满4年不足5年按80%。患职业病的，一次性工伤医疗补助金增发30%。达到退休年龄的，不支付一次性伤残就业补助金。"}
-                ],
-                desc: "以本人工资为基数；仅就业补助金按距退休年限分五档递减，最低10%；职业病医疗补助金增发30%；退休后就业补助金不予支付"
-            },
+                "江西省": {
+                    baseType: "personal_salary",
+                    medicalBase: "personal_salary",
+                    employmentBase: "personal_salary",
+                    medical: {5:21, 6:18, 7:14, 8:11, 9:8, 10:5},
+                    employment: {5:32, 6:28, 7:18, 8:13, 9:9, 10:6},
+                    reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                    defaultAvg: 6525,
+                    odAdd: { type: "ratio", target: "medical", value: 0.3 },
+                    legalBasis: [
+                        {title:"《江西省实施〈工伤保险条例〉办法》（2023修订）第22条", text:"两项补助金均以本人工资为基数。距法定退休年龄不足五年的，仅一次性伤残就业补助金按年限递减：不足1年按10%、满1年不足2年按20%、满2年不足3年按40%、满3年不足4年按60%、满4年不足5年按80%。患职业病的，一次性工伤医疗补助金增发30%。达到退休年龄的，不支付一次性伤残就业补助金。"}
+                    ],
+                    desc: "以本人工资为基数；仅就业补助金按距退休年限分五档递减，最低10%；职业病医疗补助金增发30%；退休后就业补助金不予支付"
+                },
 
             // 华南地区
             "广东省": {
@@ -621,8 +621,6 @@
             },
             "湖南省": {
                 baseType: "personal_salary",
-                medicalBase: "personal_salary",
-                employmentBase: "personal_salary",
                 medical: {5:24, 6:18, 7:15, 8:10, 9:8, 10:6},
                 employment: {5:36, 6:30, 7:15, 8:10, 9:8, 10:6},
                 reduction: "both", reductionRate: 0.1, minRatio: 0.5,
@@ -647,8 +645,6 @@
             },
             "山西省": {
                 baseType: "personal_salary",
-                medicalBase: "personal_salary",
-                employmentBase: "personal_salary",
                 medical: {5:36, 6:33, 7:24, 8:21, 9:18, 10:15},
                 employment: {5:24, 6:21, 7:15, 8:12, 9:9, 10:6},
                 reduction: "both", reductionRate: 0.1, minRatio: 0.5,
@@ -697,10 +693,7 @@
                 desc: "职业病医疗补助金增发30%；仅就业补助金递减，退休后两项均不予支付"
             },
             "黑龙江省": {
-            "黑龙江省": {
                 baseType: "personal_salary",
-                medicalBase: "personal_salary",
-                employmentBase: "personal_salary",
                 medical: {5:30, 6:25, 7:20, 8:15, 9:10, 10:5},
                 employment: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
@@ -1337,28 +1330,9 @@
                 let chongqingEmpTip = empRatio !== 1 ? `<br><span style="color:#d97706; font-weight:bold;">⚠️ 重庆就业补助金距退休不足10年逐年递减，本次递减比例${(empRatio*100).toFixed(1)}%</span>` : '';
                 const employmentProcess = `${fmt(employmentBase)} 元 × ${baseEmpMonths} 个月 × ${(empRatio * 100).toFixed(0)}%<br>= ${fmt(employmentBase)} × ${employmentMonthTotal.toFixed(2)} = ${fmt(employmentAmount)} 元${chongqingEmpTip}`;
                 return { medical: medicalAmount, employment: employmentAmount, medicalFormula, employmentFormula, medicalProcess, employmentProcess };
-                } else {
-                    medRatio = std.reduction === "both" ? getReductionRatio(std, yearsToRetire) : 1;
-                    empRatio = (std.reduction === "both" || std.reduction === "employment") ? getReductionRatio(std, yearsToRetire) : 1;
-
-                    // 安徽省特殊递减规则：分档非线性，不足1年按30%计发
-                if (province === "安徽省") {
-                    if (yearsToRetire >= 5) {
-                        empRatio = 1;
-                    } else if (yearsToRetire >= 4) {
-                        empRatio = 0.9;
-                    } else if (yearsToRetire >= 3) {
-                        empRatio = 0.8;
-                    } else if (yearsToRetire >= 2) {
-                        empRatio = 0.7;
-                    } else if (yearsToRetire >= 1) {
-                        empRatio = 0.6;
-                    } else if (yearsToRetire > 0) {
-                        empRatio = 0.3;
-                    } else {
-                        empRatio = 0;
-                    }
-                }
+            } else {
+                medRatio = std.reduction === "both" ? getReductionRatio(std, yearsToRetire) : 1;
+                empRatio = (std.reduction === "both" || std.reduction === "employment") ? getReductionRatio(std, yearsToRetire) : 1;
             }
 
             // 贵州特殊模式
