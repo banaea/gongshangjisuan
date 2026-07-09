@@ -2401,6 +2401,7 @@
 // ========== 票据OCR批量识别逻辑 精准单条联动删除+列对齐修复 ==========
 // ========== 票据OCR批量识别 正本轮转转正+单条精准联动删除+列对齐修复 ==========
 // ========== 票据OCR批量识别 单张识别单条即时插入表格+正本自动轮转+精准联动删除 ==========
+// ========== 票据OCR批量识别 单张识别单条即时插入+额度用尽弹窗提示+正本自动轮转+精准联动删除 ==========
 const OCR_API_URL = "https://1344130555-ksmev0r7qw.ap-beijing.tencentscf.com";
 // 待上传图片列表，每条携带唯一uid
 let ocrFileList = [];
@@ -2508,7 +2509,7 @@ ocrSubmitBtn.onclick = async () => {
     ocrSubmitBtn.disabled = true;
     ocrTipText.textContent = `开始识别新增 ${needRec.length} 张票据……`;
 
-    // 遍历每一张，识别完**立刻单条插入表格**，不再等全部识别完统一渲染
+    // 遍历每一张，识别完立刻单条插入表格
     for (const fileItem of needRec) {
         try {
             const res = await fetch(OCR_API_URL, {
@@ -2517,6 +2518,32 @@ ocrSubmitBtn.onclick = async () => {
                 body: JSON.stringify({ imgBase64: fileItem.base64 })
             });
             const json = await res.json();
+
+            // ========== 额度用尽核心判断逻辑 ==========
+            if (json.Response && json.Response.Error) {
+                const errCode = json.Response.Error.Code;
+                // 腾讯云官方2种额度耗尽错误码
+                if (errCode === "ResourcesSoldOut.ChargeStatusException" || errCode === "FailedOperation.ChargeStatusError") {
+                    alert("⚠️ OCR识别额度已全部用尽！\n本月免费额度与资源包余量耗尽，无法继续识别，请联系管理员购买资源包或开启后付费。");
+                    // 直接终止整批识别，解锁按钮
+                    ocrSubmitBtn.disabled = false;
+                    ocrTipText.textContent = "识别终止：额度不足";
+                    return;
+                }
+                // 其他普通识别错误
+                const errItem = {
+                    error: json.Response.Error.Message || '识别失败',
+                    bindUid: fileItem.uid
+                };
+                finishedOcrRecords.push(errItem);
+                fileItem.hasRecognized = true;
+                const currentIdx = finishedOcrRecords.length - 1;
+                insertOcrRow(currentIdx + 1, errItem, currentIdx);
+                refreshAllTableAndSum();
+                continue;
+            }
+
+            // 正常识别成功
             if (json.code === 0 && json.fullData) {
                 const data = parseOcrFullData(json.fullData);
                 // 绑定当前图片唯一ID，用于双向删除
