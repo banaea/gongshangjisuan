@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>票据OCR识别测试</title>
+    <style>
+        body { padding: 30px; font-family: system-ui; max-width: 900px; margin: 0 auto; }
+        .box { margin: 15px 0; }
+        textarea { width: 100%; min-height: 320px; padding: 12px; font-size: 14px; box-sizing: border-box; }
+        button { padding: 10px 22px; cursor: pointer; background: #007bff; color: #fff; border: none; border-radius: 4px; }
+        input[type="file"] { padding: 8px; }
+        #preview { max-width: 320px; margin:10px 0; border:1px solid #eee; }
+    </style>
+</head>
+<body>
+    <h2>医疗票据OCR在线识别</h2>
+
+    <div class="box">
+        <input type="file" id="imgFile" accept="image/png,image/jpg,image/jpeg">
+        <br>
+        <img id="preview" />
+    </div>
+
+    <div class="box">
+        <button id="sendBtn">提交识别</button>
+    </div>
+
+    <div class="box">
+        <h4>接口返回结果：</h4>
+        <textarea id="result" readonly></textarea>
+    </div>
+
+<script>
+// 云函数固定URL
+const API_URL = "https://1344130555-ksmev0r7qw.ap-beijing.tencentscf.com";
+
+// 图片预览 + 转Base64
+let base64Str = "";
+const fileInput = document.getElementById('imgFile');
+const previewImg = document.getElementById('preview');
+const resultText = document.getElementById('result');
+
+fileInput.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function(ev) {
+        previewImg.src = ev.target.result;
+        // 去掉base64前缀 data:image/xxx;base64,
+        base64Str = ev.target.result.split(',')[1];
+        resultText.value = "";
+    }
+}
+
+// 发送请求
+document.getElementById('sendBtn').onclick = async function() {
+    if (!base64Str) {
+        resultText.value = "请先选择一张票据图片";
+        return;
+    }
+    resultText.value = "正在请求云函数识别...";
+    try {
+        const resp = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                imgBase64: base64Str
+            })
+        });
+        const json = await resp.json();
+        resultText.value = JSON.stringify(json, null, 4);
+    } catch (err) {
+        resultText.value = "请求失败：" + err.message;
+    }
+}
+</script>
+</body>
+</html>
