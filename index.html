@@ -2588,6 +2588,7 @@ ocrSubmitBtn.onclick = async () => {
 };
 
 // OCR字段解析
+// OCR字段解析【已修复：就诊日期 ↔ 开票日期 互换】
 function parseOcrFullData(raw) {
     const info = raw.MedicalInvoiceInfos || [];
     const res = {
@@ -2609,23 +2610,36 @@ function parseOcrFullData(raw) {
             switch (item.Name) {
                 case "票据号码": case "发票号码": case "票据编号":
                     res.invoiceNo = item.Content.trim(); break;
-                case "交款人": res.payerName = item.Content; break;
-                case "就诊日期": res.visitDate = item.Content; break;
-                case "住院日期": res.inHospitalDate = item.Content; break;
-                case "开票日期": res.makeOutDate = item.Content; break;
-                case "总金额": res.totalMoney = item.Content; break;
-                case "医保统筹基金支付": res.medicareFundPay = item.Content; break;
+                case "交款人": 
+                    res.payerName = item.Content; 
+                    break;
+                // 核心修复：接口返回的「就诊日期」实际是开票日期，「开票日期」实际是就诊日期，强制互换
+                case "就诊日期": 
+                    res.makeOutDate = item.Content; 
+                    break;
+                case "住院日期": 
+                    res.inHospitalDate = item.Content; 
+                    break;
+                case "开票日期": 
+                    res.visitDate = item.Content; 
+                    break;
+                case "总金额": 
+                    res.totalMoney = item.Content; 
+                    break;
+                case "医保统筹基金支付": 
+                    res.medicareFundPay = item.Content; 
+                    break;
                 case "发票类型":
                     if (item.Content.includes("住院")) res.billType = "inpatient";
                     break;
             }
         }
     }
-    // 住院票据强制使用住院日期展示
+    // 住院票据依然沿用住院日期作为就诊展示，不受互换影响
     if (res.billType === "inpatient" && res.inHospitalDate) {
         res.visitDate = res.inHospitalDate;
     }
-    // 存储原始数据
+    // 存储原始正本数据用于重复票据归零逻辑
     res.originBillType = res.billType;
     res.originTotal = res.totalMoney;
     res.originMedicare = res.medicareFundPay;
