@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V4.2.0 稳定版</title>
+    <title>全国工伤赔偿计算器 V5.0.0 20260709</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,7 +18,7 @@
         .header { text-align: center; margin-bottom: 30px; }
         .header h1 { font-size: 28px; color: #1a56db; margin-bottom: 8px; }
         .header p { color: #6b7280; font-size: 14px; }
-
+    
         .card {
             background: #fff;
             border-radius: 12px;
@@ -50,7 +50,7 @@
             transition: background 0.2s;
         }
         .export-btn:hover { background: #1e40af; }
-
+    
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -108,7 +108,7 @@
         }
         .checkbox-item input { width: 16px; height: 16px; }
         .checkbox-item label { margin: 0; font-size: 14px; color: #4b5563; }
-
+    
         .salary-note {
             background: #eff6ff;
             border-left: 3px solid #1a56db;
@@ -118,9 +118,10 @@
             color: #1e40af;
             border-radius: 0 6px 6px 0;
         }
-
+    
         .detail-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             font-size: 13px;
             margin-top: 10px;
@@ -131,43 +132,82 @@
             border-bottom: 1px solid #e5e7eb;
             vertical-align: top;
         }
+        /* 所有表头统一居中 */
         .detail-table th {
             background: #f9fafb;
             font-weight: 600;
             color: #374151;
             position: sticky;
             top: 0;
+            text-align: center;
         }
-        .item-name { font-weight: 600; color: #111827; min-width: 160px; }
-        .legal-basis { font-size: 12px; color: #6b7280; line-height: 1.5; }
-        .legal-basis .basis-title {
-            font-weight: 600;
-            color: #1a56db;
-            display: block;
-            margin-bottom: 2px;
-        }
-        .formula {
-            font-family: Consolas, Monaco, monospace;
-            font-size: 12px;
-            color: #047857;
-            background: #ecfdf5;
-            padding: 4px 6px;
-            border-radius: 4px;
-            display: inline-block;
-        }
-        .process { font-size: 12px; color: #4b5563; line-height: 1.8; }
-        .payer { font-size: 12px; font-weight: 500; }
-        .payer-social { color: #047857; }
-        .payer-company { color: #dc2626; }
-        .amount {
-            font-weight: 600;
-            color: #111827;
-            text-align: right;
-            font-size: 14px;
-            min-width: 100px;
-        }
-        .amount .unit { font-size: 11px; font-weight: normal; color: #6b7280; }
 
+
+
+
+
+        /* ========== 统一6列宽度（严格按比例分配，表头+数据行同步生效） ========== */
+/* 第1列：赔偿项目 */
+.detail-table th:nth-child(1), .detail-table td:nth-child(1) { width: 17%; }
+/* 第2列：法律依据 */
+.detail-table th:nth-child(2), .detail-table td:nth-child(2) { width: 28%; }
+/* 第3列：计算公式 */
+.detail-table th:nth-child(3), .detail-table td:nth-child(3) { width: 13%; }
+/* 第4列：计算过程 */
+.detail-table th:nth-child(4), .detail-table td:nth-child(4) { width: 27%; }
+/* 第5列：支付主体 */
+.detail-table th:nth-child(5), .detail-table td:nth-child(5) { width: 7%; }
+/* 第6列：金额 */
+.detail-table th:nth-child(6), .detail-table td:nth-child(6) { width: 8%; }
+
+/* 赔偿项目列样式 */
+.item-name { font-weight: 600; color: #111827; min-width: 140px; }
+/* 法律依据列样式 */
+.legal-basis { 
+    font-size: 12px; 
+    color: #6b7280; 
+    line-height: 1.5;
+    word-break: break-word;
+}
+.legal-basis .basis-title {
+    font-weight: 600;
+    color: #1a56db;
+    display: block;
+    margin-bottom: 2px;
+}
+.formula {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+    color: #047857;
+    background: #ecfdf5;
+    padding: 4px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+.process { font-size: 12px; color: #4b5563; line-height: 1.8; }
+/* 支付主体列样式 */
+.payer { 
+    font-size: 12px; 
+    font-weight: 500;
+    text-align: center !important;
+}
+.payer-social { color: #047857; }
+.payer-company { color: #dc2626; }
+/* 金额列样式 */
+.amount {
+    font-weight: 600;
+    color: #111827;
+    text-align: right !important;
+    font-size: 14px;
+    padding-right: 10px;
+}
+
+
+
+
+
+        .amount .unit { font-size: 11px; font-weight: normal; color: #6b7280; }
+    
         .total-row {
             background: #f0f9ff;
             font-weight: 700;
@@ -180,7 +220,7 @@
             background: #eff6ff;
             font-size: 15px;
         }
-
+    
         .tip {
             font-size: 12px;
             color: #6b7280;
@@ -189,6 +229,23 @@
             background: #f9fafb;
             padding: 12px;
             border-radius: 8px;
+        }
+    
+        /* 双行项目浅蓝色横向分组边框样式 */
+        .bonus-group-row td {
+            background-color: #f9fafb;
+        }
+        .bonus-group-row.first td {
+            border-top: 2px solid #60a5fa;
+            padding-top: 16px;
+        }
+        .bonus-group-row.last td {
+            border-bottom: 2px solid #60a5fa;
+            padding-bottom: 16px;
+        }
+        /* 第一个分组顶部保持默认间距，避免和表头距离过大 */
+        tbody tr:first-child.bonus-group-row.first td {
+            padding-top: 12px;
         }
     </style>
 </head>
@@ -317,6 +374,161 @@
                     </div>
                 </div>
             </div>
+            <!-- 新增：医疗票据批量OCR识别模块 -->
+<!-- 新增：医疗票据批量OCR识别模块 -->
+<div class="form-group">
+    <div class="group-title">医疗票据OCR批量识别</div>
+    <style>
+        /* 本模块局部样式，不污染全局原有页面 */
+        .ocr-drop-box{
+            border:2px dashed #d1d5db;
+            border-radius:8px;
+            padding:24px 16px;
+            text-align:center;
+            background:#f9fafb;
+            transition:0.2s;
+            cursor:pointer;
+        }
+        .ocr-drop-box.drag-hover{
+            border-color:#1a56db;
+            background:#eff6ff;
+        }
+        #ocrFileInput{display:none;}
+        .ocr-preview-wrap{
+            display:flex;
+            flex-wrap:wrap;
+            gap:12px;
+            margin:16px 0;
+        }
+        .ocr-preview-item{
+            width:110px;
+            position:relative;
+            border:1px solid #e5e7eb;
+            background:#fff;
+            padding:4px;
+            border-radius:4px;
+        }
+        .ocr-preview-item img{
+            width:100px;
+            height:auto;
+            display:block;
+        }
+        .ocr-preview-item .del-btn{
+            position:absolute;
+            right:-6px;
+            top:-6px;
+            width:20px;
+            height:20px;
+            border-radius:50%;
+            background:#ef4444;
+            color:#fff;
+            border:none;
+            font-size:12px;
+            cursor:pointer;
+            line-height:18px;
+            padding:0;
+        }
+        .ocr-btn{
+            padding:8px 18px;
+            background:#1a56db;
+            color:#fff;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:14px;
+        }
+        .ocr-btn:disabled{
+            background:#9ca3af;
+            cursor:not-allowed;
+        }
+        .ocr-tip{
+            margin-left:12px;
+            font-size:13px;
+            color:#6b7280;
+        }
+        .ocr-table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:14px;
+            font-size:13px;
+        }
+        .ocr-table th,.ocr-table td{
+            border:1px solid #e5e7eb;
+            padding:9px 6px;
+            text-align:center;
+        }
+        .ocr-table th{
+            background:#f3f4f6;
+        }
+        .ocr-total-row{
+            background:#f0f9ff;
+            font-weight:600;
+        }
+.table-del-btn{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#ef4444;
+    color:#fff;
+    border:none;
+    font-size:14px;
+    cursor:pointer;
+    line-height:20px;
+    padding:0;
+}
+.table-del-btn:hover{
+    background:#dc2626;
+}
+
+
+    </style>
+
+    <!-- 拖拽+选择上传区域 -->
+    <div class="ocr-drop-box" id="ocrDropArea">
+        <p>点击选择图片 / 直接拖拽多张票据图片到此处上传</p>
+        <button class="ocr-btn" id="ocrSelectBtn">选择票据图片</button>
+        <input type="file" id="ocrFileInput" multiple accept="image/png,image/jpeg,image/jpg">
+    </div>
+
+    <!-- 缩略预览区域 -->
+    <div class="ocr-preview-wrap" id="ocrPreviewBox"></div>
+
+    <!-- 提交按钮+提示 -->
+    <div style="margin:12px 0;">
+        <button class="ocr-btn" id="ocrSubmitBtn" disabled>批量提交识别</button>
+        <span class="ocr-tip" id="ocrTipText"></span>
+    </div>
+
+    <!-- 识别结果表格 -->
+    <!-- 识别结果表格 -->
+    <table class="ocr-table" id="ocrResultTable">
+        <thead>
+            <tr>
+                <th>序号</th>
+                <th>票据号码</th>
+                <th>票据类型</th>
+                <th>患者姓名</th>
+                <th>就诊/住院日期</th>
+                <th>开票日期</th>
+                <th>总金额(元)</th>
+                <th>医保统筹支付(元)</th>
+                <th>删除</th>
+            </tr>
+        </thead>
+        <tbody id="ocrTableBody"></tbody>
+        <!-- 合计行 精准跨6列，剩下两列分别对应总金额、医保 -->
+        <tfoot>
+            <tr class="ocr-total-row">
+                <td colspan="6">本批票据合计</td>
+                <td id="sumTotalMoney">0.00</td>
+                <td id="sumMedicareMoney">0.00</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+
 
             <!-- 第三组：医疗费信息 -->
             <div class="form-group">
@@ -397,7 +609,7 @@
                         <th>计算公式</th>
                         <th>计算过程</th>
                         <th>支付主体</th>
-                        <th style="text-align:right;">金额</th>
+                        <th>金额</th>
                     </tr>
                 </thead>
                 <tbody id="resultBody"></tbody>
@@ -508,7 +720,7 @@
                 baseType: "avg_salary",
                 medical: {5:30, 6:25, 7:10, 8:7, 9:4, 10:2},
                 employment: {5:30, 6:25, 7:10, 8:7, 9:4, 10:2},
-                reduction: "employment", reductionRate: 0.2, minRatio: 0,
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
                 defaultAvg: 8433, odAdd: null,
                 legalBasis: [
                     {title:"《浙江省工伤保险条例》第27条", text:"医疗补助金全额支付不递减；就业补助金距退休不足5年每满一周年递减20%。达到退休年龄的，不享受两项补助金。"}
@@ -519,7 +731,7 @@
                 baseType: "avg_salary",
                 medical: {5:24, 6:18, 7:10, 8:8, 9:6, 10:4},
                 employment: {5:40, 6:34, 7:20, 8:15, 9:10, 10:5},
-                reduction: "employment", reductionRate: 0.1, minRatio: 0.3,
+                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
                 defaultAvg: 7999, odAdd: null,
                 legalBasis: [
                     {title:"《安徽省实施〈工伤保险条例〉办法》第26条", text:"就业补助金距退休不足5年逐年递减10%，不足1年按30%支付。达到退休年龄的，不予支付两项补助金。"}
@@ -543,18 +755,20 @@
                 ],
                 desc: "按预期寿命与年龄差动态计算月数（不满1年按1年算），设最低保底；职业病医疗补助金增发30%；距退休不足5年两项补助金均递减（最低10%），退休后两项均不予支付"
             },
-            "江西省": {
-                baseType: "personal_salary",
-                medical: {5:21, 6:18, 7:14, 8:11, 9:8, 10:5},
-                employment: {5:32, 6:28, 7:25, 8:21, 9:17, 10:13},
-                reduction: "both", reductionRate: 0.1, minRatio: 0.5,
-                defaultAvg: 6525,
-                odAdd: { type: "ratio", target: "medical", value: 0.3 },
-                legalBasis: [
-                    {title:"《江西省实施〈工伤保险条例〉办法》第22条", text:"距法定退休年龄不足5年的两项补助金每差1年扣减10%。确诊职业病的，一次性工伤医疗补助金增发30%。达到退休年龄的，不享受两项补助金。"}
-                ],
-                desc: "以本人工资为基数，两项同步递减，每差1年扣10%；职业病一次性医疗补助金增发30%，退休后不予支付"
-            },
+                "江西省": {
+                    baseType: "personal_salary",
+                    medicalBase: "personal_salary",
+                    employmentBase: "personal_salary",
+                    medical: {5:21, 6:18, 7:14, 8:11, 9:8, 10:5},
+                    employment: {5:32, 6:28, 7:18, 8:13, 9:9, 10:6},
+                    reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                    defaultAvg: 6525,
+                    odAdd: { type: "ratio", target: "medical", value: 0.3 },
+                    legalBasis: [
+                        {title:"《江西省实施〈工伤保险条例〉办法》（2023修订）第22条", text:"两项补助金均以本人工资为基数。距法定退休年龄不足五年的，仅一次性伤残就业补助金按年限递减：不足1年按10%、满1年不足2年按20%、满2年不足3年按40%、满3年不足4年按60%、满4年不足5年按80%。患职业病的，一次性工伤医疗补助金增发30%。达到退休年龄的，不支付一次性伤残就业补助金。"}
+                    ],
+                    desc: "以本人工资为基数；仅就业补助金按距退休年限分五档递减，最低10%；职业病医疗补助金增发30%；退休后就业补助金不予支付"
+                },
 
             // 华南地区
             "广东省": {
@@ -600,7 +814,8 @@
                 medical: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
                 employment: {5:56, 6:46, 7:36, 8:26, 9:16, 10:6},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
-                defaultAvg: 7183, odAdd: null,
+                defaultAvg: 7183,
+                odAdd: { type: "ratio", target: "medical", value: 0.3 },
                 legalBasis: [
                     {title:"《河南省工伤保险条例》第27条", text:"就业补助金距退休不足五年递减，不足一年按10%支付。达到退休年龄的，不予支付两项补助金。"}
                 ],
@@ -610,7 +825,7 @@
                 baseType: "avg_salary",
                 medical: {5:18, 6:16, 7:14, 8:12, 9:10, 10:8},
                 employment: {5:34, 6:28, 7:20, 8:16, 9:12, 10:8},
-                reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
+                reduction: "both", reductionRate: 0.2, minRatio: 0.1,
                 defaultAvg: 6948, odAdd: null,
                 legalBasis: [
                     {title:"《湖北省工伤保险实施办法》第36条", text:"就业补助金距退休不足5年递减，不足1年按10%支付。达到退休年龄的，两项均不予支付。"}
@@ -619,9 +834,11 @@
             },
             "湖南省": {
                 baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:24, 6:18, 7:15, 8:10, 9:8, 10:6},
                 employment: {5:36, 6:30, 7:15, 8:10, 9:8, 10:6},
-                reduction: "both", reductionRate: 0.1, minRatio: 0.5,
+                reduction: "employment", reductionRate: 0.1, minRatio: 0.5,
                 defaultAvg: 6711, odAdd: null,
                 legalBasis: [
                     {title:"《湖南省实施〈工伤保险条例〉办法》第23条", text:"距退休不足5年的两项补助金每减少1年递减10%。达到退休年龄的，不予支付。"}
@@ -643,6 +860,8 @@
             },
             "山西省": {
                 baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:36, 6:33, 7:24, 8:21, 9:18, 10:15},
                 employment: {5:24, 6:21, 7:15, 8:12, 9:9, 10:6},
                 reduction: "both", reductionRate: 0.1, minRatio: 0.5,
@@ -679,7 +898,9 @@
                 desc: "医疗补助金固定不递减，仅就业补助金递减，退休后两项均不予支付"
             },
             "吉林省": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
                 employment: {5:16, 6:14, 7:11, 8:9, 9:7, 10:5},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
@@ -692,6 +913,8 @@
             },
             "黑龙江省": {
                 baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:30, 6:25, 7:20, 8:15, 9:10, 10:5},
                 employment: {5:16, 6:14, 7:12, 8:10, 9:8, 10:6},
                 reduction: "employment", reductionRate: 0.2, minRatio: 0.1,
@@ -717,7 +940,10 @@
             },
             "贵州省": {
                 baseType: "guizhou_special",
-                medicalFixed: {5:36, 6:26, 7:12, 8:9, 9:6, 10:3},
+                medicalLimits: {
+                    5: {max:36}, 6: {max:26}, 7: {max:12},
+                    8: {max:9}, 9: {max:6}, 10: {max:3}
+                },
                 employmentLimits: {
                     5: {max:36, min:11},
                     6: {max:26, min:8},
@@ -770,7 +996,9 @@
                 desc: "两项补助金同步递减，最低10%，退休后不予支付"
             },
             "甘肃省": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
                 employment: {5:18, 6:16, 7:13, 8:11, 9:9, 10:7},
                 reduction: "both", reductionRate: 0.2, minRatio: 0.1,
@@ -781,7 +1009,9 @@
                 desc: "两项补助金同步递减，最低10%，退休后不予支付"
             },
             "青海省": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:15, 6:13, 7:11, 8:9, 9:7, 10:5},
                 employment: {5:15, 6:13, 7:11, 8:9, 9:7, 10:5},
                 reduction: "both", reductionRate: 0.2, minRatio: 0.1,
@@ -792,7 +1022,9 @@
                 desc: "两项补助金同步递减，最低10%，退休后不予支付"
             },
             "宁夏回族自治区": {
-                baseType: "avg_salary",
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
                 medical: {5:22, 6:19, 7:15, 8:12, 9:9, 10:6},
                 employment: {5:22, 6:19, 7:15, 8:12, 9:9, 10:6},
                 reduction: "both", reductionRate: 0.2, minRatio: 0.1,
@@ -913,7 +1145,6 @@
         }
 
         // 计算两个日期的月差（仅用于核算逻辑，保留原政策口径）
-        // 计算两个日期的整月差（向下取整，兼容YYYY-MM和YYYY-MM-DD两种格式）
         function getMonthDiff(startStr, endStr) {
             if (!startStr || !endStr) return 0;
             const startParts = startStr.split('-').map(Number);
@@ -924,7 +1155,6 @@
             if (isNaN(sy) || isNaN(sm) || isNaN(ey) || isNaN(em)) return 0;
     
             let months = (ey * 12 + em) - (sy * 12 + sm);
-            // 结束日小于开始日，说明不足一个整月，月份数减1
             if (ed < sd) {
                 months--;
             }
@@ -991,7 +1221,6 @@
             const [birthYear, birthMonth, birthDay] = birthStr.split('-').map(Number);
             const birthDate = new Date(birthYear, birthMonth - 1, birthDay || 1);
 
-            // 原法定退休年龄（月）
             let baseRetireAgeMonths;
             if (gender === '男') {
                 baseRetireAgeMonths = 60 * 12;
@@ -1003,11 +1232,9 @@
                 }
             }
 
-            // 原退休日期：出生日 + 退休年龄月数
             const originalRetire = new Date(birthDate);
             originalRetire.setMonth(originalRetire.getMonth() + baseRetireAgeMonths);
 
-            // 不启用延迟退休
             if (!useDelay) {
                 const y = originalRetire.getFullYear();
                 const m = String(originalRetire.getMonth() + 1).padStart(2, '0');
@@ -1019,7 +1246,6 @@
                 };
             }
 
-            // 渐进式延迟退休规则
             let stepMonths, maxDelayMonths;
             if (gender === '男') {
                 stepMonths = 4;
@@ -1043,7 +1269,6 @@
                 delayMonths = Math.min(delayMonths, maxDelayMonths);
             }
 
-            // 最终退休日期
             const finalRetire = new Date(originalRetire);
             finalRetire.setMonth(finalRetire.getMonth() + delayMonths);
             
@@ -1067,6 +1292,18 @@
             let ratio = 1 - reduceYears * (std.reductionRate || 0.2);
             ratio = Math.max(ratio, std.minRatio || 0.1);
             return Math.max(0, Math.min(1, ratio));
+        }
+
+        // 三组一次性补助金单选全局联动
+        function syncAllBonusTypes(type) {
+            const targets = [
+                document.querySelector(`input[name="disBonusType"][value="${type}"]`),
+                document.querySelector(`input[name="medicalBonusType"][value="${type}"]`),
+                document.querySelector(`input[name="employmentBonusType"][value="${type}"]`)
+            ];
+            targets.forEach(radio => {
+                if (radio) radio.checked = true;
+            });
         }
 
         // ===================== 页面交互函数 =====================
@@ -1239,7 +1476,7 @@
         }
 
         // ===================== 补助金核心计算 =====================
-        function calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireCalcStr) {
+        function calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireCalcStr, isActualVersion = false) {
             // 1. 达到退休年龄直接归零
             if (yearsToRetire <= 0) {
                 return {
@@ -1335,11 +1572,23 @@
 
             // 贵州特殊模式
             if (std.baseType === "guizhou_special") {
-                const medMonths = std.medicalFixed[level] || 0;
+                const medLimits = std.medicalLimits[level] || { max: 0, min: 0 };
+                let medMonths;
+                let medicalProcess;
+                if (monthsToRetire >= medLimits.max) {
+                    medMonths = medLimits.max;
+                    medicalProcess = `距退休剩余 ${monthsToRetire} 个月 ≥ 最高 ${medLimits.max} 个月<br>按最高月数计发：${medMonths} 个月`;
+                } else if (monthsToRetire <= 0) {
+                    medMonths = 0;
+                    medicalProcess = `已达到法定退休年龄，不享受一次性工伤医疗补助金`;
+                } else {
+                    medMonths = monthsToRetire;
+                    medicalProcess = `距退休剩余 ${monthsToRetire} 个月<br>在上下限之间，按实际剩余月数计发`;
+                }
                 const medicalAmount = avgSalary * medMonths;
-                const medicalFormula = `全市社平工资 × ${medMonths}个月`;
-                const medicalProcess = `${fmt(avgSalary)} 元 × ${medMonths} 个月<br><span style="color:#16a34a;">贵州法定固定标准，不随年龄递减，无职业病增发</span>
-                <br><span style="color:#d97706; font-weight:bold;">⚠️ 贵州省一次性医疗补助金固定月数，不执行年龄递减</span>`;
+                const medicalFormula = `全市社平工资 × 计发月数（封顶保底）`;
+                medicalProcess += `<br>最终金额：${fmt(avgSalary)} × ${medMonths} = ${fmt(medicalAmount)} 元
+                <br><span style="color:#d97706; font-weight:bold;">⚠️ 贵州省医疗补助金按剩余退休月数动态核算，设置上限封顶，非常规固定月数</span>`;
                 const limits = std.employmentLimits[level] || { max: 0, min: 0 };
                 let empMonths;
                 let employmentProcess;
@@ -1441,6 +1690,28 @@
             let baseMedValue = (std.medical && std.medical[level]) || 0;
             let baseEmpValue = (std.employment && std.employment[level]) || 0;
 
+            // 辽宁专属逻辑
+            if (province === "辽宁省") {
+                medRatio = 1;
+                const fullYears = Math.floor(yearsToRetire);
+                let reduceMonths = 0;
+                if (yearsToRetire >= 5) {
+                    reduceMonths = 0;
+                } else if (yearsToRetire >= 4) {
+                    reduceMonths = 2;
+                } else if (yearsToRetire >= 3) {
+                    reduceMonths = 4;
+                } else if (yearsToRetire >= 2) {
+                    reduceMonths = 6;
+                } else if (yearsToRetire > 0) {
+                    reduceMonths = 7;
+                } else {
+                    reduceMonths = baseEmpValue;
+                }
+                const finalEmpMonths = Math.max(0, baseEmpValue - reduceMonths);
+                empRatio = baseEmpValue > 0 ? finalEmpMonths / baseEmpValue : 0;
+            }
+
             let odRateMed = 1;
             let odRateEmp = 1;
             let odAddTextMed = "";
@@ -1460,12 +1731,8 @@
                     }
                 }
                 else if (std.odAdd.type === "month" && std.odAdd.target === "medical") {
-                    if (level === 5 || level === 6) {
-                        baseMedValue = baseMedValue + std.odAdd.value;
-                        odAddTextMed = `<br><span style="color:#d97706;">职业病5/6级医疗补助金额外增发${std.odAdd.value}个月</span>`;
-                    } else {
-                        odAddTextMed = `<br><span style="color:#d97706;">本省7~10级职业病无额外增发</span>`;
-                    }
+                    baseMedValue = baseMedValue + std.odAdd.value;
+                    odAddTextMed = `<br><span style="color:#d97706;">⚠️ 职业病工伤医疗补助金增发${std.odAdd.value}个月</span>`;
                 }
             }
 
@@ -1519,8 +1786,8 @@
                 employmentFormula = `计算基数 × 月数 × 递减比例`;
 
                 let medTipHtml = "";
-                if (province === "广东省") {
-                    medTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与一次性伤残补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                if (province === "广东省" && !isActualVersion) {
+                    medTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与一次性伤残补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>`;
                 }
                 let medReduceTip = '';
                 if(medRatio !== 1){
@@ -1529,8 +1796,8 @@
                 medicalProcess = `${fmt(medicalBase)} 元 × ${baseMedValue} 个月 × ${(medRatio*100).toFixed(0)}% × ${odRateMed.toFixed(2)}${odAddTextMed}<br> = ${fmt(medicalBase)} × ${medicalMonthTotal.toFixed(2)} = ${fmt(medicalAmount)} 元${medTipHtml}${medReduceTip}`;
 
                 let empTipHtml = "";
-                if (province === "广东省") {
-                    empTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与另外两项一次性补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                if (province === "广东省" && !isActualVersion) {
+                    empTipHtml = `<br><span style="color:#d97706;">⚠️ 广东口径：本基数与另外两项一次性补助金基数上下限核定规则完全统一，本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>`;
                 }
                 let empReduceTip = '';
                 if(empRatio !== 1){
@@ -1590,7 +1857,6 @@
 
                 // 退休时间
                 const retireInfo = calcRetireDate(birthStr, gender, postType, useDelay);
-                // 核算用月差（保留原政策口径）
                 const monthsToRetire = getMonthDiff(calcDateStr, retireInfo.retireDateStr);
                 const yearsToRetire = monthsToRetire / 12;
 
@@ -1613,32 +1879,13 @@
                 const baseSalary = Math.min(Math.max(salary, minBase), maxBase);
 
                 // 1. 一次性伤残补助金
-                //let disBonus = 0;
-                //let disBonusProcess = '';
-                //if (level === 0) {
-                //    disBonusProcess = '未达到伤残等级，该项目无需计算';
-                //} else {
-                //    const disBonusMonths = DISABILITY_BONUS_MONTHS[level] || 0;
-                //    disBonus = baseSalary * disBonusMonths;
-                //    disBonusProcess = `原始缴费工资：${fmt(salary)} 元，上下限基准社平：${fmt(avgSalary)} 元
-                //    保底下限：${fmt(minBase)} 元（社平60%），封顶上限：${fmt(maxBase)} 元（社平300%）
-                //    核定计发基数：${fmt(baseSalary)} 元 × ${disBonusMonths} 个月`;
-                //    if (salary < minBase && avgSalary > 0) {
-                //        disBonusProcess += `<br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
-                //    } else if (salary > maxBase && avgSalary > 0) {
-                //        disBonusProcess += `<br><span style="color:#d97706;">⚠️ 本人工资高于社平工资300%的，按封顶基数社平工资的300%计算</span>`;
-                //    }
-                //}
-
-                // 1. 一次性伤残补助金
-                let disBonusStandard = 0; // 法定标准（社平60%保底/300%封顶）
-                let disBonusActual = 0;   // 按本人实际工资计算
+                let disBonusStandard = 0;
+                let disBonusActual = 0;
                 let disBonusProcessStandard = '';
                 let disBonusProcessActual = '';
-                let isBelow60Percent = false; // 是否低于社平60%
-                let selectedDisBonusType = 'actual'; // 默认选中实际工资版本
+                let isBelow60Percent = false;
+                let selectedDisBonusType = 'actual';
 
-                // 读取当前单选选中状态，保留用户切换后的选择
                 const selectedRadio = document.querySelector('input[name="disBonusType"]:checked');
                 if (selectedRadio) {
                     selectedDisBonusType = selectedRadio.value;
@@ -1654,13 +1901,12 @@
                     isBelow60Percent = salary < minBase && avgSalary > 0;
 
                     disBonusProcessStandard = `法定计发基数（社平60%保底）：${fmt(baseSalary)} 元 × ${disBonusMonths} 个月
-                    <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按保底基数社平工资的60%计算</span>`;
+                    <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>`;
 
                     disBonusProcessActual = `本人实际月工资：${fmt(salary)} 元 × ${disBonusMonths} 个月
                     <br><span style="color:#d97706;">⚠️ 本人工资低于社平工资60%，本条按实际工资核算，供与客户沟通参考（首选）</span>`;
                 }
 
-                // 最终计入合计的伤残补助金金额（与单选选中结果联动）
                 const disBonus = selectedDisBonusType === 'standard' ? disBonusStandard : disBonusActual;
 
                 // 2. 1-4级伤残津贴
@@ -1710,8 +1956,31 @@
                     </tr>`;
                 }
 
-                // 3. 医疗+就业补助金
-                const me = calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireInfo.retireDateStr);
+                // 3. 医疗+就业补助金（双版本核算）
+                const meStandard = calcMedicalAndEmployment(province, std, level, avgSalary, baseSalary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireInfo.retireDateStr, false);
+                const meActual = calcMedicalAndEmployment(province, std, level, avgSalary, salary, monthsToRetire, yearsToRetire, isOD, isResigned, birthStr, calcDateStr, retireInfo.retireDateStr, true);
+
+                // 判断两项补助金是否为本人工资基数
+                const isMedicalPersonalBase = std.medicalBase === "personal_salary" || province === "广东省";
+                const isEmploymentPersonalBase = std.employmentBase === "personal_salary" || province === "广东省";
+
+                // 读取医疗补助金单选状态
+                let selectedMedicalType = 'actual';
+                const selectedMedicalRadio = document.querySelector('input[name="medicalBonusType"]:checked');
+                if (selectedMedicalRadio) selectedMedicalType = selectedMedicalRadio.value;
+
+                // 读取就业补助金单选状态
+                let selectedEmploymentType = 'actual';
+                const selectedEmploymentRadio = document.querySelector('input[name="employmentBonusType"]:checked');
+                if (selectedEmploymentRadio) selectedEmploymentType = selectedEmploymentRadio.value;
+
+                // 最终计入合计的金额（与单选联动）
+                const finalMedical = (isMedicalPersonalBase && isBelow60Percent && level >= 5 && isResigned)
+                    ? (selectedMedicalType === 'standard' ? meStandard.medical : meActual.medical)
+                    : meStandard.medical;
+                const finalEmployment = (isEmploymentPersonalBase && isBelow60Percent && level >= 5 && isResigned)
+                    ? (selectedEmploymentType === 'standard' ? meStandard.employment : meActual.employment)
+                    : meStandard.employment;
 
                 // 4. 停工留薪期工资
                 const actualStopDays = Math.max(0, stopDays - deductDays);
@@ -1722,8 +1991,8 @@
                 const medPayable = Math.max(0, (medTotal - medReimbursed - selfPayNonMed - medDeductible) * medRatio);
 
                 // 汇总金额
-                const socialTotal = disBonus + me.medical + medPayable + allowanceTotal;
-                const companyTotal = me.employment + stopWorkPay;
+                const socialTotal = disBonus + finalMedical + medPayable + allowanceTotal;
+                const companyTotal = finalEmployment + stopWorkPay;
                 const grandTotal = socialTotal + companyTotal;
 
                 // 渲染表格
@@ -1732,9 +2001,9 @@
                 
                 tbody.innerHTML = `
                     ${isBelow60Percent && level > 0 ? `
-                    <tr>
+                    <tr class="bonus-group-row first">
                         <td class="item-name" style="padding-left: 8px;">
-                            <input type="radio" name="disBonusType" value="actual" ${selectedDisBonusType === 'actual' ? 'checked' : ''} onchange="calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            <input type="radio" name="disBonusType" value="actual" ${selectedDisBonusType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
                             一次性伤残补助金（按本人实际工资）
                         </td>
                         <td class="legal-basis">
@@ -1746,9 +2015,9 @@
                         <td class="payer payer-social">社保基金</td>
                         <td class="amount">${fmt(disBonusActual)}</td>
                     </tr>
-                    <tr>
+                    <tr class="bonus-group-row last">
                         <td class="item-name" style="padding-left: 8px;">
-                            <input type="radio" name="disBonusType" value="standard" ${selectedDisBonusType === 'standard' ? 'checked' : ''} onchange="calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            <input type="radio" name="disBonusType" value="standard" ${selectedDisBonusType === 'standard' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
                             一次性伤残补助金（法定保底标准）
                         </td>
                         <td class="legal-basis">
@@ -1776,26 +2045,87 @@
 
                     ${allowanceHtml}
 
+                    ${isMedicalPersonalBase && isBelow60Percent && level >= 5 && isResigned ? `
+                    <tr class="bonus-group-row first">
+                        <td class="item-name" style="padding-left: 8px;">
+                            <input type="radio" name="medicalBonusType" value="actual" ${selectedMedicalType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            一次性工伤医疗补助金（按本人实际工资）
+                        </td>
+                        <td class="legal-basis">
+                            <span class="basis-title">实际工资核算参考</span>
+                            按本人实际月工资直接计算，低于法定保底标准，非法定计发口径
+                        </td>
+                        <td><span class="formula">本人实际月工资 × 月数 × 递减比例 × (1+职业病增发比例)</span></td>
+                        <td class="process">${meActual.medicalProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(meActual.medical)}</td>
+                    </tr>
+                    <tr class="bonus-group-row last">
+                        <td class="item-name" style="padding-left: 8px;">
+                            <input type="radio" name="medicalBonusType" value="standard" ${selectedMedicalType === 'standard' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            一次性工伤医疗补助金（法定保底标准）
+                        </td>
+                        <td class="legal-basis">
+                            ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
+                        </td>
+                        <td><span class="formula">${meStandard.medicalFormula}</span></td>
+                        <td class="process">${meStandard.medicalProcess}</td>
+                        <td class="payer payer-social">社保基金</td>
+                        <td class="amount">${fmt(meStandard.medical)}</td>
+                    </tr>
+                    ` : `
                     <tr>
                         <td class="item-name">一次性工伤医疗补助金</td>
                         <td class="legal-basis">
                             ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
                         </td>
-                        <td><span class="formula">${me.medicalFormula}</span></td>
-                        <td class="process">${me.medicalProcess}</td>
+                        <td><span class="formula">${meStandard.medicalFormula}</span></td>
+                        <td class="process">${meStandard.medicalProcess}</td>
                         <td class="payer payer-social">社保基金</td>
-                        <td class="amount">${fmt(me.medical)}</td>
+                        <td class="amount">${fmt(meStandard.medical)}</td>
                     </tr>
+                    `}
+
+                    ${isEmploymentPersonalBase && isBelow60Percent && level >= 5 && isResigned ? `
+                    <tr class="bonus-group-row first">
+                            <td class="item-name" style="padding-left: 8px;">
+                                <input type="radio" name="employmentBonusType" value="actual" ${selectedEmploymentType === 'actual' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                                一次性伤残就业补助金（按本人实际工资）
+                            </td>
+                        <td class="legal-basis">
+                            <span class="basis-title">实际工资核算参考</span>
+                            按本人实际月工资直接计算，低于法定保底标准，非法定计发口径
+                        </td>
+                        <td><span class="formula">本人实际月工资 × 月数 × 递减比例</span></td>
+                        <td class="process">${meActual.employmentProcess}</td>
+                        <td class="payer payer-company">用人单位</td>
+                        <td class="amount">${fmt(meActual.employment)}</td>
+                    </tr>
+                    <tr class="bonus-group-row last">
+                        <td class="item-name" style="padding-left: 8px;">
+                            <input type="radio" name="employmentBonusType" value="standard" ${selectedEmploymentType === 'standard' ? 'checked' : ''} onchange="syncAllBonusTypes(this.value); calculate()" style="margin-right: 8px; vertical-align: middle;">
+                            一次性伤残就业补助金（法定保底标准）
+                        </td>
+                        <td class="legal-basis">
+                            ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
+                        </td>
+                        <td><span class="formula">${meStandard.employmentFormula}</span></td>
+                        <td class="process">${meStandard.employmentProcess}</td>
+                        <td class="payer payer-company">用人单位</td>
+                        <td class="amount">${fmt(meStandard.employment)}</td>
+                    </tr>
+                    ` : `
                     <tr>
                         <td class="item-name">一次性伤残就业补助金</td>
                         <td class="legal-basis">
                             ${std.legalBasis ? std.legalBasis.map(b => `<span class="basis-title">${b.title}</span>${b.text}`).join('') : ''}
                         </td>
-                        <td><span class="formula">${me.employmentFormula}</span></td>
-                        <td class="process">${me.employmentProcess}</td>
+                        <td><span class="formula">${meStandard.employmentFormula}</span></td>
+                        <td class="process">${meStandard.employmentProcess}</td>
                         <td class="payer payer-company">用人单位</td>
-                        <td class="amount">${fmt(me.employment)}</td>
+                        <td class="amount">${fmt(meStandard.employment)}</td>
                     </tr>
+                    `}
                     <tr>
                         <td class="item-name">停工留薪期工资</td>
                         <td class="legal-basis">
@@ -2061,6 +2391,372 @@
             let finalDayWage = Math.min(wageByMonth, policyLimit);
             dailyWageEl.value = finalDayWage.toFixed(2);
         }
+
+
+
+// ========== 票据OCR批量识别逻辑 固定云函数地址 ==========
+// ========== 票据OCR批量识别逻辑 固定云函数地址 【独立模块，仅作用于OCR区域】 ==========
+// ========== 票据OCR批量识别逻辑 固定云函数地址 【独立模块，仅作用于OCR区域】 ==========
+// ========== 票据OCR批量识别逻辑 固定云函数地址 【独立模块，仅作用于OCR区域】 ==========
+// ========== 票据OCR批量识别逻辑 精准单条联动删除+列对齐修复 ==========
+// ========== 票据OCR批量识别 正本轮转转正+单条精准联动删除+列对齐修复 ==========
+// ========== 票据OCR批量识别 单张识别单条即时插入表格+正本自动轮转+精准联动删除 ==========
+// ========== 票据OCR批量识别 单张识别单条即时插入+额度用尽弹窗提示+正本自动轮转+精准联动删除 ==========
+const OCR_API_URL = "https://1344130555-ksmev0r7qw.ap-beijing.tencentscf.com";
+// 待上传图片列表，每条携带唯一uid
+let ocrFileList = [];
+// 已识别记录：每条绑定对应图片uid，存储原始未篡改数据（用于删正本后恢复）
+let finishedOcrRecords = [];
+// 票据号分组：key=票据号码，value=[所有同号记录下标数组]
+let invoiceGroupMap = new Map();
+
+// DOM绑定
+const ocrDropArea = document.getElementById('ocrDropArea');
+const ocrFileInput = document.getElementById('ocrFileInput');
+const ocrSelectBtn = document.getElementById('ocrSelectBtn');
+const ocrPreviewBox = document.getElementById('ocrPreviewBox');
+const ocrSubmitBtn = document.getElementById('ocrSubmitBtn');
+const ocrTipText = document.getElementById('ocrTipText');
+const ocrTableBody = document.getElementById('ocrTableBody');
+const sumTotalMoneyEl = document.getElementById('sumTotalMoney');
+const sumMedicareMoneyEl = document.getElementById('sumMedicareMoney');
+const medicalTotalInput = document.getElementById('medicalTotal');
+const medicalReimbursedInput = document.getElementById('medicalReimbursed');
+
+// 选择文件
+ocrSelectBtn.onclick = () => ocrFileInput.click();
+ocrFileInput.onchange = e => {
+    const files = Array.from(e.target.files);
+    addOcrFiles(files);
+    ocrFileInput.value = '';
+};
+
+// 拖拽上传
+ocrDropArea.ondragover = e => {
+    e.preventDefault();
+    ocrDropArea.classList.add('drag-hover');
+};
+ocrDropArea.ondragleave = () => ocrDropArea.classList.remove('drag-hover');
+ocrDropArea.ondrop = e => {
+    e.preventDefault();
+    ocrDropArea.classList.remove('drag-hover');
+    addOcrFiles(Array.from(e.dataTransfer.files));
+};
+
+// 新增图片，携带唯一UID
+function addOcrFiles(files) {
+    for (const f of files) {
+        if (!f.type.startsWith('image/')) continue;
+        const uid = Date.now() + Math.random();
+        ocrFileList.push({
+            uid: uid,
+            file: f,
+            base64: '',
+            hasRecognized: false
+        });
+    }
+    renderOcrPreview();
+    ocrSubmitBtn.disabled = ocrFileList.length === 0;
+    ocrTipText.textContent = `已选中 ${ocrFileList.length} 张票据`;
+}
+
+// 渲染缩略预览，每条绑定uid
+function renderOcrPreview() {
+    ocrPreviewBox.innerHTML = '';
+    ocrFileList.forEach(item => {
+        const wrap = document.createElement('div');
+        wrap.className = 'ocr-preview-item';
+        wrap.dataset.uid = item.uid;
+
+        const img = document.createElement('img');
+        const reader = new FileReader();
+        reader.onload = ev => {
+            img.src = ev.target.result;
+            item.base64 = ev.target.result.split(',')[1];
+        };
+        reader.readAsDataURL(item.file);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'del-btn';
+        delBtn.textContent = '×';
+        delBtn.onclick = () => {
+            const targetUid = item.uid;
+            // 查找本条对应的识别记录下标
+            const recIndex = finishedOcrRecords.findIndex(r => r.bindUid === targetUid);
+            if (recIndex > -1) {
+                removeRecordAndRebuild(recIndex);
+            }
+            // 从上传列表移除当前单张
+            ocrFileList = ocrFileList.filter(f => f.uid !== targetUid);
+            renderOcrPreview();
+            ocrTipText.textContent = ocrFileList.length ? `已选中 ${ocrFileList.length} 张票据` : '';
+            ocrSubmitBtn.disabled = ocrFileList.length === 0;
+            refreshAllTableAndSum();
+        };
+
+        wrap.append(img, delBtn);
+        ocrPreviewBox.appendChild(wrap);
+    });
+}
+
+// 批量识别
+ocrSubmitBtn.onclick = async () => {
+    const needRec = ocrFileList.filter(item => !item.hasRecognized);
+    if (needRec.length === 0) {
+        ocrTipText.textContent = "没有新增待识别票据，无需重复调用接口";
+        return;
+    }
+    ocrSubmitBtn.disabled = true;
+    ocrTipText.textContent = `开始识别新增 ${needRec.length} 张票据……`;
+
+    // 遍历每一张，识别完立刻单条插入表格
+    for (const fileItem of needRec) {
+        try {
+            const res = await fetch(OCR_API_URL, {
+                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imgBase64: fileItem.base64 })
+            });
+            const json = await res.json();
+
+            // ========== 额度用尽核心判断逻辑 ==========
+            if (json.Response && json.Response.Error) {
+                const errCode = json.Response.Error.Code;
+                // 腾讯云官方2种额度耗尽错误码
+                if (errCode === "ResourcesSoldOut.ChargeStatusException" || errCode === "FailedOperation.ChargeStatusError") {
+                    alert("⚠️ OCR识别额度已全部用尽！\n本月免费额度与资源包余量耗尽，无法继续识别，请联系管理员购买资源包或开启后付费。");
+                    // 直接终止整批识别，解锁按钮
+                    ocrSubmitBtn.disabled = false;
+                    ocrTipText.textContent = "识别终止：额度不足";
+                    return;
+                }
+                // 其他普通识别错误
+                const errItem = {
+                    error: json.Response.Error.Message || '识别失败',
+                    bindUid: fileItem.uid
+                };
+                finishedOcrRecords.push(errItem);
+                fileItem.hasRecognized = true;
+                const currentIdx = finishedOcrRecords.length - 1;
+                insertOcrRow(currentIdx + 1, errItem, currentIdx);
+                refreshAllTableAndSum();
+                continue;
+            }
+
+            // 正常识别成功
+            if (json.code === 0 && json.fullData) {
+                const data = parseOcrFullData(json.fullData);
+                // 绑定当前图片唯一ID，用于双向删除
+                data.bindUid = fileItem.uid;
+                // 保存原始原值，后续转正用
+                data.originBillType = data.billType;
+                data.originTotal = data.totalMoney;
+                data.originMedicare = data.medicareFundPay;
+
+                finishedOcrRecords.push(data);
+                fileItem.hasRecognized = true;
+                // 识别完成直接插入单行表格，实时显示
+                const currentIdx = finishedOcrRecords.length - 1;
+                insertOcrRow(currentIdx + 1, data, currentIdx);
+                // 插入后立刻刷新重复标记与合计
+                refreshAllTableAndSum();
+            } else {
+                const errItem = {
+                    error: json.msg || '识别失败',
+                    bindUid: fileItem.uid
+                };
+                finishedOcrRecords.push(errItem);
+                fileItem.hasRecognized = true;
+                const currentIdx = finishedOcrRecords.length - 1;
+                insertOcrRow(currentIdx + 1, errItem, currentIdx);
+                refreshAllTableAndSum();
+            }
+        } catch {
+            const errItem = {
+                error: '网络请求异常',
+                bindUid: fileItem.uid
+            };
+            finishedOcrRecords.push(errItem);
+            fileItem.hasRecognized = true;
+            const currentIdx = finishedOcrRecords.length - 1;
+            insertOcrRow(currentIdx + 1, errItem, currentIdx);
+            refreshAllTableAndSum();
+        }
+    }
+    ocrTipText.textContent = `本次新增${needRec.length}张，累计已识别${finishedOcrRecords.filter(i=>!i.error).length}张`;
+    ocrSubmitBtn.disabled = false;
+};
+
+// OCR字段解析
+function parseOcrFullData(raw) {
+    const info = raw.MedicalInvoiceInfos || [];
+    const res = {
+        bindUid: "",
+        invoiceNo: "",
+        billType: "outpatient",
+        originBillType: "outpatient",
+        payerName: "",
+        visitDate: "",
+        inHospitalDate: "",
+        makeOutDate: "",
+        totalMoney: "0.00",
+        originTotal: "0.00",
+        medicareFundPay: "0.00",
+        originMedicare: "0.00"
+    };
+    for (const group of info) {
+        for (const item of group.MedicalInvoiceItems || []) {
+            switch (item.Name) {
+                case "票据号码": case "发票号码": case "票据编号":
+                    res.invoiceNo = item.Content.trim(); break;
+                case "交款人": res.payerName = item.Content; break;
+                case "就诊日期": res.visitDate = item.Content; break;
+                case "住院日期": res.inHospitalDate = item.Content; break;
+                case "开票日期": res.makeOutDate = item.Content; break;
+                case "总金额": res.totalMoney = item.Content; break;
+                case "医保统筹基金支付": res.medicareFundPay = item.Content; break;
+                case "发票类型":
+                    if (item.Content.includes("住院")) res.billType = "inpatient";
+                    break;
+            }
+        }
+    }
+    // 住院票据强制使用住院日期展示
+    if (res.billType === "inpatient" && res.inHospitalDate) {
+        res.visitDate = res.inHospitalDate;
+    }
+    // 存储原始数据
+    res.originBillType = res.billType;
+    res.originTotal = res.totalMoney;
+    res.originMedicare = res.medicareFundPay;
+    return res;
+}
+
+// 插入单行表格
+function insertOcrRow(seq, data, idx) {
+    const tr = document.createElement('tr');
+    if (data.error) {
+        tr.innerHTML = `<td>${seq}</td><td colspan="7" style="color:#dc2626">${data.error}</td><td></td>`;
+    } else {
+        const typeText = data.billType === "outpatient" ? "门诊票据"
+            : data.billType === "inpatient" ? "住院票据" : data.billType;
+        tr.innerHTML = `
+            <td>${seq}</td>
+            <td>${data.invoiceNo || '-'}</td>
+            <td>${typeText}</td>
+            <td>${data.payerName}</td>
+            <td>${data.visitDate}</td>
+            <td>${data.makeOutDate}</td>
+            <td>${data.totalMoney}</td>
+            <td>${data.medicareFundPay}</td>
+            <td><button class="table-del-btn" data-rec-idx="${idx}">×</button></td>
+        `;
+    }
+    ocrTableBody.appendChild(tr);
+}
+
+// 核心：删除指定下标记录，并自动同票号组重新分配正本，再刷新页面
+function removeRecordAndRebuild(delIndex) {
+    const delItem = finishedOcrRecords[delIndex];
+    if (!delItem || delItem.error) {
+        finishedOcrRecords.splice(delIndex, 1);
+        return;
+    }
+    const targetNo = delItem.invoiceNo;
+    // 删除本条
+    finishedOcrRecords.splice(delIndex, 1);
+    if (!targetNo) return;
+
+    // 筛选剩余所有同票据号条目
+    const sameGroup = finishedOcrRecords.filter(item => item.invoiceNo === targetNo && !item.error);
+    if (sameGroup.length === 0) return;
+
+    // 组内第一条恢复原始正本数据，其余全部标记重复置0
+    sameGroup.forEach((item, pos) => {
+        if (pos === 0) {
+            item.billType = item.originBillType;
+            item.totalMoney = item.originTotal;
+            item.medicareFundPay = item.originMedicare;
+        } else {
+            item.billType = "重复票据";
+            item.totalMoney = "0.00";
+            item.medicareFundPay = "0.00";
+        }
+    });
+}
+
+// 表格删除按钮点击（单条精准删除+正本自动轮转）
+ocrTableBody.addEventListener('click', e => {
+    const btn = e.target.closest('.table-del-btn');
+    if (!btn) return;
+    const recIdx = Number(btn.dataset.recIdx);
+    const record = finishedOcrRecords[recIdx];
+    if (!record) return;
+
+    // 执行删除+同票组正本重分配
+    removeRecordAndRebuild(recIdx);
+
+    // 根据绑定的唯一UID，精准删除上方对应单张缩略图
+    const targetBindUid = record.bindUid;
+    ocrFileList = ocrFileList.filter(file => file.uid !== targetBindUid);
+
+    // 刷新预览、表格、合计、输入框
+    renderOcrPreview();
+    ocrTipText.textContent = ocrFileList.length ? `已选中 ${ocrFileList.length} 张票据` : '';
+    ocrSubmitBtn.disabled = ocrFileList.length === 0;
+    refreshAllTableAndSum();
+});
+
+// 全局刷新表格与汇总、分组查重赋值正本/重复
+function refreshAllTableAndSum() {
+    ocrTableBody.innerHTML = '';
+    invoiceGroupMap.clear();
+
+    // 1. 按票据号码分组
+    finishedOcrRecords.forEach((item, idx) => {
+        if (item.error || !item.invoiceNo) return;
+        if (!invoiceGroupMap.has(item.invoiceNo)) {
+            invoiceGroupMap.set(item.invoiceNo, []);
+        }
+        invoiceGroupMap.get(item.invoiceNo).push(idx);
+    });
+
+    // 2. 每组第一条设为正本原始数据，后面全部标记重复金额归零
+    invoiceGroupMap.forEach((indexArr) => {
+        indexArr.forEach((recIdx, pos) => {
+            const rec = finishedOcrRecords[recIdx];
+            if (pos === 0) {
+                rec.billType = rec.originBillType;
+                rec.totalMoney = rec.originTotal;
+                rec.medicareFundPay = rec.originMedicare;
+            } else {
+                rec.billType = "重复票据";
+                rec.totalMoney = "0.00";
+                rec.medicareFundPay = "0.00";
+            }
+        });
+    });
+
+    // 3. 渲染表格行
+    finishedOcrRecords.forEach((item, index) => {
+        insertOcrRow(index + 1, item, index);
+    });
+
+    // 4. 计算合计
+    const sumTotal = finishedOcrRecords.reduce((s, i) => {
+        if (i.error) return s;
+        return s + (Number(i.totalMoney) || 0);
+    }, 0);
+    const sumMed = finishedOcrRecords.reduce((s, i) => {
+        if (i.error) return s;
+        return s + (Number(i.medicareFundPay) || 0);
+    }, 0);
+    sumTotalMoneyEl.textContent = sumTotal.toFixed(2);
+    sumMedicareMoneyEl.textContent = sumMed.toFixed(2);
+    medicalTotalInput.value = sumTotal.toFixed(2);
+    medicalReimbursedInput.value = sumMed.toFixed(2);
+    calculate();
+}
     </script>
 </body>
 </html>
