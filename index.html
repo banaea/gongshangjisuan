@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V5.0.0 20260709</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <title>全国工伤赔偿计算器 V5.0.1 20260709</title>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -463,6 +463,13 @@
         .ocr-total-row{
             background:#f0f9ff;
             font-weight:600;
+        }
+        .ocr-table td {
+            cursor: text;
+        }
+        .ocr-table td[contenteditable="true"] {
+            background: #fffef0;
+            outline: 1px solid #1a56db;
         }
 .table-del-btn{
     width:22px;
@@ -2597,9 +2604,9 @@ function parseOcrFullData(raw) {
         billType: "outpatient",
         originBillType: "outpatient",
         payerName: "",
-        visitDate: "",
-        inHospitalDate: "",
-        makeOutDate: "",
+        visitDate: "",      // 表格列：就诊/住院日期
+        inHospitalDate: "", // 原始识别住院日期
+        makeOutDate: "",    // 原始识别开票日期
         totalMoney: "0.00",
         originTotal: "0.00",
         medicareFundPay: "0.00",
@@ -2607,39 +2614,40 @@ function parseOcrFullData(raw) {
     };
     for (const group of info) {
         for (const item of group.MedicalInvoiceItems || []) {
-            switch (item.Name) {
+            const val = item.Content?.trim() || "";
+            switch (item.Name.trim()) {
                 case "票据号码": case "发票号码": case "票据编号":
-                    res.invoiceNo = item.Content.trim(); break;
-                case "交款人": 
-                    res.payerName = item.Content; 
-                    break;
-                // 核心修复：接口返回的「就诊日期」实际是开票日期，「开票日期」实际是就诊日期，强制互换
-                case "就诊日期": 
-                    res.makeOutDate = item.Content; 
-                    break;
-                case "住院日期": 
-                    res.inHospitalDate = item.Content; 
-                    break;
-                case "开票日期": 
-                    res.visitDate = item.Content; 
-                    break;
-                case "总金额": 
-                    res.totalMoney = item.Content; 
-                    break;
-                case "医保统筹基金支付": 
-                    res.medicareFundPay = item.Content; 
-                    break;
+                    res.invoiceNo = val; break;
+                case "交款人": case "患者": case "姓名":
+                    res.payerName = val; break;
+                case "就诊日期":
+                    // 门诊单据的就诊日期，存入开票字段（门诊展示互换逻辑）
+                    res.makeOutDate = val; break;
+                case "住院日期":
+                    res.inHospitalDate = val; break;
+                case "开票日期":
+                    res.makeOutDate = val; break;
+                case "总金额":
+                    res.totalMoney = val; break;
+                case "医保统筹基金支付":
+                    res.medicareFundPay = val; break;
                 case "发票类型":
-                    if (item.Content.includes("住院")) res.billType = "inpatient";
+                    if (val.includes("住院")) res.billType = "inpatient";
                     break;
             }
         }
     }
-    // 住院票据依然沿用住院日期作为就诊展示，不受互换影响
+
+    // 关键区分规则
+    // 住院票据：就诊/住院日期 = 住院日期；开票日期 = 原始开票日期，不再互换
     if (res.billType === "inpatient" && res.inHospitalDate) {
         res.visitDate = res.inHospitalDate;
+    } else {
+        // 门诊票据保持原有互换逻辑
+        res.visitDate = res.makeOutDate;
     }
-    // 存储原始正本数据用于重复票据归零逻辑
+
+    // 备份原始正本数值（重复票据归零恢复用）
     res.originBillType = res.billType;
     res.originTotal = res.totalMoney;
     res.originMedicare = res.medicareFundPay;
@@ -2656,13 +2664,13 @@ function insertOcrRow(seq, data, idx) {
             : data.billType === "inpatient" ? "住院票据" : data.billType;
         tr.innerHTML = `
             <td>${seq}</td>
-            <td>${data.invoiceNo || '-'}</td>
-            <td>${typeText}</td>
-            <td>${data.payerName}</td>
-            <td>${data.visitDate}</td>
-            <td>${data.makeOutDate}</td>
-            <td>${data.totalMoney}</td>
-            <td>${data.medicareFundPay}</td>
+            <td data-key="invoiceNo" ondblclick="editCell(this,${idx})">${data.invoiceNo || '-'}</td>
+            <td data-key="billType" ondblclick="editCell(this,${idx})">${typeText}</td>
+            <td data-key="payerName" ondblclick="editCell(this,${idx})">${data.payerName}</td>
+            <td data-key="visitDate" ondblclick="editCell(this,${idx})">${data.visitDate}</td>
+            <td data-key="makeOutDate" ondblclick="editCell(this,${idx})">${data.makeOutDate}</td>
+            <td data-key="totalMoney" ondblclick="editCell(this,${idx})">${data.totalMoney}</td>
+            <td data-key="medicareFundPay" ondblclick="editCell(this,${idx})">${data.medicareFundPay}</td>
             <td><button class="table-del-btn" data-rec-idx="${idx}">×</button></td>
         `;
     }
@@ -2770,6 +2778,42 @@ function refreshAllTableAndSum() {
     medicalTotalInput.value = sumTotal.toFixed(2);
     medicalReimbursedInput.value = sumMed.toFixed(2);
     calculate();
+    // OCR表格双击编辑单元格函数
+    function editCell(td, recIdx) {
+        const record = finishedOcrRecords[recIdx];
+        const fieldKey = td.dataset.key;
+        if (!record || record.error) return;
+
+        // 开启编辑高亮
+        td.contentEditable = "true";
+        td.style.background = "#fffef0";
+        td.style.outline = "1px solid #1a56db";
+        td.focus();
+
+        // 失焦保存修改，同步数据源+刷新合计
+        td.onblur = function () {
+            td.contentEditable = "false";
+            td.style.background = "";
+            td.style.outline = "none";
+            const newVal = td.innerText.trim();
+            record[fieldKey] = newVal;
+            // 修改金额同步原始备份，避免重复票据归零覆盖手动修改值
+            if(fieldKey === "totalMoney") record.originTotal = newVal;
+            if(fieldKey === "medicareFundPay") record.originMedicare = newVal;
+            if(fieldKey === "billType"){
+                record.originBillType = newVal.includes("住院") ? "inpatient" : "outpatient";
+            }
+            refreshAllTableAndSum();
+        };
+
+        // 回车快速退出编辑
+        td.onkeydown = function(e){
+            if(e.key === "Enter"){
+                e.preventDefault();
+                td.blur();
+            }
+        }
+    }    
 }
     </script>
 </body>
