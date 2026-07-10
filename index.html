@@ -147,60 +147,60 @@
 
 
         /* ========== 统一6列宽度（严格按比例分配，表头+数据行同步生效） ========== */
-/* 第1列：赔偿项目 */
-.detail-table th:nth-child(1), .detail-table td:nth-child(1) { width: 17%; }
-/* 第2列：法律依据 */
-.detail-table th:nth-child(2), .detail-table td:nth-child(2) { width: 28%; }
-/* 第3列：计算公式 */
-.detail-table th:nth-child(3), .detail-table td:nth-child(3) { width: 13%; }
-/* 第4列：计算过程 */
-.detail-table th:nth-child(4), .detail-table td:nth-child(4) { width: 27%; }
-/* 第5列：支付主体 */
-.detail-table th:nth-child(5), .detail-table td:nth-child(5) { width: 7%; }
-/* 第6列：金额 */
-.detail-table th:nth-child(6), .detail-table td:nth-child(6) { width: 8%; }
+        /* 第1列：赔偿项目 */
+        .detail-table th:nth-child(1), .detail-table td:nth-child(1) { width: 17%; }
+        /* 第2列：法律依据 */
+        .detail-table th:nth-child(2), .detail-table td:nth-child(2) { width: 28%; }
+        /* 第3列：计算公式 */
+        .detail-table th:nth-child(3), .detail-table td:nth-child(3) { width: 13%; }
+        /* 第4列：计算过程 */
+        .detail-table th:nth-child(4), .detail-table td:nth-child(4) { width: 27%; }
+        /* 第5列：支付主体 */
+        .detail-table th:nth-child(5), .detail-table td:nth-child(5) { width: 7%; }
+        /* 第6列：金额 */
+        .detail-table th:nth-child(6), .detail-table td:nth-child(6) { width: 8%; }
 
-/* 赔偿项目列样式 */
-.item-name { font-weight: 600; color: #111827; min-width: 140px; }
-/* 法律依据列样式 */
-.legal-basis { 
-    font-size: 12px; 
-    color: #6b7280; 
-    line-height: 1.5;
-    word-break: break-word;
-}
-.legal-basis .basis-title {
-    font-weight: 600;
-    color: #1a56db;
-    display: block;
-    margin-bottom: 2px;
-}
-.formula {
-    font-family: Consolas, Monaco, monospace;
-    font-size: 12px;
-    color: #047857;
-    background: #ecfdf5;
-    padding: 4px 6px;
-    border-radius: 4px;
-    display: inline-block;
-}
-.process { font-size: 12px; color: #4b5563; line-height: 1.8; }
-/* 支付主体列样式 */
-.payer { 
-    font-size: 12px; 
-    font-weight: 500;
-    text-align: center !important;
-}
-.payer-social { color: #047857; }
-.payer-company { color: #dc2626; }
-/* 金额列样式 */
-.amount {
-    font-weight: 600;
-    color: #111827;
-    text-align: right !important;
-    font-size: 14px;
-    padding-right: 10px;
-}
+        /* 赔偿项目列样式 */
+        .item-name { font-weight: 600; color: #111827; min-width: 140px; }
+        /* 法律依据列样式 */
+        .legal-basis { 
+            font-size: 12px; 
+            color: #6b7280; 
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .legal-basis .basis-title {
+            font-weight: 600;
+            color: #1a56db;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .formula {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12px;
+            color: #047857;
+            background: #ecfdf5;
+            padding: 4px 6px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .process { font-size: 12px; color: #4b5563; line-height: 1.8; }
+        /* 支付主体列样式 */
+        .payer { 
+            font-size: 12px; 
+            font-weight: 500;
+            text-align: center !important;
+        }
+        .payer-social { color: #047857; }
+        .payer-company { color: #dc2626; }
+        /* 金额列样式 */
+        .amount {
+            font-weight: 600;
+            color: #111827;
+            text-align: right !important;
+            font-size: 14px;
+            padding-right: 10px;
+        }
 
 
 
@@ -375,165 +375,165 @@
                 </div>
             </div>
             <!-- 新增：医疗票据批量OCR识别模块 -->
-<!-- 新增：医疗票据批量OCR识别模块 -->
-<div class="form-group">
-    <div class="group-title">医疗票据OCR批量识别</div>
-    <style>
-        /* 本模块局部样式，不污染全局原有页面 */
-        .ocr-drop-box{
-            border:2px dashed #d1d5db;
-            border-radius:8px;
-            padding:24px 16px;
-            text-align:center;
-            background:#f9fafb;
-            transition:0.2s;
-            cursor:pointer;
-        }
-        .ocr-drop-box.drag-hover{
-            border-color:#1a56db;
-            background:#eff6ff;
-        }
-        #ocrFileInput{display:none;}
-        .ocr-preview-wrap{
-            display:flex;
-            flex-wrap:wrap;
-            gap:12px;
-            margin:16px 0;
-        }
-        .ocr-preview-item{
-            width:110px;
-            position:relative;
-            border:1px solid #e5e7eb;
-            background:#fff;
-            padding:4px;
-            border-radius:4px;
-        }
-        .ocr-preview-item img{
-            width:100px;
-            height:auto;
-            display:block;
-        }
-        .ocr-preview-item .del-btn{
-            position:absolute;
-            right:-6px;
-            top:-6px;
-            width:20px;
-            height:20px;
-            border-radius:50%;
-            background:#ef4444;
-            color:#fff;
-            border:none;
-            font-size:12px;
-            cursor:pointer;
-            line-height:18px;
-            padding:0;
-        }
-        .ocr-btn{
-            padding:8px 18px;
-            background:#1a56db;
-            color:#fff;
-            border:none;
-            border-radius:6px;
-            cursor:pointer;
-            font-size:14px;
-        }
-        .ocr-btn:disabled{
-            background:#9ca3af;
-            cursor:not-allowed;
-        }
-        .ocr-tip{
-            margin-left:12px;
-            font-size:13px;
-            color:#6b7280;
-        }
-        .ocr-table{
-            width:100%;
-            border-collapse:collapse;
-            margin-top:14px;
-            font-size:13px;
-        }
-        .ocr-table th,.ocr-table td{
-            border:1px solid #e5e7eb;
-            padding:9px 6px;
-            text-align:center;
-        }
-        .ocr-table th{
-            background:#f3f4f6;
-        }
-        .ocr-total-row{
-            background:#f0f9ff;
-            font-weight:600;
-        }
-        .ocr-table td {
-            cursor: text;
-        }
-        .ocr-table td[contenteditable="true"] {
-            background: #fffef0;
-            outline: 1px solid #1a56db;
-        }
-.table-del-btn{
-    width:22px;
-    height:22px;
-    border-radius:50%;
-    background:#ef4444;
-    color:#fff;
-    border:none;
-    font-size:14px;
-    cursor:pointer;
-    line-height:20px;
-    padding:0;
-}
-.table-del-btn:hover{
-    background:#dc2626;
-}
+            <!-- 新增：医疗票据批量OCR识别模块 -->
+            <div class="form-group">
+                <div class="group-title">医疗票据OCR批量识别</div>
+                <style>
+                    /* 本模块局部样式，不污染全局原有页面 */
+                    .ocr-drop-box{
+                        border:2px dashed #d1d5db;
+                        border-radius:8px;
+                        padding:24px 16px;
+                        text-align:center;
+                        background:#f9fafb;
+                        transition:0.2s;
+                        cursor:pointer;
+                    }
+                    .ocr-drop-box.drag-hover{
+                        border-color:#1a56db;
+                        background:#eff6ff;
+                    }
+                    #ocrFileInput{display:none;}
+                    .ocr-preview-wrap{
+                        display:flex;
+                        flex-wrap:wrap;
+                        gap:12px;
+                        margin:16px 0;
+                    }
+                    .ocr-preview-item{
+                        width:110px;
+                        position:relative;
+                        border:1px solid #e5e7eb;
+                        background:#fff;
+                        padding:4px;
+                        border-radius:4px;
+                    }
+                    .ocr-preview-item img{
+                        width:100px;
+                        height:auto;
+                        display:block;
+                    }
+                    .ocr-preview-item .del-btn{
+                        position:absolute;
+                        right:-6px;
+                        top:-6px;
+                        width:20px;
+                        height:20px;
+                        border-radius:50%;
+                        background:#ef4444;
+                        color:#fff;
+                        border:none;
+                        font-size:12px;
+                        cursor:pointer;
+                        line-height:18px;
+                        padding:0;
+                    }
+                    .ocr-btn{
+                        padding:8px 18px;
+                        background:#1a56db;
+                        color:#fff;
+                        border:none;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-size:14px;
+                    }
+                    .ocr-btn:disabled{
+                        background:#9ca3af;
+                        cursor:not-allowed;
+                    }
+                    .ocr-tip{
+                        margin-left:12px;
+                        font-size:13px;
+                        color:#6b7280;
+                    }
+                    .ocr-table{
+                        width:100%;
+                        border-collapse:collapse;
+                        margin-top:14px;
+                        font-size:13px;
+                    }
+                    .ocr-table th,.ocr-table td{
+                        border:1px solid #e5e7eb;
+                        padding:9px 6px;
+                        text-align:center;
+                    }
+                    .ocr-table th{
+                        background:#f3f4f6;
+                    }
+                    .ocr-total-row{
+                        background:#f0f9ff;
+                        font-weight:600;
+                    }
+                    .ocr-table td {
+                        cursor: text;
+                    }
+                    .ocr-table td[contenteditable="true"] {
+                        background: #fffef0;
+                        outline: 1px solid #1a56db;
+                    }
+                    .table-del-btn{
+                        width:22px;
+                        height:22px;
+                        border-radius:50%;
+                        background:#ef4444;
+                        color:#fff;
+                        border:none;
+                        font-size:14px;
+                        cursor:pointer;
+                        line-height:20px;
+                        padding:0;
+                    }
+                    .table-del-btn:hover{
+                        background:#dc2626;
+                    }
 
 
-    </style>
+                </style>
 
-    <!-- 拖拽+选择上传区域 -->
-    <div class="ocr-drop-box" id="ocrDropArea">
-        <p>点击选择图片 / 直接拖拽多张票据图片到此处上传</p>
-        <button class="ocr-btn" id="ocrSelectBtn">选择票据图片</button>
-        <input type="file" id="ocrFileInput" multiple accept="image/png,image/jpeg,image/jpg">
-    </div>
+                <!-- 拖拽+选择上传区域 -->
+                <div class="ocr-drop-box" id="ocrDropArea">
+                    <p>点击选择图片 / 直接拖拽多张票据图片到此处上传</p>
+                    <button class="ocr-btn" id="ocrSelectBtn">选择票据图片</button>
+                    <input type="file" id="ocrFileInput" multiple accept="image/png,image/jpeg,image/jpg">
+                </div>
 
-    <!-- 缩略预览区域 -->
-    <div class="ocr-preview-wrap" id="ocrPreviewBox"></div>
+                <!-- 缩略预览区域 -->
+                <div class="ocr-preview-wrap" id="ocrPreviewBox"></div>
 
-    <!-- 提交按钮+提示 -->
-    <div style="margin:12px 0;">
-        <button class="ocr-btn" id="ocrSubmitBtn" disabled>批量提交识别</button>
-        <span class="ocr-tip" id="ocrTipText"></span>
-    </div>
+                <!-- 提交按钮+提示 -->
+                <div style="margin:12px 0;">
+                    <button class="ocr-btn" id="ocrSubmitBtn" disabled>批量提交识别</button>
+                    <span class="ocr-tip" id="ocrTipText"></span>
+                </div>
 
-    <!-- 识别结果表格 -->
-    <!-- 识别结果表格 -->
-    <table class="ocr-table" id="ocrResultTable">
-        <thead>
-            <tr>
-                <th>序号</th>
-                <th>票据号码</th>
-                <th>票据类型</th>
-                <th>患者姓名</th>
-                <th>就诊/住院日期</th>
-                <th>开票日期</th>
-                <th>总金额(元)</th>
-                <th>医保统筹支付(元)</th>
-                <th>删除</th>
-            </tr>
-        </thead>
-        <tbody id="ocrTableBody"></tbody>
-        <!-- 合计行 精准跨6列，剩下两列分别对应总金额、医保 -->
-        <tfoot>
-            <tr class="ocr-total-row">
-                <td colspan="6">本批票据合计</td>
-                <td id="sumTotalMoney">0.00</td>
-                <td id="sumMedicareMoney">0.00</td>
-                <td></td>
-            </tr>
-        </tfoot>
-    </table>
-</div>
+                <!-- 识别结果表格 -->
+                <!-- 识别结果表格 -->
+                <table class="ocr-table" id="ocrResultTable">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>票据号码</th>
+                            <th>票据类型</th>
+                            <th>患者姓名</th>
+                            <th>就诊/住院日期</th>
+                            <th>开票日期</th>
+                            <th>总金额(元)</th>
+                            <th>医保统筹支付(元)</th>
+                            <th>删除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ocrTableBody"></tbody>
+                    <!-- 合计行 精准跨6列，剩下两列分别对应总金额、医保 -->
+                    <tfoot>
+                        <tr class="ocr-total-row">
+                            <td colspan="6">本批票据合计</td>
+                            <td id="sumTotalMoney">0.00</td>
+                            <td id="sumMedicareMoney">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
 
 
 
@@ -2729,6 +2729,43 @@ ocrTableBody.addEventListener('click', e => {
     refreshAllTableAndSum();
 });
 
+// OCR表格双击编辑全局函数（提升至顶层，行内ondblclick可直接访问）
+function editCell(td, recIdx) {
+    const record = finishedOcrRecords[recIdx];
+    const fieldKey = td.dataset.key;
+    if (!record || record.error) return;
+
+    // 开启编辑高亮
+    td.contentEditable = "true";
+    td.style.background = "#fffef0";
+    td.style.outline = "1px solid #1a56db";
+    td.focus();
+
+    // 失焦保存修改，同步数据源+刷新合计
+    td.onblur = function () {
+        td.contentEditable = "false";
+        td.style.background = "";
+        td.style.outline = "none";
+        const newVal = td.innerText.trim();
+        record[fieldKey] = newVal;
+        // 修改金额同步原始备份，避免重复票据归零覆盖手动修改值
+        if(fieldKey === "totalMoney") record.originTotal = newVal;
+        if(fieldKey === "medicareFundPay") record.originMedicare = newVal;
+        if(fieldKey === "billType"){
+            record.originBillType = newVal.includes("住院") ? "inpatient" : "outpatient";
+        }
+        refreshAllTableAndSum();
+    };
+
+    // 回车快速退出编辑
+    td.onkeydown = function(e){
+        if(e.key === "Enter"){
+            e.preventDefault();
+            td.blur();
+        }
+    }
+}
+
 // 全局刷新表格与汇总、分组查重赋值正本/重复
 function refreshAllTableAndSum() {
     ocrTableBody.innerHTML = '';
@@ -2743,7 +2780,7 @@ function refreshAllTableAndSum() {
         invoiceGroupMap.get(item.invoiceNo).push(idx);
     });
 
-    // 2. 每组第一条设为正本原始数据，后面全部标记重复金额归零
+    // 2. 每组第一条设为正本原始数据，后面全部标记重复置0
     invoiceGroupMap.forEach((indexArr) => {
         indexArr.forEach((recIdx, pos) => {
             const rec = finishedOcrRecords[recIdx];
@@ -2778,42 +2815,6 @@ function refreshAllTableAndSum() {
     medicalTotalInput.value = sumTotal.toFixed(2);
     medicalReimbursedInput.value = sumMed.toFixed(2);
     calculate();
-    // OCR表格双击编辑单元格函数
-    function editCell(td, recIdx) {
-        const record = finishedOcrRecords[recIdx];
-        const fieldKey = td.dataset.key;
-        if (!record || record.error) return;
-
-        // 开启编辑高亮
-        td.contentEditable = "true";
-        td.style.background = "#fffef0";
-        td.style.outline = "1px solid #1a56db";
-        td.focus();
-
-        // 失焦保存修改，同步数据源+刷新合计
-        td.onblur = function () {
-            td.contentEditable = "false";
-            td.style.background = "";
-            td.style.outline = "none";
-            const newVal = td.innerText.trim();
-            record[fieldKey] = newVal;
-            // 修改金额同步原始备份，避免重复票据归零覆盖手动修改值
-            if(fieldKey === "totalMoney") record.originTotal = newVal;
-            if(fieldKey === "medicareFundPay") record.originMedicare = newVal;
-            if(fieldKey === "billType"){
-                record.originBillType = newVal.includes("住院") ? "inpatient" : "outpatient";
-            }
-            refreshAllTableAndSum();
-        };
-
-        // 回车快速退出编辑
-        td.onkeydown = function(e){
-            if(e.key === "Enter"){
-                e.preventDefault();
-                td.blur();
-            }
-        }
-    }    
 }
     </script>
 </body>
