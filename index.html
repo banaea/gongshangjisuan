@@ -376,6 +376,7 @@
             </div>
             <!-- 新增：医疗票据批量OCR识别模块 -->
             <!-- 新增：医疗票据批量OCR识别模块 -->
+            <!-- 新增：医疗票据批量OCR识别模块 新版 -->
             <div class="form-group">
                 <div class="group-title">医疗票据OCR批量识别（识别结果表格可人工校正双击修改）</div>
                 <style>
@@ -476,7 +477,6 @@
                         background-color: #fff9c4 !important;
                     }
                     .table-del-btn{
-                    .table-del-btn{
                         width:22px;
                         height:22px;
                         border-radius:50%;
@@ -491,8 +491,6 @@
                     .table-del-btn:hover{
                         background:#dc2626;
                     }
-
-
                 </style>
 
                 <!-- 拖拽+选择上传区域 -->
@@ -511,7 +509,6 @@
                     <span class="ocr-tip" id="ocrTipText"></span>
                 </div>
 
-                <!-- 识别结果表格 -->
                 <!-- 识别结果表格 -->
                 <table class="ocr-table" id="ocrResultTable">
                     <thead>
@@ -2414,417 +2411,470 @@
         // ========== 票据OCR批量识别 正本轮转转正+单条精准联动删除+列对齐修复 ==========
         // ========== 票据OCR批量识别 单张识别单条即时插入表格+正本自动轮转+精准联动删除 ==========
         // ========== 票据OCR批量识别 单张识别单条即时插入+额度用尽弹窗提示+正本自动轮转+精准联动删除 ==========
-        const OCR_API_URL = "https://1344130555-ksmev0r7qw.ap-beijing.tencentscf.com";
-        // 待上传图片列表，每条携带唯一uid
-        let ocrFileList = [];
-        // 已识别记录：每条绑定对应图片uid，存储原始未篡改数据（用于删正本后恢复）
-        let finishedOcrRecords = [];
-        // 票据号分组：key=票据号码，value=[所有同号记录下标数组]
-        let invoiceGroupMap = new Map();
+        // ========== 票据OCR批量识别 单张识别单条即时插入+额度用尽弹窗提示+正本自动轮转+精准联动删除 ==========
+        // ========== 票据OCR批量识别逻辑 适配阿里云FC飞桨PaddleOCR接口 ==========
+        // ========== 票据OCR批量识别逻辑 【最终生产稳定版｜适配现有阿里云百度OCR接口】 ==========
+        // 阿里云已测通公网接口（固定不变）
+        // ========== 票据OCR批量识别逻辑 【最终生产稳定版｜后端零改动、全功能保留】 ==========
+// 阿里云已实测可通接口（固定不变，适配FormData文件上传）
+// ========== 票据OCR批量识别逻辑 【最终生产稳定版｜适配新版PaddleOCR接口】 ==========
+// ========== 票据OCR批量识别逻辑 【最终修复版｜PaddleOCR-VL-1.6 强制解析字符串嵌套JSON】 ==========
+// ========== 票据OCR批量识别逻辑 【最终定稿·完美修复版】 ==========
+// ========== 票据OCR批量识别逻辑 【终极容错版 彻底解决text报错】 ==========
+// ========== 票据OCR批量识别 · 层级完全兼容版 ==========
+// ========== 票据OCR批量识别 最终完整版 适配你当前接口返回结构 ==========
+// ========== 医疗票据OCR批量识别 全量最终兼容版 ==========
+// ========== 医疗票据OCR批量识别 全量终极兼容版 ==========
+// ========== 回滚原始版 医疗票据OCR批量识别 ==========
+// ========== 票据OCR批量识别逻辑 【最终强匹配版 完全适配PaddleOCR-VL1.6返回原文】 ==========
+const OCR_API_URL = "https://web-mdhdbiliyc.cn-hangzhou.fcapp.run";
 
-        // DOM绑定
-        const ocrDropArea = document.getElementById('ocrDropArea');
-        const ocrFileInput = document.getElementById('ocrFileInput');
-        const ocrSelectBtn = document.getElementById('ocrSelectBtn');
-        const ocrPreviewBox = document.getElementById('ocrPreviewBox');
-        const ocrSubmitBtn = document.getElementById('ocrSubmitBtn');
-        const ocrTipText = document.getElementById('ocrTipText');
-        const ocrTableBody = document.getElementById('ocrTableBody');
-        const sumTotalMoneyEl = document.getElementById('sumTotalMoney');
-        const sumMedicareMoneyEl = document.getElementById('sumMedicareMoney');
-        const medicalTotalInput = document.getElementById('medicalTotal');
-        const medicalReimbursedInput = document.getElementById('medicalReimbursed');
+let ocrFileList = [];
+let finishedOcrRecords = [];
+let invoiceGroupMap = new Map();
 
-        // 选择文件
-        ocrSelectBtn.onclick = () => ocrFileInput.click();
-        ocrFileInput.onchange = e => {
-            const files = Array.from(e.target.files);
-            addOcrFiles(files);
-            ocrFileInput.value = '';
+// DOM绑定
+const ocrDropArea = document.getElementById('ocrDropArea');
+const ocrFileInput = document.getElementById('ocrFileInput');
+const ocrSelectBtn = document.getElementById('ocrSelectBtn');
+const ocrPreviewBox = document.getElementById('ocrPreviewBox');
+const ocrSubmitBtn = document.getElementById('ocrSubmitBtn');
+const ocrTipText = document.getElementById('ocrTipText');
+const ocrTableBody = document.getElementById('ocrTableBody');
+const sumTotalMoneyEl = document.getElementById('sumTotalMoney');
+const sumMedicareMoneyEl = document.getElementById('sumMedicareMoney');
+const medicalTotalInput = document.getElementById('medicalTotal');
+const medicalReimbursedInput = document.getElementById('medicalReimbursed');
+
+ocrSelectBtn.onclick = () => ocrFileInput.click();
+ocrFileInput.onchange = e => {
+    const files = Array.from(e.target.files);
+    addOcrFiles(files);
+    ocrFileInput.value = '';
+};
+
+ocrDropArea.ondragover = e => {
+    e.preventDefault();
+    ocrDropArea.classList.add('drag-hover');
+};
+ocrDropArea.ondragleave = () => ocrDropArea.classList.remove('drag-hover');
+ocrDropArea.ondrop = e => {
+    e.preventDefault();
+    ocrDropArea.classList.remove('drag-hover');
+    addOcrFiles(Array.from(e.dataTransfer.files));
+};
+
+function addOcrFiles(files) {
+    for (const f of files) {
+        if (!f.type.startsWith('image/')) continue;
+        const uid = Date.now() + Math.random();
+        ocrFileList.push({
+            uid: uid,
+            file: f,
+            base64: '',
+            hasRecognized: false
+        });
+    }
+    renderOcrPreview();
+    ocrSubmitBtn.disabled = ocrFileList.length === 0;
+    ocrTipText.textContent = `已选中 ${ocrFileList.length} 张票据`;
+}
+
+function renderOcrPreview() {
+    ocrPreviewBox.innerHTML = '';
+    ocrFileList.forEach(item => {
+        const wrap = document.createElement('div');
+        wrap.className = 'ocr-preview-item';
+        wrap.dataset.uid = item.uid;
+
+        const img = document.createElement('img');
+        const reader = new FileReader();
+        reader.onload = ev => {
+            img.src = ev.target.result;
+            item.base64 = ev.target.result.split(',')[1];
         };
+        reader.readAsDataURL(item.file);
 
-        // 拖拽上传
-        ocrDropArea.ondragover = e => {
-            e.preventDefault();
-            ocrDropArea.classList.add('drag-hover');
-        };
-        ocrDropArea.ondragleave = () => ocrDropArea.classList.remove('drag-hover');
-        ocrDropArea.ondrop = e => {
-            e.preventDefault();
-            ocrDropArea.classList.remove('drag-hover');
-            addOcrFiles(Array.from(e.dataTransfer.files));
-        };
-
-        // 新增图片，携带唯一UID
-        function addOcrFiles(files) {
-            for (const f of files) {
-                if (!f.type.startsWith('image/')) continue;
-                const uid = Date.now() + Math.random();
-                ocrFileList.push({
-                    uid: uid,
-                    file: f,
-                    base64: '',
-                    hasRecognized: false
-                });
+        const delBtn = document.createElement('button');
+        delBtn.className = 'del-btn';
+        delBtn.textContent = '×';
+        delBtn.onclick = () => {
+            const targetUid = item.uid;
+            const recIndex = finishedOcrRecords.findIndex(r => r.bindUid === targetUid);
+            if (recIndex > -1) {
+                removeRecordAndRebuild(recIndex);
             }
-            renderOcrPreview();
-            ocrSubmitBtn.disabled = ocrFileList.length === 0;
-            ocrTipText.textContent = `已选中 ${ocrFileList.length} 张票据`;
-        }
-
-        // 渲染缩略预览，每条绑定uid
-        function renderOcrPreview() {
-            ocrPreviewBox.innerHTML = '';
-            ocrFileList.forEach(item => {
-                const wrap = document.createElement('div');
-                wrap.className = 'ocr-preview-item';
-                wrap.dataset.uid = item.uid;
-
-                const img = document.createElement('img');
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    img.src = ev.target.result;
-                    item.base64 = ev.target.result.split(',')[1];
-                };
-                reader.readAsDataURL(item.file);
-
-                const delBtn = document.createElement('button');
-                delBtn.className = 'del-btn';
-                delBtn.textContent = '×';
-                delBtn.onclick = () => {
-                    const targetUid = item.uid;
-                    // 查找本条对应的识别记录下标
-                    const recIndex = finishedOcrRecords.findIndex(r => r.bindUid === targetUid);
-                    if (recIndex > -1) {
-                        removeRecordAndRebuild(recIndex);
-                    }
-                    // 从上传列表移除当前单张
-                    ocrFileList = ocrFileList.filter(f => f.uid !== targetUid);
-                    renderOcrPreview();
-                    ocrTipText.textContent = ocrFileList.length ? `已选中 ${ocrFileList.length} 张票据` : '';
-                    ocrSubmitBtn.disabled = ocrFileList.length === 0;
-                    refreshAllTableAndSum();
-                };
-
-                wrap.append(img, delBtn);
-                ocrPreviewBox.appendChild(wrap);
-            });
-        }
-
-        // 批量识别
-        ocrSubmitBtn.onclick = async () => {
-            const needRec = ocrFileList.filter(item => !item.hasRecognized);
-            if (needRec.length === 0) {
-                ocrTipText.textContent = "没有新增待识别票据，无需重复调用接口";
-                return;
-            }
-            ocrSubmitBtn.disabled = true;
-            ocrTipText.textContent = `开始识别新增 ${needRec.length} 张票据……`;
-
-            // 遍历每一张，识别完立刻单条插入表格
-            for (const fileItem of needRec) {
-                try {
-                    const res = await fetch(OCR_API_URL, {
-                        method: 'POST',
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ imgBase64: fileItem.base64 })
-                    });
-                    const json = await res.json();
-
-                    // ========== 额度用尽核心判断逻辑 ==========
-                    if (json.Response && json.Response.Error) {
-                        const errCode = json.Response.Error.Code;
-                        // 腾讯云官方2种额度耗尽错误码
-                        if (errCode === "ResourcesSoldOut.ChargeStatusException" || errCode === "FailedOperation.ChargeStatusError") {
-                            alert("⚠️ OCR识别额度已全部用尽！\n本月免费额度与资源包余量耗尽，无法继续识别，请联系管理员购买资源包或开启后付费。");
-                            // 直接终止整批识别，解锁按钮
-                            ocrSubmitBtn.disabled = false;
-                            ocrTipText.textContent = "识别终止：额度不足";
-                            return;
-                        }
-                        // 其他普通识别错误
-                        const errItem = {
-                            error: json.Response.Error.Message || '识别失败',
-                            bindUid: fileItem.uid
-                        };
-                        finishedOcrRecords.push(errItem);
-                        fileItem.hasRecognized = true;
-                        const currentIdx = finishedOcrRecords.length - 1;
-                        insertOcrRow(currentIdx + 1, errItem, currentIdx);
-                        refreshAllTableAndSum();
-                        continue;
-                    }
-
-                    // 正常识别成功
-                    if (json.code === 0 && json.fullData) {
-                        const data = parseOcrFullData(json.fullData);
-                        // 绑定当前图片唯一ID，用于双向删除
-                        data.bindUid = fileItem.uid;
-                        // 保存原始原值，后续转正用
-                        data.originBillType = data.billType;
-                        data.originTotal = data.totalMoney;
-                        data.originMedicare = data.medicareFundPay;
-
-                        finishedOcrRecords.push(data);
-                        fileItem.hasRecognized = true;
-                        // 识别完成直接插入单行表格，实时显示
-                        const currentIdx = finishedOcrRecords.length - 1;
-                        insertOcrRow(currentIdx + 1, data, currentIdx);
-                        // 插入后立刻刷新重复标记与合计
-                        refreshAllTableAndSum();
-                    } else {
-                        const errItem = {
-                            error: json.msg || '识别失败',
-                            bindUid: fileItem.uid
-                        };
-                        finishedOcrRecords.push(errItem);
-                        fileItem.hasRecognized = true;
-                        const currentIdx = finishedOcrRecords.length - 1;
-                        insertOcrRow(currentIdx + 1, errItem, currentIdx);
-                        refreshAllTableAndSum();
-                    }
-                } catch {
-                    const errItem = {
-                        error: '网络请求异常',
-                        bindUid: fileItem.uid
-                    };
-                    finishedOcrRecords.push(errItem);
-                    fileItem.hasRecognized = true;
-                    const currentIdx = finishedOcrRecords.length - 1;
-                    insertOcrRow(currentIdx + 1, errItem, currentIdx);
-                    refreshAllTableAndSum();
-                }
-            }
-            ocrTipText.textContent = `本次新增${needRec.length}张，累计已识别${finishedOcrRecords.filter(i=>!i.error).length}张`;
-            ocrSubmitBtn.disabled = false;
-        };
-
-        // OCR字段解析
-        // OCR字段解析【已修复：就诊日期 ↔ 开票日期 互换】
-        function parseOcrFullData(raw) {
-            const info = raw.MedicalInvoiceInfos || [];
-            const res = {
-                bindUid: "",
-                invoiceNo: "",
-                billType: "outpatient",
-                originBillType: "outpatient",
-                payerName: "",
-                visitDate: "",      // 表格列：就诊/住院日期
-                inHospitalDate: "", // 原始识别住院日期
-                makeOutDate: "",    // 原始识别开票日期
-                totalMoney: "0.00",
-                originTotal: "0.00",
-                medicareFundPay: "0.00",
-                originMedicare: "0.00"
-            };
-            for (const group of info) {
-                for (const item of group.MedicalInvoiceItems || []) {
-                    const val = item.Content?.trim() || "";
-                    switch (item.Name.trim()) {
-                        case "票据号码": case "发票号码": case "票据编号":
-                            res.invoiceNo = val; break;
-                        case "交款人": case "患者": case "姓名":
-                            res.payerName = val; break;
-                        case "就诊日期":
-                            // 门诊单据的就诊日期，存入开票字段（门诊展示互换逻辑）
-                            res.makeOutDate = val; break;
-                        case "住院日期":
-                            res.inHospitalDate = val; break;
-                        case "开票日期":
-                            res.makeOutDate = val; break;
-                        case "总金额":
-                            res.totalMoney = val; break;
-                        case "医保统筹基金支付":
-                            res.medicareFundPay = val; break;
-                        case "发票类型":
-                            if (val.includes("住院")) res.billType = "inpatient";
-                            break;
-                    }
-                }
-            }
-
-            // 关键区分规则
-            // 住院票据：就诊/住院日期 = 住院日期；开票日期 = 原始开票日期，不再互换
-            if (res.billType === "inpatient" && res.inHospitalDate) {
-                res.visitDate = res.inHospitalDate;
-            } else {
-                // 门诊票据保持原有互换逻辑
-                res.visitDate = res.makeOutDate;
-            }
-
-            // 备份原始正本数值（重复票据归零恢复用）
-            res.originBillType = res.billType;
-            res.originTotal = res.totalMoney;
-            res.originMedicare = res.medicareFundPay;
-            return res;
-        }
-
-        // 插入单行表格
-        function insertOcrRow(seq, data, idx) {
-            const tr = document.createElement('tr');
-            // 判断是否重复票据，添加黄色行class
-            if (!data.error && data.billType === "重复票据") {
-                tr.classList.add('repeat-row');
-            }
-            if (data.error) {
-                tr.innerHTML = `<td>${seq}</td><td colspan="7" style="color:#dc2626">${data.error}</td><td></td>`;
-            } else {
-                const typeText = data.billType === "outpatient" ? "门诊票据"
-                    : data.billType === "inpatient" ? "住院票据" : data.billType;
-                tr.innerHTML = `
-                    <td>${seq}</td>
-                    <td data-key="invoiceNo" ondblclick="editCell(this,${idx})">${data.invoiceNo || '-'}</td>
-                    <td data-key="billType" ondblclick="editCell(this,${idx})">${typeText}</td>
-                    <td data-key="payerName" ondblclick="editCell(this,${idx})">${data.payerName}</td>
-                    <td data-key="visitDate" ondblclick="editCell(this,${idx})">${data.visitDate}</td>
-                    <td data-key="makeOutDate" ondblclick="editCell(this,${idx})">${data.makeOutDate}</td>
-                    <td data-key="totalMoney" ondblclick="editCell(this,${idx})">${data.totalMoney}</td>
-                    <td data-key="medicareFundPay" ondblclick="editCell(this,${idx})">${data.medicareFundPay}</td>
-                    <td><button class="table-del-btn" data-rec-idx="${idx}">×</button></td>
-                `;
-            }
-            ocrTableBody.appendChild(tr);
-        }
-
-        // 核心：删除指定下标记录，并自动同票号组重新分配正本，再刷新页面
-        function removeRecordAndRebuild(delIndex) {
-            const delItem = finishedOcrRecords[delIndex];
-            if (!delItem || delItem.error) {
-                finishedOcrRecords.splice(delIndex, 1);
-                return;
-            }
-            const targetNo = delItem.invoiceNo;
-            // 删除本条
-            finishedOcrRecords.splice(delIndex, 1);
-            if (!targetNo) return;
-
-            // 筛选剩余所有同票据号条目
-            const sameGroup = finishedOcrRecords.filter(item => item.invoiceNo === targetNo && !item.error);
-            if (sameGroup.length === 0) return;
-
-            // 组内第一条恢复原始正本数据，其余全部标记重复置0
-            sameGroup.forEach((item, pos) => {
-                if (pos === 0) {
-                    item.billType = item.originBillType;
-                    item.totalMoney = item.originTotal;
-                    item.medicareFundPay = item.originMedicare;
-                } else {
-                    item.billType = "重复票据";
-                    item.totalMoney = "0.00";
-                    item.medicareFundPay = "0.00";
-                }
-            });
-        }
-
-        // 表格删除按钮点击（单条精准删除+正本自动轮转）
-        ocrTableBody.addEventListener('click', e => {
-            const btn = e.target.closest('.table-del-btn');
-            if (!btn) return;
-            const recIdx = Number(btn.dataset.recIdx);
-            const record = finishedOcrRecords[recIdx];
-            if (!record) return;
-
-            // 执行删除+同票组正本重分配
-            removeRecordAndRebuild(recIdx);
-
-            // 根据绑定的唯一UID，精准删除上方对应单张缩略图
-            const targetBindUid = record.bindUid;
-            ocrFileList = ocrFileList.filter(file => file.uid !== targetBindUid);
-
-            // 刷新预览、表格、合计、输入框
+            ocrFileList = ocrFileList.filter(f => f.uid !== targetUid);
             renderOcrPreview();
             ocrTipText.textContent = ocrFileList.length ? `已选中 ${ocrFileList.length} 张票据` : '';
             ocrSubmitBtn.disabled = ocrFileList.length === 0;
             refreshAllTableAndSum();
-        });
+        };
 
-        // OCR表格双击编辑全局函数（提升至顶层，行内ondblclick可直接访问）
-        function editCell(td, recIdx) {
-            const record = finishedOcrRecords[recIdx];
-            const fieldKey = td.dataset.key;
-            if (!record || record.error) return;
+        wrap.append(img, delBtn);
+        ocrPreviewBox.appendChild(wrap);
+    });
+}
 
-            // 开启编辑高亮
-            td.contentEditable = "true";
-            td.style.background = "#fffef0";
-            td.style.outline = "1px solid #1a56db";
-            td.focus();
+ocrSubmitBtn.onclick = async () => {
+    const needRec = ocrFileList.filter(item => !item.hasRecognized);
+    if (needRec.length === 0) {
+        ocrTipText.textContent = "没有新增待识别票据，无需重复调用接口";
+        return;
+    }
+    ocrSubmitBtn.disabled = true;
+    ocrTipText.textContent = `开始识别新增 ${needRec.length} 张票据……`;
 
-            // 失焦保存修改，同步数据源+刷新合计
-            td.onblur = function () {
-                td.contentEditable = "false";
-                td.style.background = "";
-                td.style.outline = "none";
-                const newVal = td.innerText.trim();
-                record[fieldKey] = newVal;
-                // 修改金额同步原始备份，避免重复票据归零覆盖手动修改值
-                if(fieldKey === "totalMoney") record.originTotal = newVal;
-                if(fieldKey === "medicareFundPay") record.originMedicare = newVal;
-                if(fieldKey === "billType"){
-                    record.originBillType = newVal.includes("住院") ? "inpatient" : "outpatient";
-                }
+    for (const fileItem of needRec) {
+        try {
+            const formData = new FormData();
+            formData.append("file", fileItem.file);
+
+            const res = await fetch(OCR_API_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+
+            if (json.code !== 0 || typeof json.data !== 'string') {
+                const errItem = {
+                    error: json.msg || "接口返回数据格式异常",
+                    bindUid: fileItem.uid
+                };
+                finishedOcrRecords.push(errItem);
+                fileItem.hasRecognized = true;
+                const currentIdx = finishedOcrRecords.length - 1;
+                insertOcrRow(currentIdx + 1, errItem, currentIdx);
                 refreshAllTableAndSum();
-            };
+                continue;
+            }
 
-            // 回车快速退出编辑
-            td.onkeydown = function(e){
-                if(e.key === "Enter"){
-                    e.preventDefault();
-                    td.blur();
-                }
+            // 解析外层字符串JSON
+            const innerOcrResult = JSON.parse(json.data);
+            // 核心强解析，直接遍历所有文本+全文检索关键字
+            const data = parsePaddleVL16_FullText(innerOcrResult);
+
+            data.bindUid = fileItem.uid;
+            data.originBillType = data.billType;
+            data.originTotal = data.totalMoney;
+            data.originMedicare = data.medicareFundPay;
+
+            finishedOcrRecords.push(data);
+            fileItem.hasRecognized = true;
+            const currentIdx = finishedOcrRecords.length - 1;
+            insertOcrRow(currentIdx + 1, data, currentIdx);
+            refreshAllTableAndSum();
+
+        } catch (err) {
+            console.error('识别单张票据异常', err);
+            const errItem = {
+                error: `处理失败：${err.message}`,
+                bindUid: fileItem.uid
+            };
+            finishedOcrRecords.push(errItem);
+            fileItem.hasRecognized = true;
+            const currentIdx = finishedOcrRecords.length - 1;
+            insertOcrRow(currentIdx + 1, errItem, currentIdx);
+            refreshAllTableAndSum();
+        }
+    }
+    ocrTipText.textContent = `本次新增${needRec.length}张，累计已识别${finishedOcrRecords.filter(i=>!i.error).length}张`;
+    ocrSubmitBtn.disabled = false;
+};
+
+// 【新版全文检索解析函数｜门诊住院日期完全隔离，不复用开票日期兜底】
+function parsePaddleVL16_FullText(root) {
+    const ret = {
+        invoiceNo: "",
+        billType: "outpatient",
+        originBillType: "outpatient",
+        payerName: "",
+        visitDate: "",
+        inHospitalDate: "",
+        makeOutDate: "",
+        totalMoney: "0.00",
+        originTotal: "0.00",
+        medicareFundPay: "0.00",
+        originMedicare: "0.00"
+    };
+
+    // 单日期标准化：任意格式 → YYYY-MM-DD
+    function formatDateStr(s) {
+        if (!s) return s;
+        let str = String(s).trim();
+        if (/^\d{8}$/.test(str)) {
+            return `${str.slice(0,4)}-${str.slice(4,6)}-${str.slice(6,8)}`;
+        }
+        str = str.replace(/^(\d{2})-(\d{1,2})-(\d{1,2})/, "20$1-$2-$3");
+        const parts = str.split("-");
+        if (parts.length === 3) {
+            const y = parts[0];
+            const m = parts[1].padStart(2, "0");
+            const d = parts[2].padStart(2, "0");
+            return `${y}-${m}-${d}`;
+        }
+        return str;
+    }
+
+    let allRawText = "";
+    const layoutList = root?.result?.layoutParsingResults ?? [];
+    layoutList.forEach(layoutItem => {
+        const parseList = layoutItem?.prunedResult?.parsing_res_list ?? [];
+        parseList.forEach(block => {
+            const txt = (block.block_content || "").trim();
+            allRawText += txt + "\n";
+            if (block.block_label === "doc_title" && txt.includes("住院")) {
+                ret.billType = "inpatient";
+            }
+        });
+    });
+    const mdText = root?.markdown?.text || "";
+    allRawText += "\n" + mdText;
+
+    // 兜底判定：全文包含住院时间 → 强制住院票据
+    if (allRawText.includes("住院时间")) {
+        ret.billType = "inpatient";
+    }
+
+    // 1.票据号码
+    const invoiceNoMatch = allRawText.match(/票据号码[:：\s]*(\d+)/);
+    if (invoiceNoMatch) ret.invoiceNo = invoiceNoMatch[1];
+
+    // 2.交款人姓名，过滤信用代码行
+    const nameExact = allRawText.match(/交款人[:：]\s*([\u4e00-\u9fa5]+)(?!.*统一社会信用代码)/);
+    if (nameExact) {
+        ret.payerName = nameExact[1].trim();
+    } else {
+        const nameFuzzy = allRawText.match(/款人[:：]\s*([\u4e00-\u9fa5]+)(?!.*统一社会信用代码)/);
+        if (nameFuzzy) ret.payerName = nameFuzzy[1].trim();
+    }
+
+    // 3.开票日期 单独提取，只存入开票字段
+    const billDateMatch = allRawText.match(/开票日期[:：\s]*(\d{4}-\d{1,2}-\d{1,2}|\d{8})/);
+    if (billDateMatch) ret.makeOutDate = formatDateStr(billDateMatch[1]);
+
+    // 4.住院时间 仅住院票据使用
+    const inTimeMatch = allRawText.match(/住院时间[:：\s]*([^\n\r<>&\\]+)/);
+    if (inTimeMatch) {
+        let raw = inTimeMatch[1].trim().split(/[\n\r<>\\]/)[0];
+        if (/^\d{16}$/.test(raw)) {
+            const d1 = formatDateStr(raw.slice(0, 8));
+            const d2 = formatDateStr(raw.slice(8, 16));
+            ret.inHospitalDate = `${d1}至${d2}`;
+        } else {
+            let dateArr;
+            if (raw.includes("至") || raw.includes("～")) {
+                dateArr = raw.split(/至|～/);
+            } else {
+                dateArr = raw.split("-");
+            }
+            if (dateArr.length === 2) {
+                const d1 = formatDateStr(dateArr[0]);
+                const d2 = formatDateStr(dateArr[1]);
+                ret.inHospitalDate = `${d1}至${d2}`;
+            } else {
+                ret.inHospitalDate = formatDateStr(raw);
             }
         }
+    }
 
-        // 全局刷新表格与汇总、分组查重赋值正本/重复
-        function refreshAllTableAndSum() {
-            ocrTableBody.innerHTML = '';
-            invoiceGroupMap.clear();
+    // 5.门诊专属：提取就诊日期，仅用于门诊就诊列
+    const clinicDateMatch = allRawText.match(/就诊日期[:：\s]*(\d{4}-\d{1,2}-\d{1,2}|\d{8})/);
+    let clinicVisitDate = "";
+    if (clinicDateMatch) clinicVisitDate = formatDateStr(clinicDateMatch[1]);
 
-            // 1. 按票据号码分组
-            finishedOcrRecords.forEach((item, idx) => {
-                if (item.error || !item.invoiceNo) return;
-                if (!invoiceGroupMap.has(item.invoiceNo)) {
-                    invoiceGroupMap.set(item.invoiceNo, []);
-                }
-                invoiceGroupMap.get(item.invoiceNo).push(idx);
-            });
+    // 6.医保统筹支付
+    const medicareMatch = allRawText.match(/医保统筹.*?支付[:：\s]*([\d,.]+)/);
+    if (medicareMatch) ret.medicareFundPay = medicareMatch[1].replace(/,/g, "");
 
-            // 2. 每组第一条设为正本原始数据，后面全部标记重复置0
-            invoiceGroupMap.forEach((indexArr) => {
-                indexArr.forEach((recIdx, pos) => {
-                    const rec = finishedOcrRecords[recIdx];
-                    if (pos === 0) {
-                        rec.billType = rec.originBillType;
-                        rec.totalMoney = rec.originTotal;
-                        rec.medicareFundPay = rec.originMedicare;
-                    } else {
-                        rec.billType = "重复票据";
-                        rec.totalMoney = "0.00";
-                        rec.medicareFundPay = "0.00";
-                    }
-                });
-            });
+    // 7.总金额提取
+    const totalMatch = allRawText.match(/小写.*?([\d,]+\.\d{2})/);
+    if (totalMatch) ret.totalMoney = totalMatch[1].replace(/,/g, "");
 
-            // 3. 渲染表格行
-            finishedOcrRecords.forEach((item, index) => {
-                insertOcrRow(index + 1, item, index);
-            });
+    // ===== 日期赋值逻辑 彻底分离，不复用 =====
+    if (ret.billType === "inpatient") {
+        // 住院：固定使用住院区间，绝不碰开票日期
+        ret.visitDate = ret.inHospitalDate;
+    } else {
+        // 门诊：有识别到就诊日期就填，没有则留空，**绝不自动填开票日期**
+        ret.visitDate = clinicVisitDate;
+    }
 
-            // 4. 计算合计
-            const sumTotal = finishedOcrRecords.reduce((s, i) => {
-                if (i.error) return s;
-                return s + (Number(i.totalMoney) || 0);
-            }, 0);
-            const sumMed = finishedOcrRecords.reduce((s, i) => {
-                if (i.error) return s;
-                return s + (Number(i.medicareFundPay) || 0);
-            }, 0);
-            sumTotalMoneyEl.textContent = sumTotal.toFixed(2);
-            sumMedicareMoneyEl.textContent = sumMed.toFixed(2);
-            medicalTotalInput.value = sumTotal.toFixed(2);
-            medicalReimbursedInput.value = sumMed.toFixed(2);
-            calculate();
+    ret.originBillType = ret.billType;
+    ret.originTotal = ret.totalMoney;
+    ret.originMedicare = ret.medicareFundPay;
+    return ret;
+}
+
+// 插入表格行
+function insertOcrRow(seq, data, idx) {
+    const tr = document.createElement('tr');
+    if (!data.error && data.billType === "重复票据") {
+        tr.classList.add('repeat-row');
+    }
+    if (data.error) {
+        tr.innerHTML = `<td>${seq}</td><td colspan="7" style="color:#dc2626">${data.error}</td><td></td>`;
+    } else {
+        const typeText = data.billType === "outpatient" ? "门诊票据" : data.billType === "inpatient" ? "住院票据" : data.billType;
+        tr.innerHTML = `
+            <td>${seq}</td>
+            <td data-key="invoiceNo" ondblclick="editCell(this,${idx})">${data.invoiceNo || '-'}</td>
+            <td data-key="billType" ondblclick="editCell(this,${idx})">${typeText}</td>
+            <td data-key="payerName" ondblclick="editCell(this,${idx})">${data.payerName}</td>
+            <td data-key="visitDate" ondblclick="editCell(this,${idx})">${data.visitDate}</td>
+            <td data-key="makeOutDate" ondblclick="editCell(this,${idx})">${data.makeOutDate}</td>
+            <td data-key="totalMoney" ondblclick="editCell(this,${idx})">${data.totalMoney}</td>
+            <td data-key="medicareFundPay" ondblclick="editCell(this,${idx})">${data.medicareFundPay}</td>
+            <td><button class="table-del-btn" data-rec-idx="${idx}">×</button></td>
+        `;
+    }
+    ocrTableBody.appendChild(tr);
+}
+
+// 删除正本自动轮转逻辑
+function removeRecordAndRebuild(delIndex) {
+    const delItem = finishedOcrRecords[delIndex];
+    if (!delItem || delItem.error) {
+        finishedOcrRecords.splice(delIndex, 1);
+        return;
+    }
+    const targetNo = delItem.invoiceNo;
+    finishedOcrRecords.splice(delIndex, 1);
+    if (!targetNo) return;
+
+    const sameGroup = finishedOcrRecords.filter(item => item.invoiceNo === targetNo && !item.error);
+    if (sameGroup.length === 0) return;
+
+    sameGroup.forEach((item, pos) => {
+        if (pos === 0) {
+            item.billType = item.originBillType;
+            item.totalMoney = item.originTotal;
+            item.medicareFundPay = item.originMedicare;
+        } else {
+            item.billType = "重复票据";
+            item.totalMoney = "0.00";
+            item.medicareFundPay = "0.00";
         }
+    });
+}
+
+// 表格删除按钮事件
+ocrTableBody.addEventListener('click', e => {
+    const btn = e.target.closest('.table-del-btn');
+    if (!btn) return;
+    const recIdx = Number(btn.dataset.recIdx);
+    const record = finishedOcrRecords[recIdx];
+    if (!record) return;
+
+    removeRecordAndRebuild(recIdx);
+    const targetBindUid = record.bindUid;
+    ocrFileList = ocrFileList.filter(file => file.uid !== targetBindUid);
+
+    renderOcrPreview();
+    ocrTipText.textContent = ocrFileList.length ? `已选中 ${ocrFileList.length} 张票据` : '';
+    ocrSubmitBtn.disabled = ocrFileList.length === 0;
+    refreshAllTableAndSum();
+});
+
+// 双击单元格编辑函数
+function editCell(td, recIdx) {
+    const record = finishedOcrRecords[recIdx];
+    const fieldKey = td.dataset.key;
+    if (!record || record.error) return;
+
+    td.contentEditable = "true";
+    td.style.background = "#fffef0";
+    td.style.outline = "1px solid #1a56db";
+    td.focus();
+
+    td.onblur = function () {
+        td.contentEditable = "false";
+        td.style.background = "";
+        td.style.outline = "none";
+        const newVal = td.innerText.trim();
+        record[fieldKey] = newVal;
+        if (fieldKey === "totalMoney") record.originTotal = newVal;
+        if (fieldKey === "medicareFundPay") record.originMedicare = newVal;
+        if (fieldKey === "billType") {
+            record.originBillType = newVal.includes("住院") ? "inpatient" : "outpatient";
+        }
+        refreshAllTableAndSum();
+    };
+
+    td.onkeydown = function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            td.blur();
+        }
+    }
+}
+
+// 刷新表格+合计计算
+function refreshAllTableAndSum() {
+    ocrTableBody.innerHTML = '';
+    invoiceGroupMap.clear();
+
+    finishedOcrRecords.forEach((item, idx) => {
+        if (item.error || !item.invoiceNo) return;
+        if (!invoiceGroupMap.has(item.invoiceNo)) {
+            invoiceGroupMap.set(item.invoiceNo, []);
+        }
+        invoiceGroupMap.get(item.invoiceNo).push(idx);
+    });
+
+    invoiceGroupMap.forEach((indexArr) => {
+        indexArr.forEach((recIdx, pos) => {
+            const rec = finishedOcrRecords[recIdx];
+            if (pos === 0) {
+                rec.billType = rec.originBillType;
+                rec.totalMoney = rec.originTotal;
+                rec.medicareFundPay = rec.originMedicare;
+            } else {
+                rec.billType = "重复票据";
+                rec.totalMoney = "0.00";
+                rec.medicareFundPay = "0.00";
+            }
+        });
+    });
+
+    finishedOcrRecords.forEach((item, index) => {
+        insertOcrRow(index + 1, item, index);
+    });
+
+    const sumTotal = finishedOcrRecords.reduce((s, i) => {
+        if (i.error) return s;
+        return s + (Number(i.totalMoney) || 0);
+    }, 0);
+    const sumMed = finishedOcrRecords.reduce((s, i) => {
+        if (i.error) return s;
+        return s + (Number(i.medicareFundPay) || 0);
+    }, 0);
+    sumTotalMoneyEl.textContent = sumTotal.toFixed(2);
+    sumMedicareMoneyEl.textContent = sumMed.toFixed(2);
+    medicalTotalInput.value = sumTotal.toFixed(2);
+    medicalReimbursedInput.value = sumMed.toFixed(2);
+    calculate();
+}
+
+
+
+
+
+       
+
+
+
+
+
+
+
+
+
+
+
+
     </script>
 </body>
 </html>
