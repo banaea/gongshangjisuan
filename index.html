@@ -247,13 +247,217 @@
         tbody tr:first-child.bonus-group-row.first td {
             padding-top: 12px;
         }
+    /* ===== 理赔备注生成器 - 弹窗样式 ===== */
+.remark-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.remark-modal-overlay.active { display: flex; }
+.remark-modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    max-width: 750px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    position: relative;
+}
+.remark-modal .modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.remark-modal .modal-sub {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 18px;
+}
+.remark-modal .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0 6px;
+}
+.remark-modal .close-btn:hover { color: #374151; }
+.remark-modal .form-item { margin-bottom: 12px; }
+.remark-modal .form-item label {
+    font-weight: 500;
+    font-size: 13px;
+    display: block;
+    margin-bottom: 4px;
+    color: #374151;
+}
+.remark-modal .form-item input,
+.remark-modal .form-item select,
+.remark-modal .form-item textarea {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+    font-family: inherit;
+    background: #fff;
+}
+.remark-modal .form-item textarea { min-height: 50px; resize: vertical; }
+.remark-modal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+}
+.remark-modal .form-row .form-item { margin-bottom: 0; }
+.remark-modal .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}
+.remark-modal .btn-row button {
+    padding: 10px 28px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.remark-modal .btn-primary {
+    background: #1a56db;
+    color: #fff;
+}
+.remark-modal .btn-primary:hover { background: #1e40af; }
+.remark-modal .btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+.remark-modal .btn-secondary:hover { background: #d1d5db; }
+.remark-modal .remark-output {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.7;
+    max-height: 280px;
+    overflow-y: auto;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    min-height: 80px;
+}
+.remark-modal .copy-tip-btn {
+    background: #059669;
+    color: #fff;
+    border: none;
+    padding: 5px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.remark-modal .copy-tip-btn:hover { background: #047857; }
+.remark-modal .inline-flex {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.remark-modal .inline-flex label {
+    margin-bottom: 0;
+    font-weight: 400;
+    font-size: 14px;
+}
+.remark-modal .inline-flex input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #1a56db;
+}
+.remark-modal .hint-text {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+.gen-remark-btn {
+    padding: 8px 20px;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    margin-left: 12px;
+}
+.gen-remark-btn:hover { background: #6d28d9; }
+
+
+
+
+
+//======================================
+
+
+
+
+
+/* ★★★ 空值高亮样式（仅粉红背景，无红色边框） ★★★ */
+.highlight-empty {
+    background-color: #ffcccc !important;
+}
+
+/* ★★★ 输入框空值高亮（仅背景色） ★★★ */
+input.highlight-empty, 
+select.highlight-empty, 
+textarea.highlight-empty {
+    background-color: #ffcccc !important;
+    border-color: #d1d5db !important;
+    outline: none !important;
+}
+
+/* ★★★ 必填项红色星标 ★★★ */
+.required-star {
+    color: #ff0000;
+    font-weight: bold;
+}
+
+/* ★★★ 预览框禁止选中 ★★★ */
+.remark-output {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    cursor: default;
+}
+
+
+
+
+
+//========================================
+
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>全国工伤赔偿计算器</h1>
-            <p>31省市全量官方标准 · 延迟退休可选开关 · 未伤残/未离职场景全覆盖 <span style="margin-left: 12px; color: #6b7280;"> - Version by Shaun</span></p>
+            <p>
+                31省市全量官方标准 · 延迟退休可选开关 · 未伤残/未离职场景全覆盖 
+	<span style="margin-left: 12px; color: #6b7280;"> - Version by Shaun</span>
+            <button class="gen-remark-btn" onclick="openRemarkModal()">📝 生成理赔备注</button>
+            </p>
         </div>
 
         <div class="card">
@@ -2861,20 +3065,953 @@ function refreshAllTableAndSum() {
 
 
 
-
-       
-
+//==================================================
 
 
+// ================================================================
+// ===== 理赔备注生成器 - 独立逻辑（全自动实时更新） =====
+// ================================================================
+
+// ★★★ 需要校验的字段ID列表 ★★★
+const REQUIRED_FIELDS = [
+    'rmEmployeeName',
+    'rmEmployeeId',
+    'rmInsuranceAmount',
+    'rmAccidentDate',
+    'rmAccidentTime',
+    'rmDisabilityRatio',
+    'rmWhere',
+    'rmDoing',
+    'rmBecause',
+    'rmResult',
+    'rmAction',
+    'rmDiagnosis'
+];
+
+// ★★★ 存储字段值的键名 ★★★
+const STORAGE_PREFIX = 'remark_';
+
+function openRemarkModal() {
+    const modal = document.getElementById('remarkModal');
+    const getName = (id) => document.getElementById(id)?.value || '';
+    
+    const storedData = getStoredData();
+    
+    document.getElementById('rmEmployeeName').value = storedData?.rmEmployeeName || getName('employeeName');
+    document.getElementById('rmEmployeeId').value = storedData?.rmEmployeeId || getName('employeeId');
+    document.getElementById('rmInsuranceAmount').value = storedData?.rmInsuranceAmount || getName('insuranceAmount');
+    
+    const accDate = storedData?.rmAccidentDate || document.getElementById('leaveDate')?.value || '';
+    document.getElementById('rmAccidentDate').value = accDate;
+    
+    document.getElementById('rmAccidentTime').value = storedData?.rmAccidentTime || getName('accidentTime');
+    document.getElementById('rmDiagnosis').value = storedData?.rmDiagnosis || getName('accidentDiagnosis') || getName('diagnosis') || '';
+    document.getElementById('rmDisabilityRatio').value = storedData?.rmDisabilityRatio || '5';
+    document.getElementById('rmIsDeathCase').checked = storedData?.rmIsDeathCase === 'true';
+    
+    document.getElementById('rmHasCompensated').value = storedData?.rmHasCompensated || '否';
+    toggleCompInput();
+    document.getElementById('rmCompensated').value = storedData?.rmCompensated || '';
+    
+    const fields = ['rmWhere', 'rmDoing', 'rmBecause', 'rmResult', 'rmAction'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = storedData?.[id] || '';
+    });
+    document.getElementById('rmTreatment').value = storedData?.rmTreatment || '门诊保守治疗';
+
+    const inputs = document.querySelectorAll('#remarkModal input, #remarkModal select, #remarkModal textarea');
+    inputs.forEach(el => {
+        el.removeEventListener('input', onFieldChange);
+        el.removeEventListener('change', onFieldChange);
+        el.addEventListener('input', onFieldChange);
+        el.addEventListener('change', onFieldChange);
+    });
+
+    modal.classList.add('active');
+    
+    setTimeout(function() {
+        autoUpdateRemark();
+        validateAndHighlight();
+    }, 100);
+}
+
+function saveFieldValue(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = el.type === 'checkbox' ? el.checked : el.value;
+    localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(val));
+}
+
+function getStoredData() {
+    const data = {};
+    const allIds = [...REQUIRED_FIELDS, 'rmHasCompensated', 'rmCompensated', 'rmTreatment', 'rmIsDeathCase'];
+    allIds.forEach(id => {
+        const stored = localStorage.getItem(STORAGE_PREFIX + id);
+        if (stored !== null) {
+            try {
+                data[id] = JSON.parse(stored);
+            } catch (e) {
+                data[id] = stored;
+            }
+        }
+    });
+    return Object.keys(data).length > 0 ? data : null;
+}
+
+function onFieldChange() {
+    const id = this.id;
+    if (id) {
+        const val = this.type === 'checkbox' ? this.checked : this.value;
+        localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(val));
+    }
+    autoUpdateRemark();
+    validateAndHighlight();
+}
+
+function validateAndHighlight() {
+    REQUIRED_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const val = el.value.trim();
+        const isEmpty = val === '' || val === null || val === undefined;
+        if (isEmpty) {
+            el.style.backgroundColor = '#ffcccc';
+            el.style.borderColor = '#d1d5db';
+            el.style.outline = 'none';
+        } else {
+            el.style.backgroundColor = '';
+            el.style.borderColor = '';
+            el.style.outline = '';
+        }
+    });
+    
+    const hasComp = document.getElementById('rmHasCompensated').value === '是';
+    const compInput = document.getElementById('rmCompensated');
+    if (hasComp && compInput) {
+        const val = compInput.value.trim();
+        if (val === '' || val === '0' || val === '0.00') {
+            compInput.style.backgroundColor = '#ffcccc';
+            compInput.style.borderColor = '#d1d5db';
+            compInput.style.outline = 'none';
+        } else {
+            compInput.style.backgroundColor = '';
+            compInput.style.borderColor = '';
+            compInput.style.outline = '';
+        }
+    } else if (compInput) {
+        compInput.style.backgroundColor = '';
+        compInput.style.borderColor = '';
+        compInput.style.outline = '';
+    }
+}
+
+function toggleCompInput() {
+    const select = document.getElementById('rmHasCompensated');
+    const inputWrap = document.getElementById('rmCompInputWrap');
+    if (!select || !inputWrap) return;
+    if (select.value === '是') {
+        inputWrap.style.display = 'block';
+    } else {
+        inputWrap.style.display = 'none';
+        document.getElementById('rmCompensated').value = '';
+        localStorage.removeItem(STORAGE_PREFIX + 'rmCompensated');
+    }
+    saveFieldValue('rmHasCompensated');
+    autoUpdateRemark();
+    validateAndHighlight();
+}
+
+function closeRemarkModal() {
+    document.getElementById('remarkModal').classList.remove('active');
+}
+
+function autoUpdateRemark() {
+    try {
+        const output = document.getElementById('remarkOutput');
+        const remark = generateRemarkText();
+        output.textContent = remark || '（请补充必要信息）';
+    } catch (e) {
+        document.getElementById('remarkOutput').textContent = '⚠️ 生成出错：' + e.message;
+    }
+}
+
+function cleanProcessText(html) {
+    if (!html) return '';
+    // 将 <br> 转为 \n，移除其他HTML标签
+    let text = html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+    // 移除包含 ⚠️、注1、注2 的行
+    let lines = text.split('\n').filter(line => {
+        return !line.includes('⚠️') && !line.includes('注1') && !line.includes('注2');
+    });
+    // 去除空行
+    lines = lines.filter(line => line.trim() !== '');
+    
+    if (lines.length === 0) return '';
+    
+    const firstLine = lines[0].trim();
+    const lastLine = lines[lines.length - 1].trim();
+    
+    // ★★★ 如果只有一行，且包含 × 但不包含 =，返回第一行（由调用方追加 = 结果） ★★★
+    if (lines.length === 1) {
+        if (firstLine.includes('=')) {
+            return firstLine;
+        }
+        return firstLine;
+    }
+    
+    // 多行处理
+    if (firstLine.includes('=')) {
+        return firstLine;
+    }
+    if (lastLine.includes('=')) {
+        return firstLine + ' = ' + lastLine.replace(/^=\s*/, '');
+    }
+    return lines.join(' ');
+}
+
+function getSelectedRadioValue(name) {
+    const radio = document.querySelector(`input[name="${name}"]:checked`);
+    return radio ? radio.value : null;
+}
+
+function getSelectedBonusRow(level, isBelow60) {
+    const resultBody = document.getElementById('resultBody');
+    if (!resultBody) return null;
+    
+    const rows = resultBody.querySelectorAll('tr');
+    let targetRow = null;
+    
+    if (isBelow60 && level > 0) {
+        const selectedType = getSelectedRadioValue('disBonusType');
+        if (selectedType) {
+            for (const row of rows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) continue;
+                const itemName = cells[0]?.textContent?.trim() || '';
+                if (selectedType === 'actual' && itemName.includes('按本人实际工资')) {
+                    targetRow = row;
+                    break;
+                } else if (selectedType === 'standard' && itemName.includes('法定保底标准')) {
+                    targetRow = row;
+                    break;
+                }
+            }
+        }
+        if (!targetRow) {
+            for (const row of rows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) continue;
+                const itemName = cells[0]?.textContent?.trim() || '';
+                if (itemName.includes('一次性伤残补助金')) {
+                    targetRow = row;
+                    break;
+                }
+            }
+        }
+    } else {
+        for (const row of rows) {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 6) continue;
+            const itemName = cells[0]?.textContent?.trim() || '';
+            if (itemName.includes('一次性伤残补助金') && !itemName.includes('实际工资') && !itemName.includes('法定保底')) {
+                targetRow = row;
+                break;
+            }
+        }
+        if (!targetRow) {
+            for (const row of rows) {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) continue;
+                const itemName = cells[0]?.textContent?.trim() || '';
+                if (itemName.includes('一次性伤残补助金')) {
+                    targetRow = row;
+                    break;
+                }
+            }
+        }
+    }
+    return targetRow;
+}
+
+function getSelectedMedicalRow() {
+    const resultBody = document.getElementById('resultBody');
+    if (!resultBody) return null;
+    
+    const rows = resultBody.querySelectorAll('tr');
+    const selectedType = getSelectedRadioValue('medicalBonusType');
+    
+    for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 6) continue;
+        const itemName = cells[0]?.textContent?.trim() || '';
+        if (itemName.includes('一次性工伤医疗补助金')) {
+            if (selectedType) {
+                if (selectedType === 'actual' && itemName.includes('按本人实际工资')) {
+                    return row;
+                } else if (selectedType === 'standard' && itemName.includes('法定保底标准')) {
+                    return row;
+                }
+            }
+            if (!itemName.includes('按本人实际工资') && !itemName.includes('法定保底标准')) {
+                return row;
+            }
+        }
+    }
+    for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 6) continue;
+        const itemName = cells[0]?.textContent?.trim() || '';
+        if (itemName.includes('一次性工伤医疗补助金')) {
+            return row;
+        }
+    }
+    return null;
+}
+
+function getSelectedEmploymentRow() {
+    const resultBody = document.getElementById('resultBody');
+    if (!resultBody) return null;
+    
+    const rows = resultBody.querySelectorAll('tr');
+    const selectedType = getSelectedRadioValue('employmentBonusType');
+    
+    for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 6) continue;
+        const itemName = cells[0]?.textContent?.trim() || '';
+        if (itemName.includes('一次性伤残就业补助金')) {
+            if (selectedType) {
+                if (selectedType === 'actual' && itemName.includes('按本人实际工资')) {
+                    return row;
+                } else if (selectedType === 'standard' && itemName.includes('法定保底标准')) {
+                    return row;
+                }
+            }
+            if (!itemName.includes('按本人实际工资') && !itemName.includes('法定保底标准')) {
+                return row;
+            }
+        }
+    }
+    for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 6) continue;
+        const itemName = cells[0]?.textContent?.trim() || '';
+        if (itemName.includes('一次性伤残就业补助金')) {
+            return row;
+        }
+    }
+    return null;
+}
+
+function generateRemarkText() {
+    const name = document.getElementById('rmEmployeeName').value.trim() || '员工姓名';
+    const idInfo = document.getElementById('rmEmployeeId').value.trim() || '标的几';
+    const amount = document.getElementById('rmInsuranceAmount').value.trim() || ' ';
+    const date = document.getElementById('rmAccidentDate').value || '';
+    const time = document.getElementById('rmAccidentTime').value || '';
+    
+    const ratioRaw = document.getElementById('rmDisabilityRatio').value.trim() || '5';
+    const ratioNum = parseFloat(ratioRaw) || 5;
+    const ratioDisplay = ratioNum + '%';
+    
+    const isDeath = document.getElementById('rmIsDeathCase').checked;
+
+    const where = document.getElementById('rmWhere').value.trim() || '工作车间';
+    const doing = document.getElementById('rmDoing').value.trim() || '收拾物料';
+    const because = document.getElementById('rmBecause').value.trim() || '不慎被物料绊倒';
+    const result = document.getElementById('rmResult').value.trim() || '摔伤';
+    const action = document.getElementById('rmAction').value.trim() || '随后同事通知带班组长，被带班组长驱车送往就近医院救治';
+    const diagnosis = document.getElementById('rmDiagnosis').value.trim() || '诊断结论';
+    const treatment = document.getElementById('rmTreatment').value || '门诊保守治疗';
+    
+    const hasComp = document.getElementById('rmHasCompensated').value === '是';
+    const compensatedRaw = hasComp ? document.getElementById('rmCompensated').value.trim() : '0';
+
+    let dateStr = date || '年月日';
+    if (date) {
+        const parts = date.split('-');
+        if (parts.length === 3) dateStr = parts[0] + '年' + parts[1] + '月' + parts[2] + '日';
+    }
+    let timeStr = time || ':分左右';
+    if (time) {
+        const t = time.split(':');
+        if (t.length === 2) {
+            let h = parseInt(t[0]);
+            let m = parseInt(t[1]);
+            let ap = h >= 12 ? '下午' : '上午';
+            let hh = h > 12 ? h-12 : h;
+            if (hh === 0) hh = 12;
+            timeStr = ap + hh + ':' + (m<10?'0':'') + m + '分左右';
+        }
+    }
+
+    const amountParts = amount.split('+').map(s => parseFloat(s.trim()) || 0);
+    const firstAmount = amountParts[0] || 50;
+    const secondAmount = amountParts[1] || 5;
+
+    const getVal = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+    const medTotal = getVal('medicalTotal');
+    const thirdPartyReimb = getVal('medicalReimbursed');
+    
+    const nonMedicalRatio = getVal('nonMedicalRatio') || 0;
+    const medOut = medTotal * (nonMedicalRatio / 100);
+    
+    const ded = getVal('medicalDeductible') || 100;
+    const payRate = getVal('medicalRatio') || 90;
+    const medLoss = Math.max(0, (medTotal - thirdPartyReimb - medOut - ded) * (payRate / 100));
+
+    const medLimit = secondAmount * 10000;
+    let medFinal = medLoss;
+    let medCompareNote = '';
+    if (medLimit > 0) {
+        if (medLoss > medLimit) {
+            medFinal = medLimit;
+            medCompareNote = `本保单医疗费赔偿限额为${secondAmount}万（即${medLimit.toFixed(2)}元），低于医疗费核算金额${medLoss.toFixed(2)}元，故医疗费最终核算金额为${medLimit.toFixed(2)}元`;
+        } else {
+            medCompareNote = `本保单医疗费赔偿限额为${secondAmount}万（即${medLimit.toFixed(2)}元），高于医疗费核算金额${medLoss.toFixed(2)}元，故医疗费最终核算金额为${medLoss.toFixed(2)}元`;
+        }
+    } else {
+        medCompareNote = `医疗费无限额，最终核算金额为${medLoss.toFixed(2)}元`;
+    }
+
+    const wDays = getVal('stopWorkDays') || 0;
+    const dWage = getVal('dailyWage') || 100;
+    const deductDays = getVal('deductDays') || 3;
+    const workComp = wDays > 0 ? Math.max(0, (wDays - deductDays) * dWage) : 0;
+
+    const gender = document.getElementById('gender')?.value || '男';
+    const ageInput = document.getElementById('age')?.value || '30 岁';
+    const ageNum = ageInput.replace(/[^0-9.]/g, '') || '30';
+    const ageDisplay = gender === '女' ? `${ageNum}岁女` : `${ageNum}岁男`;
+
+    const level = parseInt(document.getElementById('disabilityLevel')?.value || '0');
+    const levelMap = {
+        1: '一级', 2: '二级', 3: '三级', 4: '四级',
+        5: '五级', 6: '六级', 7: '七级', 8: '八级', 9: '九级', 10: '十级'
+    };
+    const levelText = levelMap[level] || '';
+
+    const isResigned = document.getElementById('isResigned')?.value === '1';
+    const retireDiffShow = document.getElementById('retireDiffShow');
+    let retireDiffText = '未达法定退休年龄';
+    let isReachedRetire = false;
+    if (retireDiffShow) {
+        const diffVal = retireDiffShow.value || '';
+        if (diffVal === '0日' || diffVal === '0年0个月0日' || diffVal === '0年0月0日') {
+            retireDiffText = '已达法定退休年龄';
+            isReachedRetire = true;
+        } else if (diffVal && diffVal !== '') {
+            retireDiffText = `距法定退休年龄剩余${diffVal}`;
+        }
+    }
+
+    const salary = getVal('monthlySalary');
+    const avgSalary = getVal('localAvgSalary');
+    const minBase = avgSalary * 0.6;
+    const isBelow60 = salary > 0 && salary < minBase && avgSalary > 0;
+
+    // ★★★ 一次性伤残补助金（从主工具读取计算过程） ★★★
+    const disRow = getSelectedBonusRow(level, isBelow60);
+    let disProcessText = '';
+    let oneTimeBonus = 0;
+    if (disRow) {
+        const cells = disRow.querySelectorAll('td');
+        if (cells.length >= 6) {
+            const processHtml = cells[3]?.innerHTML || '';
+            // ★★★ 使用cleanProcessText提取第一行+最后一行合并 ★★★
+            disProcessText = cleanProcessText(processHtml);
+            const amountText = cells[5]?.textContent?.trim() || '0';
+            oneTimeBonus = parseFloat(amountText.replace(/,/g, '')) || 0;
+        }
+    }
+    
+    // ★★★ 如果disProcessText为空（兜底），从主工具构建 ★★★
+    if (!disProcessText && level > 0) {
+        const bonusMonths = {1:27,2:25,3:23,4:21,5:18,6:16,7:13,8:11,9:9,10:7};
+        const months = bonusMonths[level] || 0;
+        const salary = getVal('monthlySalary');
+        const avgSalary = getVal('localAvgSalary');
+        const minBase = avgSalary * 0.6;
+        const isBelow60 = salary > 0 && salary < minBase && avgSalary > 0;
+        if (isBelow60) {
+            const baseSalary = avgSalary * 0.6;
+            disProcessText = `法定计发基数（社平60%保底）：${fmt(baseSalary)} 元 × ${months} 个月`;
+        } else {
+            disProcessText = `本人实际月工资：${fmt(salary)} 元 × ${months} 个月`;
+        }
+    }
+
+    // ★★★ 一次性工伤医疗补助金 ★★★
+    const medicalRow = getSelectedMedicalRow();
+    let medicalProcessText = '';
+    let medicalBonus = 0;
+    if (medicalRow) {
+        const cells = medicalRow.querySelectorAll('td');
+        if (cells.length >= 6) {
+            const processHtml = cells[3]?.innerHTML || '';
+            medicalProcessText = cleanProcessText(processHtml);
+            const amountText = cells[5]?.textContent?.trim() || '0';
+            medicalBonus = parseFloat(amountText.replace(/,/g, '')) || 0;
+        }
+    }
+
+    // ★★★ 一次性伤残就业补助金 ★★★
+    const empRow = getSelectedEmploymentRow();
+    let empProcessText = '';
+    let employmentBonus = 0;
+    if (empRow) {
+        const cells = empRow.querySelectorAll('td');
+        if (cells.length >= 6) {
+            const processHtml = cells[3]?.innerHTML || '';
+            empProcessText = cleanProcessText(processHtml);
+            const amountText = cells[5]?.textContent?.trim() || '0';
+            employmentBonus = parseFloat(amountText.replace(/,/g, '')) || 0;
+        }
+    }
+
+    const totalDisCalc = oneTimeBonus + medicalBonus + employmentBonus;
+
+    // ★★★ 构建伤残赔偿金详细计算过程 ★★★
+    let disDetailProcess = '';
+    if (level !== 0 && !isDeath) {
+        const resignedText = isResigned ? '已离职' : '未离职';
+        
+        let compensationType = '';
+        const showThree = isResigned && level >= 5 && !isReachedRetire;
+        
+        if (isReachedRetire) {
+            compensationType = '一次性伤残补助金';
+        } else if (showThree) {
+            compensationType = '三个一次性';
+        } else {
+            compensationType = '一次性伤残补助金';
+        }
+
+        disDetailProcess = `伤者"${diagnosis}"，经鉴定为"${levelText}"伤残，并且"${resignedText}"`;
+        
+        if (isResigned) {
+            disDetailProcess += `，离职时"${retireDiffText}"`;
+        }
+        disDetailProcess += `，赔偿"${compensationType}"：\n`;
+        
+        // ★★★ 一次性伤残补助金 ★★★
+        if (disProcessText) {
+            // ★★★ 如果包含 × 但不包含 =，自动追加 = 结果 ★★★
+            if (disProcessText.includes('=')) {
+                disDetailProcess += `一次性伤残补助金：${disProcessText}\n`;
+            } else if (disProcessText.includes('×') || disProcessText.includes('*')) {
+                disDetailProcess += `一次性伤残补助金：${disProcessText} = ${oneTimeBonus.toFixed(2)}元\n`;
+            } else {
+                disDetailProcess += `一次性伤残补助金：${disProcessText} = ${oneTimeBonus.toFixed(2)}元\n`;
+            }
+        } else {
+            disDetailProcess += `一次性伤残补助金：${oneTimeBonus.toFixed(2)}元\n`;
+        }
+        
+        if (showThree) {
+            if (medicalProcessText) {
+                disDetailProcess += `一次性工伤医疗补助金：${medicalProcessText}\n`;
+            } else if (medicalBonus > 0) {
+                disDetailProcess += `一次性工伤医疗补助金：${medicalBonus.toFixed(2)}元\n`;
+            }
+            
+            if (empProcessText) {
+                disDetailProcess += `一次性伤残就业补助金：${empProcessText}\n`;
+            } else if (employmentBonus > 0) {
+                disDetailProcess += `一次性伤残就业补助金：${employmentBonus.toFixed(2)}元\n`;
+            }
+        }
+        
+        if (isResigned) {
+            disDetailProcess += `合计：${oneTimeBonus.toFixed(2)}`;
+            if (showThree) {
+                disDetailProcess += ` + ${medicalBonus.toFixed(2)} + ${employmentBonus.toFixed(2)}`;
+            }
+            disDetailProcess += ` = ${totalDisCalc.toFixed(2)}元\n`;
+        }
+    }
+
+    // ★★★ 伤残赔偿金限额比较 ★★★
+    let disFinal = 0;
+    let disTypeLabel = '伤残赔偿金';
+    let disCompareNote = '';
+    const disLimit = firstAmount * 10000 * (ratioNum / 100);
+
+    if (isDeath) {
+        const deathLimit = firstAmount * 10000;
+        const perCapitaIncome = 56502;
+        const calcAmount = perCapitaIncome * 20;
+        disFinal = Math.min(calcAmount, deathLimit);
+        disTypeLabel = '死亡赔偿金';
+        if (calcAmount > deathLimit) {
+            disCompareNote = `本保单死亡赔偿限额为${firstAmount}万（即${deathLimit.toFixed(2)}元），低于死亡赔偿金核算金额${calcAmount.toFixed(2)}元，故死亡赔偿金最终核算金额为${deathLimit.toFixed(2)}元`;
+        } else {
+            disCompareNote = `本保单死亡赔偿限额为${firstAmount}万（即${deathLimit.toFixed(2)}元），高于死亡赔偿金核算金额${calcAmount.toFixed(2)}元，故死亡赔偿金最终核算金额为${calcAmount.toFixed(2)}元`;
+        }
+        disDetailProcess = `死亡赔偿金 = 上一年度全国城镇居民人均可支配收入 × 20 = ${perCapitaIncome.toFixed(2)} × 20 = ${calcAmount.toFixed(2)}元`;
+    } else if (level === 0) {
+        disFinal = 0;
+        disTypeLabel = '伤残赔偿金';
+        disCompareNote = '';
+        disDetailProcess = '';
+    } else {
+        disFinal = Math.min(totalDisCalc, disLimit);
+        disTypeLabel = '伤残赔偿金';
+        if (totalDisCalc > disLimit) {
+            disCompareNote = `本保单${levelText}伤残赔偿限额为${firstAmount}万×${ratioNum}%=${disLimit.toFixed(2)}元，低于伤残赔偿金核算金额${totalDisCalc.toFixed(2)}元，故伤残赔偿金最终核算金额为${disLimit.toFixed(2)}元`;
+        } else {
+            disCompareNote = `本保单${levelText}伤残赔偿限额为${firstAmount}万×${ratioNum}%=${disLimit.toFixed(2)}元，高于伤残赔偿金核算金额${totalDisCalc.toFixed(2)}元，故伤残赔偿金最终核算金额为${totalDisCalc.toFixed(2)}元`;
+        }
+    }
+
+    // ★★★ 医疗费、误工费、伤残赔偿金最终值（已含限额比较） ★★★
+    // medFinal 已包含医疗费限额比较
+    // workComp 无限额
+    // disFinal 已包含伤残限额比较
+
+    // ★★★ 解析单位已赔偿（三段分别解析） ★★★
+    let compMed = 0, compWork = 0, compDis = 0;
+    let compTotal = 0;
+    const compStr = compensatedRaw.replace(/，/g, ',').replace(/、/g, '+');
+    if (hasComp && compStr) {
+        if (compStr.includes('+')) {
+            const parts = compStr.split('+').map(s => parseFloat(s.trim()) || 0);
+            compMed = parts[0] || 0;
+            compWork = parts[1] || 0;
+            compDis = parts[2] || 0;
+            compTotal = compMed + compWork + compDis;
+        } else {
+            compTotal = parseFloat(compStr) || 0;
+            // 单个数字时，按比例分配或全部视为总金额
+            compMed = compTotal;
+            compWork = 0;
+            compDis = 0;
+        }
+    }
+
+    // ★★★ 三段分别对比，取低值 ★★★
+    let finalMed = medFinal;
+    let finalWork = workComp;
+    let finalDis = disFinal;
+    let compareNote = '';
+    let medCompare = '';
+    let workCompare = '';
+    let disCompare = '';
+
+    if (hasComp && compStr.includes('+')) {
+        // 三段分别对比
+        if (compMed > 0) {
+            if (compMed >= medFinal) {
+                medCompare = `单位医疗费赔偿金额${compMed.toFixed(2)}元不低于核算医疗费${medFinal.toFixed(2)}元`;
+                finalMed = medFinal;
+            } else {
+                medCompare = `单位医疗费赔偿金额${compMed.toFixed(2)}元低于核算医疗费${medFinal.toFixed(2)}元`;
+                finalMed = compMed;
+            }
+        } else {
+            medCompare = `单位未赔偿医疗费，按核算金额${medFinal.toFixed(2)}元赔付`;
+            finalMed = medFinal;
+        }
+
+        if (compWork > 0) {
+            if (compWork >= workComp) {
+                workCompare = `单位误工费赔偿金额${compWork.toFixed(2)}元不低于核算误工费${workComp.toFixed(2)}元`;
+                finalWork = workComp;
+            } else {
+                workCompare = `单位误工费赔偿金额${compWork.toFixed(2)}元低于核算误工费${workComp.toFixed(2)}元`;
+                finalWork = compWork;
+            }
+        } else {
+            workCompare = `单位未赔偿误工费，按核算金额${workComp.toFixed(2)}元赔付`;
+            finalWork = workComp;
+        }
+
+        if (compDis > 0) {
+            if (compDis >= disFinal) {
+                disCompare = `单位伤残赔偿金额${compDis.toFixed(2)}元不低于核算伤残赔偿金${disFinal.toFixed(2)}元`;
+                finalDis = disFinal;
+            } else {
+                disCompare = `单位伤残赔偿金额${compDis.toFixed(2)}元低于核算伤残赔偿金${disFinal.toFixed(2)}元`;
+                finalDis = compDis;
+            }
+        } else {
+            disCompare = `单位未赔偿伤残赔偿金，按核算金额${disFinal.toFixed(2)}元赔付`;
+            finalDis = disFinal;
+        }
+
+        compareNote = `${medCompare}，${workCompare}，${disCompare}，故本案最终理算赔付金额为两者取低医疗费${finalMed.toFixed(2)}元+两者取低误工费${finalWork.toFixed(2)}元+两者取低伤残赔偿金${finalDis.toFixed(2)}元=${(finalMed + finalWork + finalDis).toFixed(2)}元`;
+
+    } else if (hasComp && compTotal > 0) {
+        // 单个总金额对比
+        const calcTotal = medFinal + workComp + disFinal;
+        if (compTotal >= calcTotal) {
+            compareNote = `单位赔偿总金额 ${compTotal.toFixed(2)} 元，高于/等于理算总金额 ${calcTotal.toFixed(2)} 元，故本案最终理算赔付金额为${calcTotal.toFixed(2)}元`;
+            // 保持finalMed, finalWork, finalDis不变
+        } else {
+            compareNote = `单位赔偿总金额 ${compTotal.toFixed(2)} 元，低于理算总金额 ${calcTotal.toFixed(2)} 元，故本案最终理算赔付金额为${compTotal.toFixed(2)}元`;
+            // 按比例缩减或直接使用总金额，这里简单处理：按比例分配
+            const ratio = compTotal / calcTotal;
+            finalMed = medFinal * ratio;
+            finalWork = workComp * ratio;
+            finalDis = disFinal * ratio;
+        }
+    }
+
+    const finalCalcTotal = finalMed + finalWork + finalDis;
+    const finalPayRound = Math.round(finalCalcTotal);
+
+    // ----- 构建备注文本 -----
+    let remark = '';
+    remark += `1、保险责任认定：\n`;
+    remark += `员工${name}（${idInfo}，${ageDisplay}，保额${amount}，伤残比例${ratioDisplay}）于${dateStr}${timeStr}在${where}${doing}时，${because}导致${result}，${action}。经诊断为${diagnosis}，${treatment}。\n`;
+    remark += `被保险人的员工在工作时因工作原因受伤，属于雇主责任险保险责任范围。\n\n`;
+
+    remark += `2、损失核定\n`;
+    
+    remark += `医疗费：\n`;
+    remark += `总费用${medTotal.toFixed(2)}元，第三方报销金额${thirdPartyReimb.toFixed(2)}元；非医保：${medOut.toFixed(2)}元；免赔${ded.toFixed(2)}元，按照${payRate}%赔付。\n`;
+    remark += `核损金额=（医疗总费用-第三方报销金额-非医保金额-免赔）*${payRate}%=（${medTotal.toFixed(2)}-${thirdPartyReimb.toFixed(2)}-${medOut.toFixed(2)}-${ded.toFixed(2)}）*${payRate}%=${medLoss.toFixed(2)}元\n`;
+    remark += `${medCompareNote}\n\n`;
+
+    remark += `误工费：\n`;
+    if (wDays === 0) {
+        remark += `经核定，停工留薪期天数为0天，误工费为0元。\n\n`;
+    } else {
+        remark += `${diagnosis}，根据《人身损害受伤人员误工损失日评定准则（GA/T 521—2004）》结合实际误工天数，核定误工天数为${wDays}天，误工费=（${wDays}-${deductDays})*${dWage.toFixed(2)}=${workComp.toFixed(2)}元。\n\n`;
+    }
+
+    if (isDeath) {
+        remark += `死亡赔偿金：\n`;
+        remark += `${disDetailProcess}\n`;
+        remark += `${disCompareNote}\n\n`;
+    } else if (level !== 0) {
+        remark += `伤残赔偿金：\n`;
+        remark += `${disDetailProcess}`;
+        remark += `${disCompareNote}\n\n`;
+    } else {
+        remark += `伤残赔偿金：未达伤残等级/未索赔伤残，不涉及伤残赔偿金\n\n`;
+    }
+
+    remark += `3、单位赔偿情况/单位授权我司支付情况及结论：\n`;
+    if (hasComp) {
+        if (compStr.includes('+')) {
+            remark += `单位已赔偿伤者医疗费${compMed.toFixed(2)}元+误工费${compWork.toFixed(2)}元+伤残赔偿金${compDis.toFixed(2)}元。\n`;
+        } else {
+            remark += `单位已赔偿伤者总金额${compTotal.toFixed(2)}元。\n`;
+        }
+        remark += `${compareNote}\n`;
+    } else {
+        remark += `被保险人授权我司将理赔款直接支付伤者。\n`;
+        remark += `本案最终核定金额为医疗费+误工费+${disTypeLabel}=${medFinal.toFixed(2)}元+${workComp.toFixed(2)}元+${disFinal.toFixed(2)}元=${(medFinal + workComp + disFinal).toFixed(2)}元。\n`;
+    }
+    
+    remark += `赔款确认书已上传，请领导审核，谢谢`;
+
+    return remark;
+}
+
+function copyRemarkText() {
+    validateAndHighlight();
+    
+    let hasEmpty = false;
+    REQUIRED_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.value.trim() === '') hasEmpty = true;
+    });
+    
+    const hasComp = document.getElementById('rmHasCompensated').value === '是';
+    if (hasComp) {
+        const compInput = document.getElementById('rmCompensated');
+        if (compInput && compInput.value.trim() === '') hasEmpty = true;
+    }
+    
+    if (hasEmpty) {
+        const btn = document.querySelector('.copy-tip-btn');
+        if (btn) {
+            btn.style.backgroundColor = '#ff6b6b';
+            btn.textContent = '⚠️ 有必填项';
+            setTimeout(() => {
+                btn.style.backgroundColor = '#059669';
+                btn.textContent = '📋 复制';
+            }, 2000);
+        }
+        return;
+    }
+
+    const el = document.getElementById('remarkOutput');
+    const text = el.textContent;
+    if (!text || text === '💡 请填写左侧信息，备注将自动生成') {
+        alert('请先填写完整信息，备注会自动生成');
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-tip-btn');
+        const orig = btn.textContent;
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    }).catch(() => {
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        const btn = document.querySelector('.copy-tip-btn');
+        const orig = btn.textContent;
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('remarkModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeRemarkModal();
+        });
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeRemarkModal();
+    });
+});
 
 
 
 
 
 
+
+
+
+
+
+//=======================================
 
 
 
     </script>
+
+
+
+<!-- ===== 理赔备注弹窗（左右布局，预览更宽） ===== -->
+<div class="remark-modal-overlay" id="remarkModal">
+    <div class="remark-modal" style="max-width: 1200px; max-height: 95vh; display: flex; flex-direction: column;">
+        <div class="modal-title">
+            <span>📄 生成理赔备注</span>
+            <button class="close-btn" onclick="closeRemarkModal()">✕</button>
+        </div>
+        <div class="modal-sub">左侧填写信息，右侧实时预览备注</div>
+
+        <div style="display: flex; gap: 24px; flex: 1; min-height: 0; flex-wrap: wrap;">
+            <!-- ===== 左侧：输入区 ===== -->
+            <div style="flex: 0 0 38%; min-width: 300px; max-height: 75vh; overflow-y: auto; padding-right: 4px;">
+
+                <div class="form-row">
+                    <div class="form-item">
+                        <label>👤 员工姓名 <span style="color:#ff0000;">*</span></label>
+                        <input id="rmEmployeeName" type="text" placeholder="请输入员工姓名">
+                    </div>
+                    <div class="form-item">
+                        <label>🆔 标的/工种 <span style="color:#ff0000;">*</span></label>
+                        <input id="rmEmployeeId" type="text" placeholder="如：标的1，车削工">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-item">
+                        <label>💰 保额 (万) <span style="color:#ff0000;">*</span></label>
+                        <input id="rmInsuranceAmount" type="text" placeholder="如：50+5+100">
+                    </div>
+                    <div class="form-item">
+                        <label>📅 出险日期 <span style="color:#ff0000;">*</span></label>
+                        <input id="rmAccidentDate" type="date">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-item">
+                        <label>⏰ 出险时间 <span style="color:#ff0000;">*</span></label>
+                        <input id="rmAccidentTime" type="time" step="60">
+                    </div>
+                    <div class="form-item">
+                        <label>⚖️ 伤残比例 (%) <span style="color:#ff0000;">*</span></label>
+                        <input id="rmDisabilityRatio" type="number" value="5" min="0" max="100" step="1" onchange="autoUpdateRemark()" oninput="autoUpdateRemark()" style="padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; width:100%;">
+                        <div class="hint-text">输入数字，与保额关联计算限额</div>
+                    </div>
+                </div>
+
+                <div class="form-item" style="margin-bottom: 8px;">
+                    <div class="inline-flex">
+                        <input type="checkbox" id="rmIsDeathCase" onchange="autoUpdateRemark()">
+                        <label for="rmIsDeathCase">☠️ 是否死亡案件</label>
+                        <span style="font-size:12px; color:#6b7280; margin-left:8px;">选「是」伤残比例自动变为100%</span>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label>🧾 事故简述</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; background:#f9fafb; padding:8px 12px; border-radius:8px; border:1px solid #e5e7eb;">
+                        <span style="font-weight:500; font-size:13px; color:#374151;">在</span>
+                        <input id="rmWhere" type="text" placeholder="哪里" style="flex:1 1 60px; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                        <input id="rmDoing" type="text" placeholder="干什么" style="flex:1 1 60px; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                        <span style="font-weight:500; font-size:13px; color:#374151;">时，</span>
+                        <input id="rmBecause" type="text" placeholder="因为什么" style="flex:1 1 70px; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                        <span style="font-weight:500; font-size:13px; color:#374151;">导致</span>
+                        <input id="rmResult" type="text" placeholder="导致结果" style="flex:1 1 60px; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                        <span style="font-weight:500; font-size:13px; color:#374151;">，</span>
+                        <input id="rmAction" type="text" placeholder="后续处理方案" style="flex:2 1 120px; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; background:#f9fafb; padding:8px 12px; border-radius:8px; border:1px solid #e5e7eb; margin-top:6px;">
+                        <span style="font-weight:500; font-size:13px; color:#374151;">经诊断为</span>
+                        <input id="rmDiagnosis" type="text" placeholder="诊断结论" style="flex:1 1 100px; padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                        <span style="font-weight:500; font-size:13px; color:#374151;">，</span>
+                        <select id="rmTreatment" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                            <option value="门诊保守治疗">门诊保守治疗</option>
+                            <option value="住院手术治疗">住院手术治疗</option>
+                            <option value="住院保守治疗">住院保守治疗</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label>📋 单位是否赔偿</label>
+                    <select id="rmHasCompensated" onchange="toggleCompInput()" style="padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; width:100%; background:#fff;">
+                        <option value="否">否</option>
+                        <option value="是">是</option>
+                    </select>
+                </div>
+
+                <div class="form-item" id="rmCompInputWrap" style="display:none;">
+                    <label>赔偿金额 (医疗+误工+伤残, 元) <span style="color:#ff0000;">*</span></label>
+                    <input id="rmCompensated" type="text" placeholder="如：1068.3+10000+150000 或 161068.3">
+                    <div class="hint-text">单个数字视为总金额，自动与理算对比</div>
+                </div>
+
+                <div class="btn-row" style="margin-top:12px;">
+                    <button class="btn-secondary" onclick="closeRemarkModal()">关闭</button>
+                </div>
+            </div>
+
+            <!-- ===== 右侧：预览区（自动贴下边 + 禁止选中/复制） ===== -->
+            <div style="flex: 1 1 58%; min-width: 350px; display: flex; flex-direction: column; min-height: 500px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-shrink:0;">
+                    <span style="font-weight:600; font-size:15px; color:#111827;">📌 备注预览</span>
+                    <button class="copy-tip-btn" onclick="copyRemarkText()" style="padding:5px 16px; background:#059669; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px;">📋 复制</button>
+                </div>
+                <!-- ★★★ 预览框：禁止选中 + 禁止复制 ★★★ -->
+                <div class="remark-output" id="remarkOutput" style="flex:1; min-height:450px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:14px 16px; white-space:pre-wrap; font-size:13px; line-height:1.7; overflow-y:auto; font-family:'Segoe UI',Roboto,sans-serif; height:100%; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; cursor: default;">
+                    💡 请填写左侧信息，备注将自动生成
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+//=====================================================================
+
 </body>
 </html>
