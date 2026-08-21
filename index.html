@@ -3746,7 +3746,7 @@ function generateRemarkText() {
         // 单个总金额对比
         const calcTotal = medFinal + workComp + disFinal;
         if (compTotal >= calcTotal) {
-            compareNote = `单位赔偿总金额 ${compTotal.toFixed(2)} 元，高于/等于理算总金额 ${calcTotal.toFixed(2)} 元，故本案最终理算赔付金额为${calcTotal.toFixed(2)}元`;
+            compareNote = `单位赔偿总金额 ${compTotal.toFixed(2)} 元，不低于理算总金额 ${calcTotal.toFixed(2)} 元，故本案最终理算赔付金额为${calcTotal.toFixed(2)}元`;
             // 保持finalMed, finalWork, finalDis不变
         } else {
             compareNote = `单位赔偿总金额 ${compTotal.toFixed(2)} 元，低于理算总金额 ${calcTotal.toFixed(2)} 元，故本案最终理算赔付金额为${compTotal.toFixed(2)}元`;
