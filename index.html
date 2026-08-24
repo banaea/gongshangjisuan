@@ -3436,28 +3436,679 @@
         // 理赔备注生成器
         // ================================================================
 
-        // ... (理赔备注代码保持不变，此处省略以节省篇幅)
-        // 实际使用时请保留完整的理赔备注代码
+        function saveFieldValue(id) {
+            var el = $(id);
+            if (!el) return;
+            var val = el.type === 'checkbox' ? el.checked : el.value;
+            try { localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(val)); } catch (e) {}
+        }
 
-        // 由于理赔备注代码较长，此处用占位表示，实际文件需包含完整代码
-        // 以下为理赔备注核心函数声明（实际使用时需包含完整实现）
-        function saveFieldValue(id) { /* ... */ }
-        function getStoredData() { /* ... */ }
-        function openRemarkModal() { /* ... */ }
-        function onFieldChange() { /* ... */ }
-        function validateAndHighlight() { /* ... */ }
-        function toggleCompInput() { /* ... */ }
-        function closeRemarkModal() { /* ... */ }
-        function autoUpdateRemark() { /* ... */ }
-        function cleanProcessText(html) { /* ... */ }
-        function getSelectedRadioValue(name) { /* ... */ }
-        function getSelectedBonusRow(level, isBelow60) { /* ... */ }
-        function getSelectedMedicalRow() { /* ... */ }
-        function getSelectedEmploymentRow() { /* ... */ }
-        function generateRemarkText() { /* ... */ }
-        function copyRemarkText() { /* ... */ }
+        function getStoredData() {
+            var data = {};
+            var allIds = REQUIRED_FIELDS.concat(['rmHasCompensated', 'rmCompensated', 'rmTreatment',
+            'rmIsDeathCase']);
+            allIds.forEach(function(id) {
+                var stored = localStorage.getItem(STORAGE_PREFIX + id);
+                if (stored !== null) {
+                    try { data[id] = JSON.parse(stored); } catch (e) { data[id] = stored; }
+                }
+            });
+            return Object.keys(data).length > 0 ? data : null;
+        }
 
-        // 理赔备注弹窗事件绑定
+        function openRemarkModal() {
+            var modal = $('remarkModal');
+            var getName = function(id) { return $(id)?.value || ''; };
+            var storedData = getStoredData();
+
+            $('rmEmployeeName').value = storedData?.rmEmployeeName || getName('employeeName');
+            $('rmEmployeeId').value = storedData?.rmEmployeeId || getName('employeeId');
+            $('rmInsuranceAmount').value = storedData?.rmInsuranceAmount || getName('insuranceAmount');
+            $('rmAccidentDate').value = storedData?.rmAccidentDate || $('leaveDate')?.value || '';
+            $('rmAccidentTime').value = storedData?.rmAccidentTime || getName('accidentTime');
+            $('rmDiagnosis').value = storedData?.rmDiagnosis || getName('accidentDiagnosis') || getName(
+            'diagnosis') || '';
+            $('rmDisabilityRatio').value = storedData?.rmDisabilityRatio || '5';
+            $('rmIsDeathCase').checked = storedData?.rmIsDeathCase === 'true';
+            $('rmHasCompensated').value = storedData?.rmHasCompensated || '否';
+            toggleCompInput();
+            $('rmCompensated').value = storedData?.rmCompensated || '';
+
+            ['rmWhere', 'rmDoing', 'rmBecause', 'rmResult', 'rmAction'].forEach(function(id) {
+                var el = $(id);
+                if (el) el.value = storedData?.[id] || '';
+            });
+            $('rmTreatment').value = storedData?.rmTreatment || '门诊保守治疗';
+
+            var inputs = document.querySelectorAll('#remarkModal input, #remarkModal select, #remarkModal textarea');
+            inputs.forEach(function(el) {
+                el.removeEventListener('input', onFieldChange);
+                el.removeEventListener('change', onFieldChange);
+                el.addEventListener('input', onFieldChange);
+                el.addEventListener('change', onFieldChange);
+            });
+
+            modal.classList.add('active');
+            setTimeout(function() {
+                autoUpdateRemark();
+                validateAndHighlight();
+            }, 100);
+        }
+
+        function onFieldChange() {
+            var id = this.id;
+            if (id) { saveFieldValue(id); }
+            autoUpdateRemark();
+            validateAndHighlight();
+        }
+
+        function validateAndHighlight() {
+            REQUIRED_FIELDS.forEach(function(id) {
+                var el = $(id);
+                if (!el) return;
+                var val = el.value.trim();
+                if (val === '' || val === null || val === undefined) {
+                    el.style.backgroundColor = '#ffcccc';
+                    el.style.borderColor = '#d1d5db';
+                    el.style.outline = 'none';
+                } else {
+                    el.style.backgroundColor = '';
+                    el.style.borderColor = '';
+                    el.style.outline = '';
+                }
+            });
+            var hasComp = $('rmHasCompensated').value === '是';
+            var compInput = $('rmCompensated');
+            if (hasComp && compInput) {
+                var val = compInput.value.trim();
+                if (val === '' || val === '0' || val === '0.00') {
+                    compInput.style.backgroundColor = '#ffcccc';
+                    compInput.style.borderColor = '#d1d5db';
+                    compInput.style.outline = 'none';
+                } else {
+                    compInput.style.backgroundColor = '';
+                    compInput.style.borderColor = '';
+                    compInput.style.outline = '';
+                }
+            } else if (compInput) {
+                compInput.style.backgroundColor = '';
+                compInput.style.borderColor = '';
+                compInput.style.outline = '';
+            }
+        }
+
+        function toggleCompInput() {
+            var select = $('rmHasCompensated');
+            var inputWrap = $('rmCompInputWrap');
+            if (!select || !inputWrap) return;
+            if (select.value === '是') {
+                inputWrap.style.display = 'block';
+            } else {
+                inputWrap.style.display = 'none';
+                $('rmCompensated').value = '';
+                localStorage.removeItem(STORAGE_PREFIX + 'rmCompensated');
+            }
+            saveFieldValue('rmHasCompensated');
+            autoUpdateRemark();
+            validateAndHighlight();
+        }
+
+        function closeRemarkModal() {
+            $('remarkModal').classList.remove('active');
+        }
+
+        function autoUpdateRemark() {
+            try {
+                var output = $('remarkOutput');
+                var remark = generateRemarkText();
+                output.textContent = remark || '（请补充必要信息）';
+            } catch (e) {
+                $('remarkOutput').textContent = '⚠️ 生成出错：' + e.message;
+            }
+        }
+
+        // ★★★ 核心修复：cleanProcessText 正确处理单行公式 ★★★
+        function cleanProcessText(html) {
+            if (!html) return '';
+            var text = html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+            var lines = text.split('\n').filter(function(line) {
+                return !line.includes('⚠️') && !line.includes('注1') && !line.includes('注2');
+            });
+            lines = lines.filter(function(line) { return line.trim() !== ''; });
+            if (lines.length === 0) return '';
+            var firstLine = lines[0].trim();
+            var lastLine = lines[lines.length - 1].trim();
+            // 单行处理：如果包含×但不包含=，返回第一行（由调用方追加=结果）
+            if (lines.length === 1) {
+                if (firstLine.includes('=')) return firstLine;
+                return firstLine;
+            }
+            if (firstLine.includes('=')) return firstLine;
+            if (lastLine.includes('=')) return firstLine + ' = ' + lastLine.replace(/^=\s*/, '');
+            return lines.join(' ');
+        }
+
+        function getSelectedRadioValue(name) {
+            var radio = document.querySelector('input[name="' + name + '"]:checked');
+            return radio ? radio.value : null;
+        }
+
+        function getSelectedBonusRow(level, isBelow60) {
+            var resultBody = $('resultBody');
+            if (!resultBody) return null;
+            var rows = resultBody.querySelectorAll('tr');
+            var targetRow = null;
+            if (isBelow60 && level > 0) {
+                var selectedType = getSelectedRadioValue('disBonusType');
+                if (selectedType) {
+                    for (var i = 0; i < rows.length; i++) {
+                        var cells = rows[i].querySelectorAll('td');
+                        if (cells.length < 6) continue;
+                        var itemName = cells[0]?.textContent?.trim() || '';
+                        if (selectedType === 'actual' && itemName.includes('按本人实际工资')) { targetRow =
+                                rows[i]; break; }
+                        if (selectedType === 'standard' && itemName.includes('法定保底标准')) { targetRow =
+                                rows[i]; break; }
+                    }
+                }
+                if (!targetRow) {
+                    for (var i = 0; i < rows.length; i++) {
+                        var cells = rows[i].querySelectorAll('td');
+                        if (cells.length < 6) continue;
+                        var itemName = cells[0]?.textContent?.trim() || '';
+                        if (itemName.includes('一次性伤残补助金')) { targetRow = rows[i]; break; }
+                    }
+                }
+            } else {
+                for (var i = 0; i < rows.length; i++) {
+                    var cells = rows[i].querySelectorAll('td');
+                    if (cells.length < 6) continue;
+                    var itemName = cells[0]?.textContent?.trim() || '';
+                    if (itemName.includes('一次性伤残补助金') && !itemName.includes('实际工资') && !itemName
+                        .includes('法定保底')) { targetRow = rows[i]; break; }
+                }
+                if (!targetRow) {
+                    for (var i = 0; i < rows.length; i++) {
+                        var cells = rows[i].querySelectorAll('td');
+                        if (cells.length < 6) continue;
+                        var itemName = cells[0]?.textContent?.trim() || '';
+                        if (itemName.includes('一次性伤残补助金')) { targetRow = rows[i]; break; }
+                    }
+                }
+            }
+            return targetRow;
+        }
+
+        function getSelectedMedicalRow() {
+            var resultBody = $('resultBody');
+            if (!resultBody) return null;
+            var rows = resultBody.querySelectorAll('tr');
+            var selectedType = getSelectedRadioValue('medicalBonusType');
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                if (cells.length < 6) continue;
+                var itemName = cells[0]?.textContent?.trim() || '';
+                if (itemName.includes('一次性工伤医疗补助金')) {
+                    if (selectedType) {
+                        if (selectedType === 'actual' && itemName.includes('按本人实际工资')) return rows[i];
+                        if (selectedType === 'standard' && itemName.includes('法定保底标准')) return rows[i];
+                    }
+                    if (!itemName.includes('按本人实际工资') && !itemName.includes('法定保底标准'))
+                    return rows[i];
+                }
+            }
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                if (cells.length < 6) continue;
+                var itemName = cells[0]?.textContent?.trim() || '';
+                if (itemName.includes('一次性工伤医疗补助金')) return rows[i];
+            }
+            return null;
+        }
+
+        function getSelectedEmploymentRow() {
+            var resultBody = $('resultBody');
+            if (!resultBody) return null;
+            var rows = resultBody.querySelectorAll('tr');
+            var selectedType = getSelectedRadioValue('employmentBonusType');
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                if (cells.length < 6) continue;
+                var itemName = cells[0]?.textContent?.trim() || '';
+                if (itemName.includes('一次性伤残就业补助金')) {
+                    if (selectedType) {
+                        if (selectedType === 'actual' && itemName.includes('按本人实际工资')) return rows[i];
+                        if (selectedType === 'standard' && itemName.includes('法定保底标准')) return rows[i];
+                    }
+                    if (!itemName.includes('按本人实际工资') && !itemName.includes('法定保底标准'))
+                    return rows[i];
+                }
+            }
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                if (cells.length < 6) continue;
+                var itemName = cells[0]?.textContent?.trim() || '';
+                if (itemName.includes('一次性伤残就业补助金')) return rows[i];
+            }
+            return null;
+        }
+
+        function generateRemarkText() {
+            var name = $('rmEmployeeName').value.trim() || '员工姓名';
+            var idInfo = $('rmEmployeeId').value.trim() || '标的几';
+            var amount = $('rmInsuranceAmount').value.trim() || ' ';
+            var date = $('rmAccidentDate').value || '';
+            var time = $('rmAccidentTime').value || '';
+
+            var ratioRaw = $('rmDisabilityRatio').value.trim() || '5';
+            var ratioNum = parseFloat(ratioRaw) || 5;
+            var ratioDisplay = ratioNum + '%';
+
+            var isDeath = $('rmIsDeathCase').checked;
+            var where = $('rmWhere').value.trim() || '工作车间';
+            var doing = $('rmDoing').value.trim() || '收拾物料';
+            var because = $('rmBecause').value.trim() || '不慎被物料绊倒';
+            var result = $('rmResult').value.trim() || '摔伤';
+            var action = $('rmAction').value.trim() || '随后同事通知带班组长，被带班组长驱车送往就近医院救治';
+            var diagnosis = $('rmDiagnosis').value.trim() || '诊断结论';
+            var treatment = $('rmTreatment').value || '门诊保守治疗';
+            var hasComp = $('rmHasCompensated').value === '是';
+            var compensatedRaw = hasComp ? $('rmCompensated').value.trim() : '0';
+
+            var dateStr = date || '年月日';
+            if (date) {
+                var parts = date.split('-');
+                if (parts.length === 3) dateStr = parts[0] + '年' + parts[1] + '月' + parts[2] + '日';
+            }
+            var timeStr = time || ':分左右';
+            if (time) {
+                var t = time.split(':');
+                if (t.length === 2) {
+                    var h = parseInt(t[0]);
+                    var m = parseInt(t[1]);
+                    var ap = h >= 12 ? '下午' : '上午';
+                    var hh = h > 12 ? h - 12 : h;
+                    if (hh === 0) hh = 12;
+                    timeStr = ap + hh + ':' + (m < 10 ? '0' : '') + m + '分左右';
+                }
+            }
+
+            var amountParts = amount.split('+').map(function(s) { return parseFloat(s.trim()) || 0; });
+            var firstAmount = amountParts[0] || 50;
+            var secondAmount = amountParts[1] || 5;
+
+            var medTotal = getVal('medicalTotal');
+            var thirdPartyReimb = getVal('medicalReimbursed');
+            var nonMedicalRatio = getVal('nonMedicalRatio') || 0;
+            var medOut = medTotal * (nonMedicalRatio / 100);
+            var ded = getVal('medicalDeductible') || 100;
+            var payRate = getVal('medicalRatio') || 90;
+            var medLoss = Math.max(0, (medTotal - thirdPartyReimb - medOut - ded) * (payRate / 100));
+
+            var medLimit = secondAmount * 10000;
+            var medFinal = medLoss;
+            var medCompareNote = '';
+            if (medLimit > 0) {
+                if (medLoss > medLimit) {
+                    medFinal = medLimit;
+                    medCompareNote = '本保单医疗费赔偿限额为' + secondAmount + '万（即' + medLimit.toFixed(2) +
+                        '元），低于医疗费核算金额' + medLoss.toFixed(2) + '元，故医疗费最终核算金额为' + medLimit.toFixed(2) +
+                        '元';
+                } else {
+                    medCompareNote = '本保单医疗费赔偿限额为' + secondAmount + '万（即' + medLimit.toFixed(2) +
+                        '元），高于医疗费核算金额' + medLoss.toFixed(2) + '元，故医疗费最终核算金额为' + medLoss.toFixed(2) +
+                        '元';
+                }
+            } else {
+                medCompareNote = '医疗费无限额，最终核算金额为' + medLoss.toFixed(2) + '元';
+            }
+
+            var wDays = getVal('stopWorkDays') || 0;
+            var dWage = getVal('dailyWage') || 100;
+            var deductDays = getVal('deductDays') || 3;
+            var workComp = wDays > 0 ? Math.max(0, (wDays - deductDays) * dWage) : 0;
+
+            var gender = $('gender')?.value || '男';
+            var ageInput = $('age')?.value || '30 岁';
+            var ageNum = ageInput.replace(/[^0-9.]/g, '') || '30';
+            var ageDisplay = gender === '女' ? ageNum + '岁女' : ageNum + '岁男';
+
+            var level = parseInt($('disabilityLevel')?.value || '0');
+            var levelMap = { 1: '一级', 2: '二级', 3: '三级', 4: '四级', 5: '五级', 6: '六级', 7: '七级', 8: '八级', 9: '九级',
+                10: '十级' };
+            var levelText = levelMap[level] || '';
+
+            var isResigned = $('isResigned')?.value === '1';
+            var retireDiffShow = $('retireDiffShow');
+            var retireDiffText = '未达法定退休年龄';
+            var isReachedRetire = false;
+            if (retireDiffShow) {
+                var diffVal = retireDiffShow.value || '';
+                if (diffVal === '0日' || diffVal === '0年0个月0日' || diffVal === '0年0月0日') {
+                    retireDiffText = '已达法定退休年龄';
+                    isReachedRetire = true;
+                } else if (diffVal && diffVal !== '') {
+                    retireDiffText = '距法定退休年龄剩余' + diffVal;
+                }
+            }
+
+            var salary = getVal('monthlySalary');
+            var avgSalary = getVal('localAvgSalary');
+            var minBase = avgSalary * 0.6;
+            var isBelow60 = salary > 0 && salary < minBase && avgSalary > 0;
+
+            // ★★★ 一次性伤残补助金 ★★★
+            var disRow = getSelectedBonusRow(level, isBelow60);
+            var disProcessText = '';
+            var oneTimeBonus = 0;
+            if (disRow) {
+                var cells = disRow.querySelectorAll('td');
+                if (cells.length >= 6) {
+                    var processHtml = cells[3]?.innerHTML || '';
+                    disProcessText = cleanProcessText(processHtml);
+                    var amountText = cells[5]?.textContent?.trim() || '0';
+                    oneTimeBonus = parseFloat(amountText.replace(/,/g, '')) || 0;
+                }
+            }
+
+            // ★★★ 如果disProcessText为空，从主工具构建 ★★★
+            if (!disProcessText && level > 0) {
+                var bonusMonths = { 1: 27, 2: 25, 3: 23, 4: 21, 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 };
+                var months = bonusMonths[level] || 0;
+                if (isBelow60) {
+                    var baseSalary2 = avgSalary * 0.6;
+                    disProcessText = '法定计发基数（社平60%保底）：' + fmt(baseSalary2) + ' 元 × ' + months + ' 个月';
+                } else {
+                    disProcessText = '本人实际月工资：' + fmt(salary) + ' 元 × ' + months + ' 个月';
+                }
+            }
+
+            // ★★★ 一次性工伤医疗补助金 ★★★
+            var medicalRow = getSelectedMedicalRow();
+            var medicalProcessText = '';
+            var medicalBonus = 0;
+            if (medicalRow) {
+                var cells2 = medicalRow.querySelectorAll('td');
+                if (cells2.length >= 6) {
+                    var processHtml2 = cells2[3]?.innerHTML || '';
+                    medicalProcessText = cleanProcessText(processHtml2);
+                    var amountText2 = cells2[5]?.textContent?.trim() || '0';
+                    medicalBonus = parseFloat(amountText2.replace(/,/g, '')) || 0;
+                }
+            }
+
+            // ★★★ 一次性伤残就业补助金 ★★★
+            var empRow = getSelectedEmploymentRow();
+            var empProcessText = '';
+            var employmentBonus = 0;
+            if (empRow) {
+                var cells3 = empRow.querySelectorAll('td');
+                if (cells3.length >= 6) {
+                    var processHtml3 = cells3[3]?.innerHTML || '';
+                    empProcessText = cleanProcessText(processHtml3);
+                    var amountText3 = cells3[5]?.textContent?.trim() || '0';
+                    employmentBonus = parseFloat(amountText3.replace(/,/g, '')) || 0;
+                }
+            }
+
+            var totalDisCalc = oneTimeBonus + medicalBonus + employmentBonus;
+
+            // ★★★ 构建伤残赔偿金详细计算过程 ★★★
+            var disDetailProcess = '';
+            if (level !== 0 && !isDeath) {
+                var resignedText = isResigned ? '已离职' : '未离职';
+                var showThree = isResigned && level >= 5 && !isReachedRetire;
+                var compensationType = isReachedRetire ? '一次性伤残补助金' : showThree ? '三个一次性' :
+                '一次性伤残补助金';
+
+                disDetailProcess = '伤者"' + diagnosis + '"，经鉴定为"' + levelText + '"伤残，并且"' + resignedText + '"';
+                if (isResigned) disDetailProcess += '，离职时"' + retireDiffText + '"';
+                disDetailProcess += '，赔偿"' + compensationType + '"：\n';
+
+                // ★★★ 一次性伤残补助金：显示公式 += 结果 ★★★
+                if (disProcessText) {
+                    if (disProcessText.includes('=')) {
+                        disDetailProcess += '一次性伤残补助金：' + disProcessText + '\n';
+                    } else if (disProcessText.includes('×') || disProcessText.includes('*')) {
+                        disDetailProcess += '一次性伤残补助金：' + disProcessText + ' = ' + oneTimeBonus.toFixed(2) +
+                            '元\n';
+                    } else {
+                        disDetailProcess += '一次性伤残补助金：' + disProcessText + ' = ' + oneTimeBonus.toFixed(2) +
+                            '元\n';
+                    }
+                } else {
+                    disDetailProcess += '一次性伤残补助金：' + oneTimeBonus.toFixed(2) + '元\n';
+                }
+
+                if (showThree) {
+                    if (medicalProcessText) {
+                        disDetailProcess += '一次性工伤医疗补助金：' + medicalProcessText + '\n';
+                    } else if (medicalBonus > 0) {
+                        disDetailProcess += '一次性工伤医疗补助金：' + medicalBonus.toFixed(2) + '元\n';
+                    }
+                    if (empProcessText) {
+                        disDetailProcess += '一次性伤残就业补助金：' + empProcessText + '\n';
+                    } else if (employmentBonus > 0) {
+                        disDetailProcess += '一次性伤残就业补助金：' + employmentBonus.toFixed(2) + '元\n';
+                    }
+                }
+
+                if (isResigned) {
+                    disDetailProcess += '合计：' + oneTimeBonus.toFixed(2);
+                    if (showThree) disDetailProcess += ' + ' + medicalBonus.toFixed(2) + ' + ' + employmentBonus
+                        .toFixed(2);
+                    disDetailProcess += ' = ' + totalDisCalc.toFixed(2) + '元\n';
+                }
+            }
+
+            // ★★★ 伤残赔偿金限额比较 ★★★
+            var disFinal = 0;
+            var disTypeLabel = '伤残赔偿金';
+            var disCompareNote = '';
+            var disLimit = firstAmount * 10000 * (ratioNum / 100);
+
+            if (isDeath) {
+                var deathLimit = firstAmount * 10000;
+                var calcAmount = PER_CAPITA_INCOME * 20;
+                disFinal = Math.min(calcAmount, deathLimit);
+                disTypeLabel = '死亡赔偿金';
+                if (calcAmount > deathLimit) {
+                    disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) +
+                        '元），低于死亡赔偿金核算金额' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + deathLimit
+                        .toFixed(2) + '元';
+                } else {
+                    disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) +
+                        '元），高于死亡赔偿金核算金额' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + calcAmount
+                        .toFixed(2) + '元';
+                }
+                disDetailProcess = '死亡赔偿金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + PER_CAPITA_INCOME.toFixed(
+                    2) + ' × 20 = ' + calcAmount.toFixed(2) + '元';
+            } else if (level === 0) {
+                disFinal = 0;
+                disCompareNote = '';
+                disDetailProcess = '';
+            } else {
+                disFinal = Math.min(totalDisCalc, disLimit);
+                if (totalDisCalc > disLimit) {
+                    disCompareNote = '本保单' + levelText + '伤残赔偿限额为' + firstAmount + '万×' + ratioNum + '%=' +
+                        disLimit.toFixed(2) + '元，低于伤残赔偿金核算金额' + totalDisCalc.toFixed(2) +
+                        '元，故伤残赔偿金最终核算金额为' + disLimit.toFixed(2) + '元';
+                } else {
+                    disCompareNote = '本保单' + levelText + '伤残赔偿限额为' + firstAmount + '万×' + ratioNum + '%=' +
+                        disLimit.toFixed(2) + '元，高于伤残赔偿金核算金额' + totalDisCalc.toFixed(2) +
+                        '元，故伤残赔偿金最终核算金额为' + totalDisCalc.toFixed(2) + '元';
+                }
+            }
+
+            // ★★★ 单位赔偿对比 ★★★
+            var compMed = 0,
+                compWork = 0,
+                compDis = 0,
+                compTotal = 0;
+            var compStr = compensatedRaw.replace(/，/g, ',').replace(/、/g, '+');
+            if (hasComp && compStr) {
+                if (compStr.includes('+')) {
+                    var parts = compStr.split('+').map(function(s) { return parseFloat(s.trim()) || 0; });
+                    compMed = parts[0] || 0;
+                    compWork = parts[1] || 0;
+                    compDis = parts[2] || 0;
+                    compTotal = compMed + compWork + compDis;
+                } else {
+                    compTotal = parseFloat(compStr) || 0;
+                    compMed = compTotal;
+                    compWork = 0;
+                    compDis = 0;
+                }
+            }
+
+            var finalMed = medFinal,
+                finalWork = workComp,
+                finalDis = disFinal;
+            var compareNote = '';
+            if (hasComp && compStr.includes('+')) {
+                var medCompare = compMed > 0 ? (compMed >= medFinal ? '单位医疗费赔偿金额' + compMed.toFixed(2) +
+                    '元不低于核算医疗费' + medFinal.toFixed(2) + '元' : '单位医疗费赔偿金额' + compMed.toFixed(2) +
+                    '元低于核算医疗费' + medFinal.toFixed(2) + '元') : '单位未赔偿医疗费，按核算金额' + medFinal.toFixed(2) +
+                    '元赔付';
+                if (compMed > 0 && compMed < medFinal) finalMed = compMed;
+                var workCompare = compWork > 0 ? (compWork >= workComp ? '单位误工费赔偿金额' + compWork.toFixed(2) +
+                    '元不低于核算误工费' + workComp.toFixed(2) + '元' : '单位误工费赔偿金额' + compWork.toFixed(2) +
+                    '元低于核算误工费' + workComp.toFixed(2) + '元') : '单位未赔偿误工费，按核算金额' + workComp.toFixed(2) +
+                    '元赔付';
+                if (compWork > 0 && compWork < workComp) finalWork = compWork;
+                var disCompare = compDis > 0 ? (compDis >= disFinal ? '单位伤残赔偿金额' + compDis.toFixed(2) +
+                    '元不低于核算伤残赔偿金' + disFinal.toFixed(2) + '元' : '单位伤残赔偿金额' + compDis.toFixed(2) +
+                    '元低于核算伤残赔偿金' + disFinal.toFixed(2) + '元') : '单位未赔偿伤残赔偿金，按核算金额' + disFinal
+                    .toFixed(2) + '元赔付';
+                if (compDis > 0 && compDis < disFinal) finalDis = compDis;
+                compareNote = medCompare + '，' + workCompare + '，' + disCompare + '，故本案最终理算赔付金额为两者取低医疗费' +
+                    finalMed.toFixed(2) + '元+两者取低误工费' + finalWork.toFixed(2) + '元+两者取低伤残赔偿金' + finalDis
+                    .toFixed(2) + '元=' + (finalMed + finalWork + finalDis).toFixed(2) + '元';
+            } else if (hasComp && compTotal > 0) {
+                var calcTotal2 = medFinal + workComp + disFinal;
+                if (compTotal >= calcTotal2) {
+                    compareNote = '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，高于/等于理算总金额 ' + calcTotal2
+                        .toFixed(2) + ' 元，故本案最终理算赔付金额为' + calcTotal2.toFixed(2) + '元';
+                } else {
+                    compareNote = '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，低于理算总金额 ' + calcTotal2
+                        .toFixed(2) + ' 元，故本案最终理算赔付金额为' + compTotal.toFixed(2) + '元';
+                    var ratio2 = compTotal / calcTotal2;
+                    finalMed = medFinal * ratio2;
+                    finalWork = workComp * ratio2;
+                    finalDis = disFinal * ratio2;
+                }
+            }
+
+            var finalCalcTotal = finalMed + finalWork + finalDis;
+            var finalPayRound = Math.round(finalCalcTotal);
+
+            // ----- 构建备注文本 -----
+            var remark = '';
+            remark += '1、保险责任认定：\n';
+            remark += '员工' + name + '（' + idInfo + '，' + ageDisplay + '，保额' + amount + '，伤残比例' +
+                ratioDisplay + '）于' + dateStr + timeStr + '在' + where + doing + '时，' + because + '导致' +
+                result + '，' + action + '。经诊断为' + diagnosis + '，' + treatment + '。\n';
+            remark += '被保险人的员工在工作时因工作原因受伤，属于雇主责任险保险责任范围。\n\n';
+
+            remark += '2、损失核定\n';
+            remark += '医疗费：\n';
+            remark += '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) +
+                '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRate + '%赔付。\n';
+            remark += '核损金额=（医疗总费用-第三方报销金额-非医保金额-免赔）*' + payRate + '%=（' + medTotal.toFixed(2) +
+                '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + '）*' +
+                payRate + '%=' + medLoss.toFixed(2) + '元\n';
+            remark += medCompareNote + '\n\n';
+
+            remark += '误工费：\n';
+            if (wDays === 0) {
+                remark += '经核定，停工留薪期天数为0天，误工费为0元。\n\n';
+            } else {
+                remark += diagnosis + '，根据《人身损害受伤人员误工损失日评定准则（GA/T 521—2004）》结合实际误工天数，核定误工天数为' +
+                    wDays + '天，误工费=（' + wDays + '-' + deductDays + ')*' + dWage.toFixed(2) + '=' + workComp
+                    .toFixed(2) + '元。\n\n';
+            }
+
+            if (isDeath) {
+                remark += '死亡赔偿金：\n';
+                remark += disDetailProcess + '\n';
+                remark += disCompareNote + '\n\n';
+            } else if (level !== 0) {
+                remark += '伤残赔偿金：\n';
+                remark += disDetailProcess;
+                remark += disCompareNote + '\n\n';
+            } else {
+                remark += '伤残赔偿金：未达伤残等级/未索赔伤残，不涉及伤残赔偿金\n\n';
+            }
+
+            remark += '3、单位赔偿情况/单位授权我司支付情况及结论：\n';
+            if (hasComp) {
+                if (compStr.includes('+')) {
+                    remark += '单位已赔偿伤者医疗费' + compMed.toFixed(2) + '元+误工费' + compWork.toFixed(2) +
+                        '元+伤残赔偿金' + compDis.toFixed(2) + '元。\n';
+                } else {
+                    remark += '单位已赔偿伤者总金额' + compTotal.toFixed(2) + '元。\n';
+                }
+                remark += compareNote + '\n';
+            } else {
+                remark += '被保险人授权我司将理赔款直接支付伤者。\n';
+                remark += '本案最终核定金额为医疗费+误工费+' + disTypeLabel + '=' + medFinal.toFixed(2) + '元+' +
+                    workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元=' + (medFinal + workComp + disFinal)
+                    .toFixed(2) + '元。\n';
+            }
+            remark += '赔款确认书已上传，请领导审核，谢谢';
+            return remark;
+        }
+
+        function copyRemarkText() {
+            validateAndHighlight();
+            var hasEmpty = false;
+            REQUIRED_FIELDS.forEach(function(id) {
+                var el = $(id);
+                if (!el) return;
+                if (el.value.trim() === '') hasEmpty = true;
+            });
+            var hasComp = $('rmHasCompensated').value === '是';
+            if (hasComp) {
+                var compInput = $('rmCompensated');
+                if (compInput && compInput.value.trim() === '') hasEmpty = true;
+            }
+            if (hasEmpty) {
+                var btn = document.querySelector('.copy-tip-btn');
+                if (btn) {
+                    btn.style.backgroundColor = '#ff6b6b';
+                    btn.textContent = '⚠️ 有必填项';
+                    setTimeout(function() {
+                        btn.style.backgroundColor = '#059669';
+                        btn.textContent = '📋 复制';
+                    }, 2000);
+                }
+                return;
+            }
+            var el = $('remarkOutput');
+            var text = el.textContent;
+            if (!text || text === '💡 请填写左侧信息，备注将自动生成') {
+                alert('请先填写完整信息，备注会自动生成');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(function() {
+                var btn = document.querySelector('.copy-tip-btn');
+                var orig = btn.textContent;
+                btn.textContent = '✅ 已复制';
+                setTimeout(function() { btn.textContent = orig; }, 1500);
+            }).catch(function() {
+                var range = document.createRange();
+                range.selectNode(el);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                var btn = document.querySelector('.copy-tip-btn');
+                var orig = btn.textContent;
+                btn.textContent = '✅ 已复制';
+                setTimeout(function() { btn.textContent = orig; }, 1500);
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             var modal = $('remarkModal');
             if (modal) {
@@ -3470,5 +4121,6 @@
             });
         });
     </script>
+
 </body>
 </html>
