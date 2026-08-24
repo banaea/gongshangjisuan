@@ -3297,140 +3297,156 @@
         // ★★★ 导出医疗发票Excel ★★★
         // ================================================================
 
-        function exportMedicalExcel() {
-            try {
-                var validRecords = finishedOcrRecords.filter(function(item) {
-                    return !item.isBlank &&
-                        (item.invoiceNo || item.payerName ||
-                        (item.totalMoney && parseFloat(item.totalMoney) > 0));
-                });
+function exportMedicalExcel() {
+    try {
+        var validRecords = finishedOcrRecords.filter(function(item) {
+            return !item.isBlank &&
+                (item.invoiceNo || item.payerName ||
+                (item.totalMoney && parseFloat(item.totalMoney) > 0));
+        });
 
-                if (validRecords.length === 0) {
-                    alert('没有可导出的票据数据，请先录入票据信息！');
-                    return;
-                }
-
-                var medDeductible = parseFloat($('medicalDeductible')?.value) || 100;
-                var nonMedicalRatio = parseFloat($('nonMedicalRatio')?.value) || 15;
-                var payRatio = parseFloat($('medicalRatio')?.value) || 90;
-
-                var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-                    'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
-                    'xmlns="http://www.w3.org/TR/REC-html40">' +
-                    '<head><meta charset="UTF-8">' +
-                    '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
-                    '<x:Name>医疗发票查实清单</x:Name><x:WorksheetOptions><x:DisplayGridlines/>' +
-                    '</x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
-                    '</head><body>';
-
-                // 门诊发票
-                var outpatients = validRecords.filter(function(item) {
-                    return item.billType === '门诊票据';
-                });
-
-                // 住院发票
-                var inpatients = validRecords.filter(function(item) {
-                    return item.billType === '住院票据';
-                });
-
-                // 门诊发票表格
-                html += '<table border="1" cellpadding="5" cellspacing="0">';
-                html += '<tr><th>票据类型</th><th>序号</th><th>交款人</th><th>票据号码</th><th>就诊日期</th><th>金额</th><th>医保报销</th><th>非医保</th></tr>';
-
-                var outpatientTotal = 0;
-                var outpatientMedicareTotal = 0;
-                var outpatientNonMedTotal = 0;
-
-                outpatients.forEach(function(item, idx) {
-                    var total = parseFloat(item.totalMoney) || 0;
-                    var medicare = parseFloat(item.medicareFundPay) || 0;
-                    var nonMed = total * (nonMedicalRatio / 100);
-                    outpatientTotal += total;
-                    outpatientMedicareTotal += medicare;
-                    outpatientNonMedTotal += nonMed;
-                    html += '<tr><td>门诊</td><td>' + (idx + 1) + '</td>' +
-                        '<td>' + (item.payerName || '') + '</td>' +
-                        '<td>' + (item.invoiceNo || '') + '</td>' +
-                        '<td>' + (item.visitDate || '') + '</td>' +
-                        '<td>' + total.toFixed(2) + '</td>' +
-                        '<td>' + medicare.toFixed(2) + '</td>' +
-                        '<td>' + nonMed.toFixed(2) + '</td></tr>';
-                });
-
-                html += '<tr><td></td><td></td><td>合计</td><td></td><td></td>' +
-                    '<td>' + outpatientTotal.toFixed(2) + '</td>' +
-                    '<td>' + outpatientMedicareTotal.toFixed(2) + '</td>' +
-                    '<td>' + outpatientNonMedTotal.toFixed(2) + '</td></tr>';
-                html += '</table><br><br>';
-
-                // 住院发票表格
-                html += '<table border="1" cellpadding="5" cellspacing="0">';
-                html += '<tr><th>票据类型</th><th>序号</th><th>交款人</th><th>票据号码</th><th>入院日期</th><th>金额</th><th>医保报销</th><th>非医保</th></tr>';
-
-                var inpatientTotal = 0;
-                var inpatientMedicareTotal = 0;
-                var inpatientNonMedTotal = 0;
-
-                inpatients.forEach(function(item, idx) {
-                    var total = parseFloat(item.totalMoney) || 0;
-                    var medicare = parseFloat(item.medicareFundPay) || 0;
-                    var nonMed = total * (nonMedicalRatio / 100);
-                    inpatientTotal += total;
-                    inpatientMedicareTotal += medicare;
-                    inpatientNonMedTotal += nonMed;
-                    html += '<tr><td>住院</td><td>' + (idx + 1) + '</td>' +
-                        '<td>' + (item.payerName || '') + '</td>' +
-                        '<td>' + (item.invoiceNo || '') + '</td>' +
-                        '<td>' + (item.visitDate || '') + '</td>' +
-                        '<td>' + total.toFixed(2) + '</td>' +
-                        '<td>' + medicare.toFixed(2) + '</td>' +
-                        '<td>' + nonMed.toFixed(2) + '</td></tr>';
-                });
-
-                html += '<tr><td></td><td></td><td>合计</td><td></td><td></td>' +
-                    '<td>' + inpatientTotal.toFixed(2) + '</td>' +
-                    '<td>' + inpatientMedicareTotal.toFixed(2) + '</td>' +
-                    '<td>' + inpatientNonMedTotal.toFixed(2) + '</td></tr>';
-                html += '</table><br><br>';
-
-                // 汇总行
-                var totalAll = outpatientTotal + inpatientTotal;
-                var totalMedicare = outpatientMedicareTotal + inpatientMedicareTotal;
-                var totalNonMed = outpatientNonMedTotal + inpatientNonMedTotal;
-                var finalPayable = Math.max(0, (totalAll - totalMedicare - totalNonMed - medDeductible) * (payRatio / 100));
-
-                html += '<table border="1" cellpadding="5" cellspacing="0">';
-                html += '<tr><th>合计</th><th>门诊</th><th>住院</th><th>医保报销</th><th>非医保</th><th>免赔</th><th>赔付比例</th><th>赔付金额</th></tr>';
-                html += '<tr><td></td>' +
-                    '<td>' + outpatientTotal.toFixed(2) + '</td>' +
-                    '<td>' + inpatientTotal.toFixed(2) + '</td>' +
-                    '<td>' + totalMedicare.toFixed(2) + '</td>' +
-                    '<td>' + totalNonMed.toFixed(2) + '</td>' +
-                    '<td>' + medDeductible.toFixed(2) + '</td>' +
-                    '<td>' + payRatio + '%</td>' +
-                    '<td>' + finalPayable.toFixed(2) + '</td></tr>';
-                html += '</table>';
-
-                html += '</body></html>';
-
-                var blob = new Blob(['\ufeff' + html], {
-                    type: 'application/vnd.ms-excel;charset=utf-8'
-                });
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                var dateStr = new Date().toLocaleDateString().replace(/\//g, '-');
-                a.download = '医疗发票查实清单_' + dateStr + '.xls';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-            } catch (e) {
-                alert('导出失败：' + e.message);
-                console.error(e);
-            }
+        if (validRecords.length === 0) {
+            alert('没有可导出的票据数据，请先录入票据信息！');
+            return;
         }
+
+        var medDeductible = parseFloat($('medicalDeductible')?.value) || 100;
+        var nonMedicalRatio = parseFloat($('nonMedicalRatio')?.value) || 15;
+        var payRatio = parseFloat($('medicalRatio')?.value) || 90;
+
+        // ★★★ 四舍五入工具函数 ★★★
+        function round2(num) {
+            return Math.round(num * 100) / 100;
+        }
+
+        var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+            'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
+            'xmlns="http://www.w3.org/TR/REC-html40">' +
+            '<head><meta charset="UTF-8">' +
+            '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
+            '<x:Name>医疗发票查实清单</x:Name><x:WorksheetOptions><x:DisplayGridlines/>' +
+            '</x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+            '</head><body>';
+
+        // 门诊发票
+        var outpatients = validRecords.filter(function(item) {
+            return item.billType === '门诊票据';
+        });
+
+        // 住院发票
+        var inpatients = validRecords.filter(function(item) {
+            return item.billType === '住院票据';
+        });
+
+        // ---- 门诊发票表格 ----
+        html += '<table border="1" cellpadding="5" cellspacing="0">';
+        html += '<tr><th>票据类型</th><th>序号</th><th>交款人</th><th>票据号码</th><th>就诊日期</th><th>金额</th><th>医保报销</th><th>非医保</th></tr>';
+
+        var outpatientTotal = 0;
+        var outpatientMedicareTotal = 0;
+        var outpatientNonMedTotal = 0;
+
+        outpatients.forEach(function(item, idx) {
+            var total = parseFloat(item.totalMoney) || 0;
+            var medicare = parseFloat(item.medicareFundPay) || 0;
+            // ★★★ 非医保 = 总金额 × 非医保比例，四舍五入 ★★★
+            var nonMed = round2(total * (nonMedicalRatio / 100));
+            
+            outpatientTotal += total;
+            outpatientMedicareTotal += medicare;
+            outpatientNonMedTotal += nonMed;
+            
+            html += '<tr><td>门诊</td><td>' + (idx + 1) + '</td>' +
+                '<td>' + (item.payerName || '') + '</td>' +
+                '<td>' + (item.invoiceNo || '') + '</td>' +
+                '<td>' + (item.visitDate || '') + '</td>' +
+                '<td>' + round2(total).toFixed(2) + '</td>' +
+                '<td>' + round2(medicare).toFixed(2) + '</td>' +
+                '<td>' + nonMed.toFixed(2) + '</td></tr>';
+        });
+
+        // ★★★ 门诊合计行 - 四舍五入 ★★★
+        html += '<tr><td></td><td></td><td>合计</td><td></td><td></td>' +
+            '<td>' + round2(outpatientTotal).toFixed(2) + '</td>' +
+            '<td>' + round2(outpatientMedicareTotal).toFixed(2) + '</td>' +
+            '<td>' + round2(outpatientNonMedTotal).toFixed(2) + '</td></tr>';
+        html += '</table><br><br>';
+
+        // ---- 住院发票表格 ----
+        html += '<table border="1" cellpadding="5" cellspacing="0">';
+        html += '<tr><th>票据类型</th><th>序号</th><th>交款人</th><th>票据号码</th><th>入院日期</th><th>金额</th><th>医保报销</th><th>非医保</th></tr>';
+
+        var inpatientTotal = 0;
+        var inpatientMedicareTotal = 0;
+        var inpatientNonMedTotal = 0;
+
+        inpatients.forEach(function(item, idx) {
+            var total = parseFloat(item.totalMoney) || 0;
+            var medicare = parseFloat(item.medicareFundPay) || 0;
+            // ★★★ 非医保 = 总金额 × 非医保比例，四舍五入 ★★★
+            var nonMed = round2(total * (nonMedicalRatio / 100));
+            
+            inpatientTotal += total;
+            inpatientMedicareTotal += medicare;
+            inpatientNonMedTotal += nonMed;
+            
+            html += '<tr><td>住院</td><td>' + (idx + 1) + '</td>' +
+                '<td>' + (item.payerName || '') + '</td>' +
+                '<td>' + (item.invoiceNo || '') + '</td>' +
+                '<td>' + (item.visitDate || '') + '</td>' +
+                '<td>' + round2(total).toFixed(2) + '</td>' +
+                '<td>' + round2(medicare).toFixed(2) + '</td>' +
+                '<td>' + nonMed.toFixed(2) + '</td></tr>';
+        });
+
+        // ★★★ 住院合计行 - 四舍五入 ★★★
+        html += '<tr><td></td><td></td><td>合计</td><td></td><td></td>' +
+            '<td>' + round2(inpatientTotal).toFixed(2) + '</td>' +
+            '<td>' + round2(inpatientMedicareTotal).toFixed(2) + '</td>' +
+            '<td>' + round2(inpatientNonMedTotal).toFixed(2) + '</td></tr>';
+        html += '</table><br><br>';
+
+// ==================== 汇总表 ====================
+var totalAll = round2(outpatientTotal + inpatientTotal);
+var totalMedicare = round2(outpatientMedicareTotal + inpatientMedicareTotal);
+var totalNonMed = round2(outpatientNonMedTotal + inpatientNonMedTotal);
+
+var step1 = round2(totalAll - totalMedicare - totalNonMed);
+var step2 = round2(step1 - medDeductible);
+var finalPayable = round2(Math.max(0, step2 * (payRatio / 100)));
+
+html += '<table border="1" cellpadding="5" cellspacing="0">';
+html += '<tr><th>合计</th><th>门诊</th><th>住院</th><th>医保报销</th><th>非医保</th><th>免赔</th><th>赔付比例</th><th>赔付金额</th></tr>';
+html += '<tr><td>' + totalAll.toFixed(2) + '</td>' +
+    '<td>' + outpatientTotal.toFixed(2) + '</td>' +
+    '<td>' + inpatientTotal.toFixed(2) + '</td>' +
+    '<td>' + totalMedicare.toFixed(2) + '</td>' +
+    '<td>' + totalNonMed.toFixed(2) + '</td>' +
+    '<td>' + medDeductible.toFixed(2) + '</td>' +
+    '<td>' + payRatio + '%</td>' +
+    '<td>' + finalPayable.toFixed(2) + '</td></tr>';
+html += '</table>';
+
+        html += '</body></html>';
+
+        var blob = new Blob(['\ufeff' + html], {
+            type: 'application/vnd.ms-excel;charset=utf-8'
+        });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        var dateStr = new Date().toLocaleDateString().replace(/\//g, '-');
+        a.download = '医疗发票查实清单_' + dateStr + '.xls';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (e) {
+        alert('导出失败：' + e.message);
+        console.error(e);
+    }
+}
 
         // ================================================================
         // 理赔备注生成器
