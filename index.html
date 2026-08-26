@@ -4073,10 +4073,14 @@ if (isReimbursedByInsurance) {
             }
 
             if (isDeath) {
-                remark += '死亡赔偿金：\n';
-                remark += disDetailProcess + '\n';
-                remark += disCompareNote + '\n\n';
-            } else if (level !== 0) {
+    remark += '死亡赔偿金：\n';
+    if (isReimbursedByInsurance) {
+        remark += '已通过工伤保险基金赔付，我司不再核算。\n\n';
+    } else {
+        remark += disDetailProcess + '\n';
+        remark += disCompareNote + '\n\n';
+    }
+} else if (level !== 0) {
                 remark += '伤残赔偿金：\n';
                 remark += disDetailProcess;
                 remark += disCompareNote + '\n\n';
@@ -4084,22 +4088,30 @@ if (isReimbursedByInsurance) {
                 remark += '伤残赔偿金：未达伤残等级/未索赔伤残，不涉及伤残赔偿金\n\n';
             }
 
-            remark += '3、单位赔偿情况/单位授权我司支付情况及结论：\n';
-            if (hasComp) {
-                if (compStr.includes('+')) {
-                    remark += '单位已赔偿伤者医疗费' + compMed.toFixed(2) + '元+误工费' + compWork.toFixed(2) +
-                        '元+伤残赔偿金' + compDis.toFixed(2) + '元。\n';
-                } else {
-                    remark += '单位已赔偿伤者总金额' + compTotal.toFixed(2) + '元。\n';
-                }
-                remark += compareNote + '\n';
-            } else {
-                remark += '被保险人授权我司将理赔款直接支付伤者。\n';
-                remark += '本案最终核定金额为医疗费+误工费+' + disTypeLabel + '=' + medFinal.toFixed(2) + '元+' +
-                    workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元=' + (medFinal + workComp + disFinal)
-                    .toFixed(2) + '元。\n';
-            }
-            remark += '赔款确认书已上传，请领导审核，谢谢';
+
+
+// 修改结论部分
+remark += '3、单位赔偿情况/单位授权我司支付情况及结论：\n';
+if (hasComp) {
+    if (compStr.includes('+')) {
+        remark += '单位已赔偿伤者医疗费' + compMed.toFixed(2) + '元+误工费' + compWork.toFixed(2) + '元+伤残赔偿金' + compDis.toFixed(2) + '元。\n';
+    } else {
+        remark += '单位已赔偿伤者总金额' + compTotal.toFixed(2) + '元。\n';
+    }
+    remark += compareNote + '\n';
+} else {
+    remark += '被保险人授权我司将理赔款直接支付伤者。\n';
+    // ★★★ 修改这里 ★★★
+// 当死亡案件且工伤保险已报销时，死亡赔偿金金额为0，但项目名称保留
+if (isReimbursedByInsurance && isDeath) {
+    // 死亡赔偿金金额设为0，但保留项目名称
+    var deathAmount = 0;
+    remark += '本案最终核定金额为医疗费+误工费+死亡赔偿金=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + deathAmount.toFixed(2) + '元=' + (medFinal + workComp + deathAmount).toFixed(2) + '元。\n';
+} else {
+    remark += '本案最终核定金额为医疗费+误工费+' + disTypeLabel + '=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元=' + (medFinal + workComp + disFinal).toFixed(2) + '元。\n';
+}
+}
+remark += '赔款确认书已上传，请领导审核，谢谢';
             return remark;
         }
 
