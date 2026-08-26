@@ -4303,8 +4303,10 @@ function copyRemarkText() {
 // 输出人伤核损计算书（Excel .xls）
 // ================================================================
 
+// 输出人伤核损计算书（Excel .xlsx）- 正式版
+// 使用 ExcelJS 库生成真实 .xlsx 文件
 function exportWordDocument() {
-    // 验证必填项
+    // ==================== 验证必填项 ====================
     var hasEmpty = false;
     REQUIRED_FIELDS.forEach(function(id) {
         var el = $(id);
@@ -4344,7 +4346,7 @@ function exportWordDocument() {
         return;
     }
 
-    // 获取数据
+    // ==================== 获取数据 ====================
     var name = $('rmEmployeeName').value.trim() || '员工姓名';
     var date = $('rmAccidentDate').value || '';
     var diagnosis = $('rmDiagnosis').value.trim() || '诊断结论';
@@ -4353,7 +4355,7 @@ function exportWordDocument() {
     var ageDisplay = gender === '女' ? ageNum + '岁女' : ageNum + '岁男';
     var accidentTimeStr = date || '';
 
-    // 获取计算数据
+    // 计算数据
     var medTotal = getVal('medicalTotal');
     var thirdPartyReimb = getVal('medicalReimbursed');
     var nonMedicalRatio = getVal('nonMedicalRatio') || 0;
@@ -4414,7 +4416,7 @@ function exportWordDocument() {
 
     var finalCalcTotal = medFinal + workComp + disFinal;
 
-    // 提取医疗费核定说明
+    // 核定说明
     var medicalNote = '';
     if (isReimbursedByInsurance) {
         medicalNote = '已通过工伤保险基金赔付，我司不再核算。';
@@ -4422,7 +4424,6 @@ function exportWordDocument() {
         medicalNote = '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) + '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRate + '%赔付。核损金额=（' + medTotal.toFixed(2) + '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + '）*' + payRate + '%=' + medLoss.toFixed(2) + '元。' + (medLimit > 0 ? '医疗费限额' + (medLimit/10000).toFixed(0) + '万，最终核定' + medFinal.toFixed(2) + '元。' : '');
     }
 
-    // 提取误工费核定说明
     var workNote = '';
     if (wDays === 0) {
         workNote = '经核定，停工留薪期天数为0天，误工费为0元。';
@@ -4430,7 +4431,6 @@ function exportWordDocument() {
         workNote = diagnosis + '，根据《人身损害受伤人员误工损失日评定准则（GA/T 521—2004）》结合实际误工天数，核定误工天数为' + wDays + '天，误工费=（' + wDays + '-' + deductDays + ')*' + dWage.toFixed(2) + '=' + workComp.toFixed(2) + '元。';
     }
 
-    // 提取伤残/死亡赔偿金核定说明
     var disNote = '';
     if (isDeath) {
         if (isReimbursedByInsurance) {
@@ -4448,7 +4448,6 @@ function exportWordDocument() {
         disNote = '未达伤残等级/未索赔伤残，不涉及伤残赔偿金。';
     }
 
-    // 获取结论
     var hasCompCheck = $('rmHasCompensated').value === '是';
     var conclusionText = '';
     if (hasCompCheck) {
@@ -4464,576 +4463,362 @@ function exportWordDocument() {
         conclusionText = '被保险人授权我司将理赔款直接支付伤者。本案最终核定金额为医疗费+误工费+' + (isDeath ? '死亡赔偿金' : '伤残赔偿金') + '=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元=' + finalCalcTotal.toFixed(2) + '元。赔款确认书已上传，请领导审核，谢谢。';
     }
 
-    // ★★★ 构建Excel文档（使用colgroup控制列宽）★★★
-    var excelHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-        'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
-        'xmlns="http://www.w3.org/TR/REC-html40">' +
-        '<head><meta charset="UTF-8">' +
-        '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
-        '<x:Name>产险人伤核损计算书</x:Name>' +
-        '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>' +
-        '<x:PageSetup><x:PageWidth>8.5</x:PageWidth><x:PageHeight>11</x:PageHeight></x:PageSetup>' +
-        '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
-        '<style>' +
-        'table { width: 100%; border-collapse: collapse; font-family: "宋体", "SimSun", sans-serif; font-size: 12pt; }' +
-        'th, td { border: 1px solid #000000; padding: 6px 8px; text-align: left; vertical-align: middle; }' +
-        'th { background-color: #f0f0f0; font-weight: bold; text-align: center; }' +
-        '.title { text-align: center; font-size: 20pt; font-weight: bold; font-family: "黑体", "SimHei", sans-serif; }' +
-        '.label { font-weight: bold; text-align: center; white-space: nowrap; }' +
-        '.amount { text-align: right; }' +
-        '.total-row td { font-weight: bold; }' +
-        '.remark-cell { font-size: 10pt; line-height: 1.8; }' +
-        '.row-normal { height: 25pt; }' +
-        '</style>' +
-        '</head><body>';
-
-    // 标题
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-    excelHtml += '<tr><td colspan="7" class="title" style="border:none;">产险人伤核损计算书</td></tr>';
-    excelHtml += '</table>';
-
-    // ============================================================
-    // ★★★ 上表：基本信息 ★★★
-    // ============================================================
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-
-    // 第一行：A=被保险人 | B+C合并=留空 | D=保单号 | E+F+G合并=留空
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">被保险人</td>';
-    excelHtml += '<td colspan="2"></td>';
-    excelHtml += '<td class="label">保单号</td>';
-    excelHtml += '<td colspan="3"></td>';
-    excelHtml += '</tr>';
-
-    // 第二行：A=赔案号 | B+C合并=留空 | D=险种 | E+F+G合并=雇主责任保险（A款）
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">赔案号</td>';
-    excelHtml += '<td colspan="2"></td>';
-    excelHtml += '<td class="label">险种</td>';
-    excelHtml += '<td colspan="3">雇主责任保险（A款）</td>';
-    excelHtml += '</tr>';
-
-    // 第三行：A=伤者姓名 | B+C合并=读取 | D=年龄 | E=读取 | F=出险时间 | G=读取出险日期
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">伤者姓名</td>';
-    excelHtml += '<td colspan="2">' + name + '</td>';
-    excelHtml += '<td class="label">年龄</td>';
-    excelHtml += '<td>' + ageDisplay + '</td>';
-    excelHtml += '<td class="label">出险时间</td>';
-    excelHtml += '<td>' + accidentTimeStr + '</td>';
-    excelHtml += '</tr>';
-
-    // 第四行：A=证件号 | B+C合并=留空 | D=伤情 | E+F+G合并=读取诊断结果
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">证件号</td>';
-    excelHtml += '<td colspan="2"></td>';
-    excelHtml += '<td class="label">伤情</td>';
-    excelHtml += '<td colspan="3">' + diagnosis + '</td>';
-    excelHtml += '</tr>';
-
-    excelHtml += '</table>';
-
-    // ============================================================
-    // ★★★ 下表：费用项目 ★★★
-    // ============================================================
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-
-    // 表头行
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<th>费用项目</th>';
-    excelHtml += '<th>索赔金额</th>';
-    excelHtml += '<th>核定金额</th>';
-    excelHtml += '<th colspan="4">核定说明（标准和依据）</th>';
-    excelHtml += '</tr>';
-
-    // 医疗费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>医疗费</td>';
-    excelHtml += '<td class="amount">' + medTotal.toFixed(2) + '</td>';
-    excelHtml += '<td class="amount">' + medFinal.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + medicalNote + '</td>';
-    excelHtml += '</tr>';
-
-    // 误工费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>误工费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount">' + workComp.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + workNote + '</td>';
-    excelHtml += '</tr>';
-
-    // 死亡/残疾赔偿金
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>死亡/残疾赔偿金</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount">' + disFinal.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + disNote + '</td>';
-    excelHtml += '</tr>';
-
-    // 护理费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>护理费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td colspan="4" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    // 住院伙食补助费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>住院伙食补助费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td colspan="4" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    // 后续治疗费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>后续治疗费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td colspan="4" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    // 总计
-    excelHtml += '<tr class="total-row row-normal">';
-    excelHtml += '<td>总 计</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount">' + finalCalcTotal.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + conclusionText + '</td>';
-    excelHtml += '</tr>';
-
-    // 备注
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">备 注</td>';
-    excelHtml += '<td colspan="6" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    excelHtml += '</table>';
-
-    // ★★★ 签名 ★★★
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-    excelHtml += '<tr>';
-    excelHtml += '<td style="border:none; padding-top:30px; font-size:12pt;">缮制人：</td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px; font-size:12pt; text-align:right;">审批人：</td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '</tr>';
-    excelHtml += '</table>';
-
-    excelHtml += '</body></html>';
-
-    var blob = new Blob(['\ufeff' + excelHtml], {
-        type: 'application/vnd.ms-excel;charset=utf-8'
-    });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    var dateStr2 = new Date().toLocaleDateString().replace(/\//g, '-');
-    a.download = '产险人伤核损计算书_' + name + '_' + dateStr2 + '.xls';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-// ================================================================
-// 弹窗事件绑定
-// ================================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    var modal = $('remarkModal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) closeRemarkModal();
+    // ==================== 使用 ExcelJS 构建 Excel ====================
+    function loadScript(src) {
+        return new Promise(function(resolve, reject) {
+            var script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
         });
     }
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeRemarkModal();
-    });
-});
 
-// ================================================================
-// 输出Word文档
-// ================================================================
-
-function exportWordDocument() {
-    // 验证必填项
-    var hasEmpty = false;
-    REQUIRED_FIELDS.forEach(function(id) {
-        var el = $(id);
-        if (!el) return;
-        if (el.value.trim() === '') {
-            el.style.backgroundColor = '#ffcccc';
-            el.style.borderColor = '#d1d5db';
-            el.style.outline = 'none';
-            hasEmpty = true;
+    Promise.all([
+        loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'),
+        loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
+    ]).then(function() {
+        createExcel();
+    }).catch(function(err) {
+        console.warn('CDN加载失败，尝试备用方式:', err);
+        if (typeof ExcelJS !== 'undefined' && typeof saveAs !== 'undefined') {
+            createExcel();
         } else {
-            el.style.backgroundColor = '';
-            el.style.borderColor = '';
-            el.style.outline = '';
+            alert('加载Excel导出库失败，请检查网络连接后重试。');
         }
     });
-    var hasComp = $('rmHasCompensated').value === '是';
-    if (hasComp) {
-        var compInput = $('rmCompensated');
-        if (compInput && compInput.value.trim() === '') {
-            compInput.style.backgroundColor = '#ffcccc';
-            compInput.style.borderColor = '#d1d5db';
-            compInput.style.outline = 'none';
-            hasEmpty = true;
+
+    function createExcel() {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('产险人伤核损计算书');
+
+        // ==================== 列宽设置 ====================
+        var colWidth = 11.38;
+        worksheet.getColumn(1).width = colWidth;
+        worksheet.getColumn(2).width = colWidth;
+        worksheet.getColumn(3).width = colWidth;
+        worksheet.getColumn(4).width = colWidth;
+        worksheet.getColumn(5).width = colWidth;
+        worksheet.getColumn(6).width = colWidth;
+        worksheet.getColumn(7).width = colWidth;
+
+        // ==================== 行高设置 ====================
+        // 第1行：40磅
+        worksheet.getRow(1).height = 40;
+        // 第2-6行：25磅
+        for (var r = 2; r <= 6; r++) {
+            worksheet.getRow(r).height = 25;
         }
-    }
-
-    if (hasEmpty) {
-        var btn = document.querySelector('.export-doc-btn');
-        if (btn) {
-            btn.style.backgroundColor = '#ff6b6b';
-            btn.textContent = '⚠️ 有必填项';
-            setTimeout(function() {
-                btn.style.backgroundColor = '#7c3aed';
-                btn.textContent = '📄 输出文档';
-            }, 2000);
+        // ★★★ 第7、8、9行：80磅 ★★★
+        for (var r = 7; r <= 9; r++) {
+            worksheet.getRow(r).height = 80;
         }
-        return;
-    }
-
-    // 获取数据
-    var name = $('rmEmployeeName').value.trim() || '员工姓名';
-    var date = $('rmAccidentDate').value || '';
-    var diagnosis = $('rmDiagnosis').value.trim() || '诊断结论';
-    var ageNum = ($('age')?.value || '30').replace(/[^0-9.]/g, '') || '30';
-    var gender = $('gender')?.value || '男';
-    var ageDisplay = gender === '女' ? ageNum + '岁女' : ageNum + '岁男';
-    var accidentTimeStr = date || '';
-
-    // 获取计算数据
-    var medTotal = getVal('medicalTotal');
-    var thirdPartyReimb = getVal('medicalReimbursed');
-    var nonMedicalRatio = getVal('nonMedicalRatio') || 0;
-    var medOut = medTotal * (nonMedicalRatio / 100);
-    var ded = getVal('medicalDeductible') || 100;
-    var payRate = getVal('medicalRatio') || 90;
-    var medLoss = Math.max(0, (medTotal - thirdPartyReimb - medOut - ded) * (payRate / 100));
-    var medFinal = medLoss;
-    var amount = $('rmInsuranceAmount').value.trim() || ' ';
-    var medLimit = parseFloat(amount.split('+')[1] || 0) * 10000;
-    if (medLimit > 0 && medLoss > medLimit) medFinal = medLimit;
-
-    var wDays = getVal('stopWorkDays') || 0;
-    var dWage = getVal('dailyWage') || 100;
-    var deductDays = getVal('deductDays') || 3;
-    var workComp = wDays > 0 ? Math.max(0, (wDays - deductDays) * dWage) : 0;
-
-    var level = parseInt($('disabilityLevel')?.value || '0');
-    var levelMap = { 1: '一级', 2: '二级', 3: '三级', 4: '四级', 5: '五级', 6: '六级', 7: '七级', 8: '八级', 9: '九级', 10: '十级' };
-    var levelText = levelMap[level] || '';
-    var isDeath = $('rmIsDeathCase').checked;
-    var isReimbursedByInsurance = $('rmIsReimbursedByInsurance').checked;
-
-    // 计算伤残赔偿金
-    var bonusMonths = { 1: 27, 2: 25, 3: 23, 4: 21, 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 };
-    var months = bonusMonths[level] || 0;
-    var salary = getVal('monthlySalary');
-    var avgSalary = getVal('localAvgSalary');
-    var minBase = avgSalary * 0.6;
-    var isBelow60 = salary > 0 && salary < minBase && avgSalary > 0;
-    var baseSalary = isBelow60 ? avgSalary * 0.6 : salary;
-    var oneTimeBonus = baseSalary * months;
-
-    var medicalBonus = 0;
-    var employmentBonus = 0;
-    var province = $('province')?.value || '';
-    var std = PROVINCE_STANDARDS[province] || PROVINCE_STANDARDS['山东省'];
-    if (level >= 5 && $('isResigned').value === '1') {
-        var medMonths = std.medical && std.medical[level] ? std.medical[level] : 0;
-        var empMonths = std.employment && std.employment[level] ? std.employment[level] : 0;
-        medicalBonus = avgSalary * medMonths;
-        employmentBonus = avgSalary * empMonths;
-    }
-
-    var totalDisCalc = oneTimeBonus + medicalBonus + employmentBonus;
-    var ratioNum = parseFloat($('rmDisabilityRatio').value) || 5;
-    var disLimit = parseFloat(amount.split('+')[0] || 0) * 10000 * ratioNum / 100;
-    var disFinal = 0;
-    if (isDeath) {
-        var deathLimit = parseFloat(amount.split('+')[0] || 0) * 10000;
-        var calcAmount = PER_CAPITA_INCOME * 20;
-        disFinal = Math.min(calcAmount, deathLimit);
-        if (isReimbursedByInsurance) disFinal = 0;
-    } else if (level !== 0) {
-        disFinal = Math.min(totalDisCalc, disLimit);
-        if (isReimbursedByInsurance) disFinal = 0;
-    }
-
-    var finalCalcTotal = medFinal + workComp + disFinal;
-
-    // 提取医疗费核定说明
-    var medicalNote = '';
-    if (isReimbursedByInsurance) {
-        medicalNote = '已通过工伤保险基金赔付，我司不再核算。';
-    } else {
-        medicalNote = '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) + '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRate + '%赔付。核损金额=（' + medTotal.toFixed(2) + '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + '）*' + payRate + '%=' + medLoss.toFixed(2) + '元。' + (medLimit > 0 ? '医疗费限额' + (medLimit/10000).toFixed(0) + '万，最终核定' + medFinal.toFixed(2) + '元。' : '');
-    }
-
-    // 提取误工费核定说明
-    var workNote = '';
-    if (wDays === 0) {
-        workNote = '经核定，停工留薪期天数为0天，误工费为0元。';
-    } else {
-        workNote = diagnosis + '，根据《人身损害受伤人员误工损失日评定准则（GA/T 521—2004）》结合实际误工天数，核定误工天数为' + wDays + '天，误工费=（' + wDays + '-' + deductDays + ')*' + dWage.toFixed(2) + '=' + workComp.toFixed(2) + '元。';
-    }
-
-    // 提取伤残/死亡赔偿金核定说明
-    var disNote = '';
-    if (isDeath) {
-        if (isReimbursedByInsurance) {
-            disNote = '已通过工伤保险基金赔付，我司不再核算。';
-        } else {
-            disNote = '死亡赔偿金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + PER_CAPITA_INCOME.toFixed(2) + ' × 20 = ' + (PER_CAPITA_INCOME * 20).toFixed(2) + '元。死亡赔偿限额' + (parseFloat(amount.split('+')[0] || 0)).toFixed(0) + '万，最终核定' + disFinal.toFixed(2) + '元。';
+        // 第10-12行：25磅
+        for (var r = 10; r <= 12; r++) {
+            worksheet.getRow(r).height = 25;
         }
-    } else if (level !== 0) {
-        if (isReimbursedByInsurance) {
-            disNote = '已通过工伤保险基金赔付，我司不再核算。';
-        } else {
-            disNote = '伤者"' + diagnosis + '"，经鉴定为"' + levelText + '"伤残，一次性伤残补助金：' + fmt(baseSalary) + '元×' + months + '个月=' + oneTimeBonus.toFixed(2) + '元。' + (level >= 5 ? '一次性工伤医疗补助金：' + fmt(avgSalary) + '元×' + (std.medical && std.medical[level] || 0) + '个月=' + medicalBonus.toFixed(2) + '元；一次性伤残就业补助金：' + fmt(avgSalary) + '元×' + (std.employment && std.employment[level] || 0) + '个月=' + employmentBonus.toFixed(2) + '元。' : '') + '伤残赔偿限额' + (parseFloat(amount.split('+')[0] || 0)).toFixed(0) + '万×' + ratioNum + '%=' + disLimit.toFixed(2) + '元，最终核定' + disFinal.toFixed(2) + '元。';
+        // ★★★ 第13行：80磅 ★★★
+        worksheet.getRow(13).height = 80;
+        // 第14行：25磅
+        worksheet.getRow(14).height = 25;
+        // 第15行（签名）：30磅
+        worksheet.getRow(15).height = 30;
+
+        // ==================== 合并单元格 ====================
+        worksheet.mergeCells('A1:G1');
+        worksheet.mergeCells('B2:C2');
+        worksheet.mergeCells('E2:G2');
+        worksheet.mergeCells('B3:C3');
+        worksheet.mergeCells('E3:G3');
+        worksheet.mergeCells('B4:C4');
+        worksheet.mergeCells('B5:C5');
+        worksheet.mergeCells('E5:G5');
+        worksheet.mergeCells('D6:G6');
+        for (var r = 7; r <= 13; r++) {
+            worksheet.mergeCells('D' + r + ':G' + r);
         }
-    } else {
-        disNote = '未达伤残等级/未索赔伤残，不涉及伤残赔偿金。';
-    }
+        worksheet.mergeCells('B14:G14');
 
-    // 获取结论
-    var hasCompCheck = $('rmHasCompensated').value === '是';
-    var conclusionText = '';
-    if (hasCompCheck) {
-        var compStr = $('rmCompensated').value.trim() || '0';
-        var compTotal = parseFloat(compStr) || 0;
-        if (compStr.includes('+')) {
-            var parts = compStr.split('+').map(function(s) { return parseFloat(s.trim()) || 0; });
-            conclusionText = '单位已赔偿伤者医疗费' + (parts[0]||0).toFixed(2) + '元+误工费' + (parts[1]||0).toFixed(2) + '元+伤残赔偿金' + (parts[2]||0).toFixed(2) + '元。';
-        } else {
-            conclusionText = '单位已赔偿伤者总金额' + compTotal.toFixed(2) + '元。';
+        // ==================== 样式辅助函数 ====================
+        function setBorder(cell) {
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
         }
-    } else {
-        conclusionText = '被保险人授权我司将理赔款直接支付伤者。本案最终核定金额为医疗费+误工费+' + (isDeath ? '死亡赔偿金' : '伤残赔偿金') + '=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元=' + finalCalcTotal.toFixed(2) + '元。赔款确认书已上传，请领导审核，谢谢。';
+
+        function setFont(cell, size, bold, align) {
+            cell.font = { name: '宋体', size: size, bold: bold || false };
+            cell.alignment = {
+                horizontal: align || 'center',
+                vertical: 'middle',
+                wrapText: true
+            };
+        }
+
+        // ==================== 填充内容 ====================
+
+        // 第1行：标题
+        var cell = worksheet.getCell('A1');
+        cell.value = '产险人伤核损计算书';
+        setFont(cell, 20, true, 'center');
+        cell.border = {};
+
+        // 第2行
+        cell = worksheet.getCell('A2');
+        cell.value = '被保险人';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('D2');
+        cell.value = '保单号';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        setBorder(worksheet.getCell('B2'));
+        setBorder(worksheet.getCell('C2'));
+        setBorder(worksheet.getCell('E2'));
+        setBorder(worksheet.getCell('F2'));
+        setBorder(worksheet.getCell('G2'));
+
+        // 第3行
+        cell = worksheet.getCell('A3');
+        cell.value = '赔案号';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('D3');
+        cell.value = '险种';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('E3');
+        cell.value = '雇主责任保险（A款）';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        setBorder(worksheet.getCell('F3'));
+        setBorder(worksheet.getCell('G3'));
+        setBorder(worksheet.getCell('B3'));
+        setBorder(worksheet.getCell('C3'));
+
+        // 第4行
+        cell = worksheet.getCell('A4');
+        cell.value = '伤者姓名';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('B4');
+        cell.value = name;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        setBorder(worksheet.getCell('C4'));
+        cell = worksheet.getCell('D4');
+        cell.value = '年龄';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('E4');
+        cell.value = ageDisplay;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('F4');
+        cell.value = '出险时间';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('G4');
+        cell.value = accidentTimeStr;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第5行
+        cell = worksheet.getCell('A5');
+        cell.value = '证件号';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('D5');
+        cell.value = '伤情';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('E5');
+        cell.value = diagnosis;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        setBorder(worksheet.getCell('B5'));
+        setBorder(worksheet.getCell('C5'));
+        setBorder(worksheet.getCell('F5'));
+        setBorder(worksheet.getCell('G5'));
+
+        // 第6行：表头
+        cell = worksheet.getCell('A6');
+        cell.value = '费用项目';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('B6');
+        cell.value = '索赔金额';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('C6');
+        cell.value = '核定金额';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('D6');
+        cell.value = '核定说明（标准和依据）';
+        setFont(cell, 11, true);
+        setBorder(cell);
+
+        // 第7行：医疗费
+        cell = worksheet.getCell('A7');
+        cell.value = '医疗费';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('B7');
+        cell.value = medTotal;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C7');
+        cell.value = medFinal;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D7');
+        cell.value = medicalNote;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第8行：误工费
+        cell = worksheet.getCell('A8');
+        cell.value = '误工费';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('B8');
+        cell.value = workComp;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C8');
+        cell.value = workComp;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D8');
+        cell.value = workNote;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第9行：死亡/残疾赔偿金
+        cell = worksheet.getCell('A9');
+        cell.value = '死亡/残疾赔偿金';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('B9');
+        cell.value = totalDisCalc;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C9');
+        cell.value = disFinal;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D9');
+        cell.value = disNote;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第10行：护理费
+        cell = worksheet.getCell('A10');
+        cell.value = '护理费';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('B10');
+        cell.value = null;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C10');
+        cell.value = null;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D10');
+        cell.value = null;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第11行：住院伙食补助费
+        cell = worksheet.getCell('A11');
+        cell.value = '住院伙食补助费';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('B11');
+        cell.value = null;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C11');
+        cell.value = null;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D11');
+        cell.value = null;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第12行：后续治疗费
+        cell = worksheet.getCell('A12');
+        cell.value = '后续治疗费';
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+        cell = worksheet.getCell('B12');
+        cell.value = null;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C12');
+        cell.value = null;
+        setFont(cell, 10, false, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D12');
+        cell.value = null;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第13行：总计
+        cell = worksheet.getCell('A13');
+        cell.value = '总 计';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        cell = worksheet.getCell('B13');
+        cell.value = null;
+        setFont(cell, 11, true, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('C13');
+        cell.value = finalCalcTotal;
+        setFont(cell, 11, true, 'right');
+        setBorder(cell);
+        cell = worksheet.getCell('D13');
+        cell.value = conclusionText;
+        setFont(cell, 10, false, 'left');
+        setBorder(cell);
+
+        // 第14行：备注
+        cell = worksheet.getCell('A14');
+        cell.value = '备 注';
+        setFont(cell, 11, true);
+        setBorder(cell);
+        setBorder(worksheet.getCell('B14'));
+
+        // ==================== 签名（第15行） ====================
+        cell = worksheet.getCell('A15');
+        cell.value = '缮制人：';
+        setFont(cell, 12, false, 'left');
+        cell.border = {};
+        cell = worksheet.getCell('F15');
+        cell.value = '审批人：';
+        setFont(cell, 12, false, 'right');
+        cell.border = {};
+
+        // ==================== 导出 ====================
+        workbook.xlsx.writeBuffer().then(function(buffer) {
+            var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            var dateStr = new Date().toLocaleDateString().replace(/\//g, '-');
+            a.download = '产险人伤核损计算书_' + name + '_' + dateStr + '.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
     }
-
-    // ★★★ 构建Excel文档（使用colgroup控制列宽）★★★
-    var excelHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-        'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
-        'xmlns="http://www.w3.org/TR/REC-html40">' +
-        '<head><meta charset="UTF-8">' +
-        '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
-        '<x:Name>产险人伤核损计算书</x:Name>' +
-        '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>' +
-        '<x:PageSetup><x:PageWidth>8.5</x:PageWidth><x:PageHeight>11</x:PageHeight></x:PageSetup>' +
-        '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
-        '<style>' +
-        'table { width: 100%; border-collapse: collapse; font-family: "宋体", "SimSun", sans-serif; font-size: 12pt; }' +
-        'th, td { border: 1px solid #000000; padding: 6px 8px; text-align: left; vertical-align: middle; }' +
-        'th { background-color: #f0f0f0; font-weight: bold; text-align: center; }' +
-        '.title { text-align: center; font-size: 20pt; font-weight: bold; font-family: "黑体", "SimHei", sans-serif; }' +
-        '.label { font-weight: bold; text-align: center; white-space: nowrap; }' +
-        '.amount { text-align: right; }' +
-        '.total-row td { font-weight: bold; }' +
-        '.remark-cell { font-size: 10pt; line-height: 1.8; }' +
-        '.row-normal { height: 25pt; }' +
-        '</style>' +
-        '</head><body>';
-
-    // 标题
-    excelHtml += '<table>';
-    // ★★★ 使用 colgroup 控制7列等宽 ★★★
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-    excelHtml += '<tr><td colspan="7" class="title" style="border:none;">产险人伤核损计算书</td></tr>';
-    excelHtml += '</table>';
-
-    // ============================================================
-    // ★★★ 上表：基本信息 ★★★
-    // ============================================================
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-
-    // 第一行：A=被保险人 | B+C合并=留空 | D=保单号 | E+F+G合并=留空
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">被保险人</td>';
-    excelHtml += '<td colspan="2"></td>';
-    excelHtml += '<td class="label">保单号</td>';
-    excelHtml += '<td colspan="3"></td>';
-    excelHtml += '</tr>';
-
-    // 第二行：A=赔案号 | B+C合并=留空 | D=险种 | E+F+G合并=雇主责任保险（A款）
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">赔案号</td>';
-    excelHtml += '<td colspan="2"></td>';
-    excelHtml += '<td class="label">险种</td>';
-    excelHtml += '<td colspan="3">雇主责任保险（A款）</td>';
-    excelHtml += '</tr>';
-
-    // 第三行：A=伤者姓名 | B+C合并=读取 | D=年龄 | E=读取 | F=出险时间 | G=读取出险日期
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">伤者姓名</td>';
-    excelHtml += '<td colspan="2">' + name + '</td>';
-    excelHtml += '<td class="label">年龄</td>';
-    excelHtml += '<td>' + ageDisplay + '</td>';
-    excelHtml += '<td class="label">出险时间</td>';
-    excelHtml += '<td>' + accidentTimeStr + '</td>';
-    excelHtml += '</tr>';
-
-    // 第四行：A=证件号 | B+C合并=留空 | D=伤情 | E+F+G合并=读取诊断结果
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">证件号</td>';
-    excelHtml += '<td colspan="2"></td>';
-    excelHtml += '<td class="label">伤情</td>';
-    excelHtml += '<td colspan="3">' + diagnosis + '</td>';
-    excelHtml += '</tr>';
-
-    excelHtml += '</table>';
-
-    // ============================================================
-    // ★★★ 下表：费用项目 ★★★
-    // ============================================================
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-
-    // 表头行
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<th>费用项目</th>';
-    excelHtml += '<th>索赔金额</th>';
-    excelHtml += '<th>核定金额</th>';
-    excelHtml += '<th colspan="4">核定说明（标准和依据）</th>';
-    excelHtml += '</tr>';
-
-    // 医疗费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>医疗费</td>';
-    excelHtml += '<td class="amount">' + medTotal.toFixed(2) + '</td>';
-    excelHtml += '<td class="amount">' + medFinal.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + medicalNote + '</td>';
-    excelHtml += '</tr>';
-
-    // 误工费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>误工费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount">' + workComp.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + workNote + '</td>';
-    excelHtml += '</tr>';
-
-    // 死亡/残疾赔偿金
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>死亡/残疾赔偿金</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount">' + disFinal.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + disNote + '</td>';
-    excelHtml += '</tr>';
-
-    // 护理费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>护理费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td colspan="4" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    // 住院伙食补助费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>住院伙食补助费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td colspan="4" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    // 后续治疗费
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td>后续治疗费</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td colspan="4" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    // 总计
-    excelHtml += '<tr class="total-row row-normal">';
-    excelHtml += '<td>总 计</td>';
-    excelHtml += '<td class="amount"></td>';
-    excelHtml += '<td class="amount">' + finalCalcTotal.toFixed(2) + '</td>';
-    excelHtml += '<td colspan="4" class="remark-cell">' + conclusionText + '</td>';
-    excelHtml += '</tr>';
-
-    // 备注
-    excelHtml += '<tr class="row-normal">';
-    excelHtml += '<td class="label">备 注</td>';
-    excelHtml += '<td colspan="6" class="remark-cell"></td>';
-    excelHtml += '</tr>';
-
-    excelHtml += '</table>';
-
-    // ★★★ 签名 ★★★
-    excelHtml += '<table>';
-    excelHtml += '<colgroup>';
-    for (var i = 0; i < 7; i++) {
-        excelHtml += '<col style="width:70pt;">';
-    }
-    excelHtml += '</colgroup>';
-    excelHtml += '<tr>';
-    excelHtml += '<td style="border:none; padding-top:30px; font-size:12pt;">缮制人：</td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '<td style="border:none; padding-top:30px; font-size:12pt; text-align:right;">审批人：</td>';
-    excelHtml += '<td style="border:none; padding-top:30px;"></td>';
-    excelHtml += '</tr>';
-    excelHtml += '</table>';
-
-    excelHtml += '</body></html>';
-
-    var blob = new Blob(['\ufeff' + excelHtml], {
-        type: 'application/vnd.ms-excel;charset=utf-8'
-    });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    var dateStr2 = new Date().toLocaleDateString().replace(/\//g, '-');
-    a.download = '产险人伤核损计算书_' + name + '_' + dateStr2 + '.xls';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 }
 
     </script>
