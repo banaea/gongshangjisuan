@@ -2522,40 +2522,175 @@
         // 导出Excel（主工具）
         // ================================================================
 
-        function exportExcel() {
-            try {
-                var table = $('resultTable');
-                if (!table) { alert('未找到结果表格，无法导出'); return; }
-                var cloneTable = table.cloneNode(true);
-                var allRows = cloneTable.querySelectorAll('tr');
-                var colWidths = [];
-                allRows.forEach(function(row) {
-                    var cells = row.querySelectorAll('th, td');
-                    cells.forEach(function(cell, idx) {
-                        var len = (cell.textContent || '').length;
-                        if (!colWidths[idx] || len > colWidths[idx]) colWidths[idx] = Math.min(Math.max(len +
-                            2, 10), 50);
-                    });
-                });
-                var excelHtml =
-                    '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
-                    '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>工伤赔偿明细</x:Name>' +
-                    '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions><x:Table><x:Column>' +
-                    colWidths.map(function(w) { return '<x:Column wch="' + w + '"/>'; }).join('') +
-                    '</x:Column></x:Table></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
-                    '</head><body>' + cloneTable.outerHTML + '</body></html>';
-                var blob = new Blob(['\ufeff' + excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = '工伤赔偿计算结果_' + new Date().toLocaleDateString() + '.xls';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } catch (e) { alert('导出失败：' + e.message);
-                console.error(e); }
+                // 导出Excel
+                // 导出Excel
+        // 导出Excel
+// 导出Excel
+function exportExcel() {
+    try {
+        const table = document.getElementById('resultTable');
+        if (!table) {
+            alert('未找到结果表格，无法导出');
+            return;
         }
+
+        const cloneTable = table.cloneNode(true);
+
+        // ★ 关键：white-space: normal + mso-wrap-text: auto 才能自动换行
+        const headerStyle = `
+            background-color: #f0f9ff;
+            font-weight: bold;
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-family: 微软雅黑;
+            font-size: 11pt;
+            vertical-align: middle;
+            text-align: center;
+            white-space: normal;
+            mso-wrap-text: auto;
+        `;
+        const totalRowStyle = `
+            background-color: #f0f9ff;
+            font-weight: bold;
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-family: 微软雅黑;
+            font-size: 11pt;
+            vertical-align: middle;
+            text-align: left;
+            white-space: normal;
+            mso-wrap-text: auto;
+        `;
+        const totalAmountStyle = `
+            background-color: #f0f9ff;
+            font-weight: bold;
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-family: 微软雅黑;
+            font-size: 11pt;
+            vertical-align: middle;
+            text-align: right;
+            white-space: normal;
+            mso-wrap-text: auto;
+        `;
+        const normalCellStyle = `
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-family: 微软雅黑;
+            font-size: 11pt;
+            vertical-align: middle;
+            text-align: left;
+            white-space: normal;
+            mso-wrap-text: auto;
+        `;
+        const normalAmountStyle = `
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-family: 微软雅黑;
+            font-size: 11pt;
+            vertical-align: middle;
+            text-align: right;
+            white-space: normal;
+            mso-wrap-text: auto;
+        `;
+
+        const allRows = cloneTable.querySelectorAll('tr');
+        const colContentLengths = [];
+
+        allRows.forEach((row, rowIndex) => {
+            const rowText = (row.textContent || '').trim();
+            const isHeaderRow = rowIndex === 0;
+            const isTotalRow = rowText.includes('合计') || rowText.includes('总金额');
+            const allCells = row.querySelectorAll('th, td');
+
+            allCells.forEach((cell, cellIndex) => {
+                const isLastCol = cellIndex === allCells.length - 1;
+                const cellContent = (cell.textContent || '').trim();
+                
+                if (isHeaderRow) {
+                    cell.setAttribute('style', headerStyle);
+                } else if (isTotalRow) {
+                    cell.setAttribute('style', isLastCol ? totalAmountStyle : totalRowStyle);
+                } else {
+                    cell.setAttribute('style', isLastCol ? normalAmountStyle : normalCellStyle);
+                }
+
+                let contentLength = 0;
+                for (let i = 0; i < cellContent.length; i++) {
+                    contentLength += /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(cellContent.charAt(i)) ? 2 : 1;
+                }
+                if (!colContentLengths[cellIndex] || contentLength > colContentLengths[cellIndex]) {
+                    colContentLengths[cellIndex] = contentLength;
+                }
+            });
+        });
+
+        const colWidthConfig = colContentLengths.map(length => {
+            const finalWidth = Math.min(Math.max(length + 2, 8), 60);
+            return { wch: finalWidth };
+        });
+
+        const excelHtml = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                  xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                  xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>工伤赔偿明细</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                                <x:Table>
+                                    <x:Column>
+                                        ${colWidthConfig.map((col, i) => `<x:Column${i+1} wch="${col.wch}"/>`).join('')}
+                                    </x:Column>
+                                    <x:Row>
+                                        <x:RowAutoFit/>
+                                    </x:Row>
+                                </x:Table>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    /* 全局强制自动换行 */
+                    td, th {
+                        white-space: normal !important;
+                        mso-wrap-text: auto !important;
+                        word-wrap: break-word;
+                        mso-line-height-rule: exactly;
+                    }
+                </style>
+            </head>
+            <body>
+                ${cloneTable.outerHTML}
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff' + excelHtml], { 
+            type: 'application/vnd.ms-excel;charset=utf-8' 
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `工伤赔偿计算结果_${new Date().toLocaleDateString()}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (e) {
+        alert('导出失败：' + e.message);
+        console.error(e);
+    }
+}
 
         // ================================================================
         // 初始化
