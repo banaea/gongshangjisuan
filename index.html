@@ -1052,13 +1052,16 @@
                         </div>
                     </div>
 
-                    <div class="form-item" style="margin-bottom: 8px;">
-                        <div class="inline-flex">
-                            <input type="checkbox" id="rmIsDeathCase" onchange="autoUpdateRemark()">
-                            <label for="rmIsDeathCase">☠️ 是否死亡案件</label>
-                            <span style="font-size:12px; color:#6b7280; margin-left:8px;">选「是」伤残比例自动变为100%</span>
-                        </div>
-                    </div>
+<div class="form-item" style="margin-bottom: 8px;">
+    <div class="inline-flex">
+        <input type="checkbox" id="rmIsDeathCase" onchange="autoUpdateRemark()">
+        <label for="rmIsDeathCase">☠️ 是否死亡案件</label>
+    </div>
+    <div class="inline-flex" style="margin-top:4px;">
+        <input type="checkbox" id="rmIsReimbursedByInsurance" onchange="autoUpdateRemark()">
+        <label for="rmIsReimbursedByInsurance">🏥 是否已通过工伤保险基金报销</label>
+    </div>
+</div>
 
                     <div class="form-item">
                         <label>🧾 事故简述</label>
@@ -3721,6 +3724,7 @@ html += '</table>';
             var ratioDisplay = ratioNum + '%';
 
             var isDeath = $('rmIsDeathCase').checked;
+            var isReimbursedByInsurance = $('rmIsReimbursedByInsurance').checked;  // ★★★ 新增
             var where = $('rmWhere').value.trim() || '工作车间';
             var doing = $('rmDoing').value.trim() || '收拾物料';
             var because = $('rmBecause').value.trim() || '不慎被物料绊倒';
@@ -3882,32 +3886,55 @@ html += '</table>';
                 disDetailProcess += '，赔偿"' + compensationType + '"：\n';
 
                 // ★★★ 一次性伤残补助金：显示公式 += 结果 ★★★
-                if (disProcessText) {
-                    if (disProcessText.includes('=')) {
-                        disDetailProcess += '一次性伤残补助金：' + disProcessText + '\n';
-                    } else if (disProcessText.includes('×') || disProcessText.includes('*')) {
-                        disDetailProcess += '一次性伤残补助金：' + disProcessText + ' = ' + oneTimeBonus.toFixed(2) +
-                            '元\n';
-                    } else {
-                        disDetailProcess += '一次性伤残补助金：' + disProcessText + ' = ' + oneTimeBonus.toFixed(2) +
-                            '元\n';
-                    }
-                } else {
-                    disDetailProcess += '一次性伤残补助金：' + oneTimeBonus.toFixed(2) + '元\n';
-                }
+// ★★★ 一次性伤残补助金 ★★★
+if (isReimbursedByInsurance) {
+    disDetailProcess += '一次性伤残补助金：已通过工伤保险基金赔付，我司不再核算。\n';
+} else {
+if (disProcessText) {
+    // ★★★ 提取冒号后面的内容 ★★★
+    var cleanText = disProcessText;
+    // 去掉 "本人实际月工资：" 或 "法定计发基数（社平60%保底）：" 前缀
+    cleanText = cleanText.replace(/^(本人实际月工资|法定计发基数（社平60%保底）)[：:]\s*/, '');
+    // 去掉末尾多余的 "元" 如果已经存在
+    // 如果包含 = 直接使用，否则拼接结果
+    if (cleanText.includes('=')) {
+        disDetailProcess += '一次性伤残补助金：' + cleanText + '\n';
+    } else if (cleanText.includes('×') || cleanText.includes('*')) {
+        disDetailProcess += '一次性伤残补助金：' + cleanText + ' = ' + oneTimeBonus.toFixed(2) + '元\n';
+    } else {
+        disDetailProcess += '一次性伤残补助金：' + cleanText + ' = ' + oneTimeBonus.toFixed(2) + '元\n';
+    }
+} else {
+    disDetailProcess += '一次性伤残补助金：' + oneTimeBonus.toFixed(2) + '元\n';
+}
+}
 
-                if (showThree) {
-                    if (medicalProcessText) {
-                        disDetailProcess += '一次性工伤医疗补助金：' + medicalProcessText + '\n';
-                    } else if (medicalBonus > 0) {
-                        disDetailProcess += '一次性工伤医疗补助金：' + medicalBonus.toFixed(2) + '元\n';
-                    }
-                    if (empProcessText) {
-                        disDetailProcess += '一次性伤残就业补助金：' + empProcessText + '\n';
-                    } else if (employmentBonus > 0) {
-                        disDetailProcess += '一次性伤残就业补助金：' + employmentBonus.toFixed(2) + '元\n';
-                    }
-                }
+if (showThree) {
+    if (isReimbursedByInsurance) {
+        disDetailProcess += '一次性工伤医疗补助金：已通过工伤保险基金赔付，我司不再核算。\n';
+    } else {
+        if (medicalProcessText) {
+            disDetailProcess += '一次性工伤医疗补助金：' + medicalProcessText + '\n';
+        } else if (medicalBonus > 0) {
+            disDetailProcess += '一次性工伤医疗补助金：' + medicalBonus.toFixed(2) + '元\n';
+        }
+    }
+    
+    if (isReimbursedByInsurance) {
+        // 就业补助金不受工伤保险报销影响，正常显示
+        if (empProcessText) {
+            disDetailProcess += '一次性伤残就业补助金：' + empProcessText + '\n';
+        } else if (employmentBonus > 0) {
+            disDetailProcess += '一次性伤残就业补助金：' + employmentBonus.toFixed(2) + '元\n';
+        }
+    } else {
+        if (empProcessText) {
+            disDetailProcess += '一次性伤残就业补助金：' + empProcessText + '\n';
+        } else if (employmentBonus > 0) {
+            disDetailProcess += '一次性伤残就业补助金：' + employmentBonus.toFixed(2) + '元\n';
+        }
+    }
+}
 
                 if (isResigned) {
                     disDetailProcess += '合计：' + oneTimeBonus.toFixed(2);
@@ -4026,14 +4053,15 @@ html += '</table>';
                 result + '，' + action + '。经诊断为' + diagnosis + '，' + treatment + '。\n';
             remark += '被保险人的员工在工作时因工作原因受伤，属于雇主责任险保险责任范围。\n\n';
 
-            remark += '2、损失核定\n';
-            remark += '医疗费：\n';
-            remark += '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) +
-                '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRate + '%赔付。\n';
-            remark += '核损金额=（医疗总费用-第三方报销金额-非医保金额-免赔）*' + payRate + '%=（' + medTotal.toFixed(2) +
-                '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + '）*' +
-                payRate + '%=' + medLoss.toFixed(2) + '元\n';
-            remark += medCompareNote + '\n\n';
+remark += '2、损失核定\n';
+remark += '医疗费：\n';
+if (isReimbursedByInsurance) {
+    remark += '已通过工伤保险基金赔付，我司不再核算。\n\n';
+} else {
+    remark += '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) + '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRate + '%赔付。\n';
+    remark += '核损金额=（医疗总费用-第三方报销金额-非医保金额-免赔）*' + payRate + '%=（' + medTotal.toFixed(2) + '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + '）*' + payRate + '%=' + medLoss.toFixed(2) + '元\n';
+    remark += medCompareNote + '\n\n';
+}
 
             remark += '误工费：\n';
             if (wDays === 0) {
