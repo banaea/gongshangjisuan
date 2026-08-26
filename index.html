@@ -4420,14 +4420,27 @@ function exportWordDocument() {
     // ==================== 核定说明（完整版，无精简） ====================
 
 // 医疗费说明
+// ==================== 医疗费说明（完整版） ====================
 var medicalNote = '';
 if (isReimbursedByInsurance) {
     medicalNote = '已通过工伤保险基金赔付，我司不再核算。';
 } else {
-    medicalNote = '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) + '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRate + '%赔付。核损金额=（' + medTotal.toFixed(2) + '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + '）*' + payRate + '%=' + medLoss.toFixed(2) + '元。' + (medLimit > 0 ? '医疗费限额' + (medLimit/10000).toFixed(0) + '万，最终核定' + medFinal.toFixed(2) + '元。' : '');
+    var payRateDisplay = payRate;
+    var medCalcProcess = '(' + medTotal.toFixed(2) + '-' + thirdPartyReimb.toFixed(2) + '-' + medOut.toFixed(2) + '-' + ded.toFixed(2) + ')*' + payRateDisplay + '%';
+    var medCalcResult = medLoss.toFixed(2);
+    var medLimitDisplay = medLimit > 0 ? '医疗费限额' + (medLimit/10000).toFixed(0) + '万（即' + medLimit.toFixed(2) + '元），' : '';
+    var medCompareResult = '';
+    if (medLimit > 0) {
+        if (medLoss > medLimit) {
+            medCompareResult = '低于医疗费核算金额' + medLoss.toFixed(2) + '元，故医疗费最终核算金额为' + medLimit.toFixed(2) + '元。';
+        } else {
+            medCompareResult = '高于医疗费核算金额' + medLoss.toFixed(2) + '元，故医疗费最终核算金额为' + medLoss.toFixed(2) + '元。';
+        }
+    }
+    medicalNote = '总费用' + medTotal.toFixed(2) + '元，第三方报销金额' + thirdPartyReimb.toFixed(2) + '元；非医保：' + medOut.toFixed(2) + '元；免赔' + ded.toFixed(2) + '元，按照' + payRateDisplay + '%赔付。核损金额=' + medCalcProcess + '=' + medCalcResult + '元。' + medLimitDisplay + medCompareResult;
 }
 
-// 误工费说明
+// ==================== 误工费说明（完整版） ====================
 var workNote = '';
 if (wDays === 0) {
     workNote = '经核定，停工留薪期天数为0天，误工费为0元。';
@@ -4435,35 +4448,48 @@ if (wDays === 0) {
     workNote = diagnosis + '，根据《人身损害受伤人员误工损失日评定准则（GA/T 521—2004）》结合实际误工天数，核定误工天数为' + wDays + '天，误工费=（' + wDays + '-' + deductDays + ')*' + dWage.toFixed(2) + '=' + workComp.toFixed(2) + '元。';
 }
 
-// 伤残/死亡赔偿金说明（完整版）
+// ==================== 伤残赔偿金说明（完整版） ====================
 var disNote = '';
 if (isDeath) {
     if (isReimbursedByInsurance) {
         disNote = '已通过工伤保险基金赔付，我司不再核算。';
     } else {
-        disNote = '死亡赔偿金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + PER_CAPITA_INCOME.toFixed(2) + ' × 20 = ' + (PER_CAPITA_INCOME * 20).toFixed(2) + '元。死亡赔偿限额' + (parseFloat(amount.split('+')[0] || 0)).toFixed(0) + '万，最终核定' + disFinal.toFixed(2) + '元。';
+        var deathCalcAmount = (PER_CAPITA_INCOME * 20).toFixed(2);
+        var deathLimitAmount = (parseFloat(amount.split('+')[0] || 0) * 10000).toFixed(2);
+        disNote = '死亡赔偿金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + PER_CAPITA_INCOME.toFixed(2) + ' × 20 = ' + deathCalcAmount + '元。死亡赔偿限额' + (parseFloat(amount.split('+')[0] || 0)).toFixed(0) + '万（即' + deathLimitAmount + '元），最终核定' + disFinal.toFixed(2) + '元。';
     }
 } else if (level !== 0) {
     if (isReimbursedByInsurance) {
         disNote = '已通过工伤保险基金赔付，我司不再核算。';
     } else {
-        // ★★★ 完整输出，不精简 ★★★
-        var disNoteParts = [];
+        var disParts = [];
         // 一次性伤残补助金
-        disNoteParts.push('一次性伤残补助金：' + fmt(baseSalary) + '元×' + months + '个月=' + oneTimeBonus.toFixed(2) + '元');
-        // 一次性工伤医疗补助金（5-10级且已离职）
-        if (level >= 5 && $('isResigned').value === '1') {
+        var bonusMonthsMap = { 1: 27, 2: 25, 3: 23, 4: 21, 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 };
+        var disMonths = bonusMonthsMap[level] || 0;
+        var disBase = isBelow60 ? (avgSalary * 0.6) : salary;
+        var disAmount = disBase * disMonths;
+        disParts.push('一次性伤残补助金：' + fmt(disBase) + '元×' + disMonths + '个月=' + disAmount.toFixed(2) + '元');
+        
+        // 一次性工伤医疗补助金
+        if (level >= 5) {
             var medMonths = std.medical && std.medical[level] ? std.medical[level] : 0;
-            var empMonths = std.employment && std.employment[level] ? std.employment[level] : 0;
-            var medBonus = avgSalary * medMonths;
-            var empBonus = avgSalary * empMonths;
-            disNoteParts.push('一次性工伤医疗补助金：' + fmt(avgSalary) + '元×' + medMonths + '个月=' + medBonus.toFixed(2) + '元');
-            disNoteParts.push('一次性伤残就业补助金：' + fmt(avgSalary) + '元×' + empMonths + '个月=' + empBonus.toFixed(2) + '元');
+            var medAmount = avgSalary * medMonths;
+            disParts.push('一次性工伤医疗补助金：' + fmt(avgSalary) + '元×' + medMonths + '个月=' + medAmount.toFixed(2) + '元');
         }
-        // 伤残赔偿限额计算
+        
+        // 一次性伤残就业补助金
+        if (level >= 5) {
+            var empMonths = std.employment && std.employment[level] ? std.employment[level] : 0;
+            var empAmount = avgSalary * empMonths;
+            disParts.push('一次性伤残就业补助金：' + fmt(avgSalary) + '元×' + empMonths + '个月=' + empAmount.toFixed(2) + '元');
+        }
+        
+        // 伤残赔偿限额
         var firstAmount = parseFloat(amount.split('+')[0] || 0);
-        disNoteParts.push('伤残赔偿限额' + firstAmount.toFixed(0) + '万×' + ratioNum + '%=' + disLimit.toFixed(2) + '元，最终核定' + disFinal.toFixed(2) + '元。');
-        disNote = '伤者"' + diagnosis + '"，经鉴定为"' + levelText + '"伤残，' + disNoteParts.join('；') + '。';
+        var limitAmount = (firstAmount * 10000 * ratioNum / 100).toFixed(2);
+        disParts.push('伤残赔偿限额' + firstAmount.toFixed(0) + '万×' + ratioNum + '%=' + limitAmount + '元，最终核定' + disFinal.toFixed(2) + '元');
+        
+        disNote = '伤者"' + diagnosis + '"，经鉴定为"' + levelText + '"伤残，' + disParts.join('；') + '。';
     }
 } else {
     disNote = '未达伤残等级/未索赔伤残，不涉及伤残赔偿金。';
