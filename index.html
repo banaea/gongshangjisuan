@@ -666,6 +666,27 @@
             font-weight: bold !important;
         }
 
+        /* ---------- 非医保联动样式 ---------- */
+.non-med-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.non-med-group select {
+    flex: 0 0 140px;
+}
+.non-med-group input {
+    flex: 1 1 100px;
+    min-width: 80px;
+}
+.non-med-group .non-med-percent {
+    flex: 0 0 20px;
+    font-size: 14px;
+    color: #4b5563;
+    font-weight: 500;
+}
+
         /* ---------- 响应式 ---------- */
         @media (max-width: 920px) {
             .remark-modal {
@@ -887,39 +908,47 @@
             </div>
 
             <!-- 第四组：医疗费信息 -->
-            <div class="form-group">
-                <div class="group-title">医疗费信息</div>
-                <div class="form-grid">
-                    <div class="form-item">
-                        <label>医疗费总金额（元）</label>
-                        <input type="text" inputmode="decimal" id="medicalTotal" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
-                    </div>
+<div class="form-group">
+    <div class="group-title">医疗费信息</div>
+    <div class="form-grid">
+        <div class="form-item">
+            <label>医疗费总金额（元）</label>
+            <input type="text" inputmode="decimal" id="medicalTotal" value="0.00" oninput="formatDecimalInput(this);onNonMedicalModeChange();" onblur="fixDecimalOnBlur(this);onNonMedicalModeChange();">
+        </div>
 
-                    <div class="form-item">
-                        <label>医保/其他方式已报销金额（元）</label>
-                        <input type="text" inputmode="decimal" id="medicalReimbursed" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
-                    </div>
+        <div class="form-item">
+            <label>医保/其他方式已报销金额（元）</label>
+            <input type="text" inputmode="decimal" id="medicalReimbursed" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+        </div>
 
-                    <div class="form-item">
-                        <label>医疗费免赔额（元）</label>
-                        <input type="text" inputmode="decimal" id="medicalDeductible" value="100.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
-                    </div>
+        <div class="form-item">
+            <label>医疗费免赔额（元）</label>
+            <input type="text" inputmode="decimal" id="medicalDeductible" value="100.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+        </div>
 
-                    <div class="form-item">
-                        <label>非医保扣减比例（%）</label>
-                        <input type="text" inputmode="decimal" id="nonMedicalRatio" value="15" data-last-valid="15"
-                        oninput="formatPercentInput(this)" onblur="fixPercentOnBlur(this)">
-                        <div class="input-tip percent-tip" style="display:none; color:#dc2626;">百分比范围为0-100，已拦截超出范围的输入</div>
-                    </div>
+        <div class="form-item">
+            <label>医疗费赔付比例（%）</label>
+            <input type="text" inputmode="decimal" id="medicalRatio" value="90" data-last-valid="90"
+            oninput="formatPercentInput(this)" onblur="fixPercentOnBlur(this)">
+            <div class="input-tip percent-tip" style="display:none; color:#dc2626;">百分比范围为0-100，已拦截超出范围的输入</div>
+        </div>
 
-                    <div class="form-item">
-                        <label>医疗费赔付比例（%）</label>
-                        <input type="text" inputmode="decimal" id="medicalRatio" value="90" data-last-valid="90"
-                        oninput="formatPercentInput(this)" onblur="fixPercentOnBlur(this)">
-                        <div class="input-tip percent-tip" style="display:none; color:#dc2626;">百分比范围为0-100，已拦截超出范围的输入</div>
-                    </div>
-                </div>
+        <div class="form-item">
+            <label>非医保扣减方式</label>
+            <div class="non-med-group">
+                <select id="nonMedicalMode" onchange="onNonMedicalModeChange(); calculate();">
+                    <option value="ratio">按比例扣减</option>
+                    <option value="amount">按金额扣减</option>
+                </select>
+                <input type="text" inputmode="decimal" id="nonMedicalValue" value="15.00"
+                oninput="formatNonMedicalInput(this);calculate();"
+                onblur="fixNonMedicalBlur(this);calculate();">
+                <span class="non-med-percent" id="nonMedicalPercentSign" style="display:none; font-size:14px; color:#4b5563; font-weight:500;">%</span>
             </div>
+            <div class="input-tip" id="nonMedicalTip">按比例扣减：默认15%；按金额扣减：默认医疗费总金额的15%</div>
+        </div>
+    </div>
+</div>
 
             <!-- 第五组：停工留薪期（误工费） -->
             <div class="form-group">
@@ -1562,209 +1591,260 @@
         const PER_CAPITA_INCOME = 56502;
 
         // ================================================================
-        // 工具函数
         // ================================================================
+        // 工具函数
+// ================================================================
 
-        function fmt(num) {
-            if (isNaN(num) || num === null || num === undefined) return '0.00';
-            return Number(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(num) {
+    if (isNaN(num) || num === null || num === undefined) return '0.00';
+    return Number(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function $(id) { return document.getElementById(id); }
+
+function getVal(id) { return parseFloat($(id)?.value) || 0; }
+
+function formatDecimalInput(el) {
+    let val = el.value.replace(/[^\d.]/g, '');
+    const dotIndex = val.indexOf('.');
+    if (dotIndex !== -1) {
+        val = val.slice(0, dotIndex + 1) + val.slice(dotIndex + 1).replace(/\./g, '');
+        const parts = val.split('.');
+        if (parts[1] && parts[1].length > 2) {
+            val = parts[0] + '.' + parts[1].slice(0, 2);
         }
+    }
+    el.value = val;
+    calculate();
+}
 
-        function $(id) { return document.getElementById(id); }
-
-        function getVal(id) { return parseFloat($(id)?.value) || 0; }
-
-        function formatDecimalInput(el) {
-            let val = el.value.replace(/[^\d.]/g, '');
-            const dotIndex = val.indexOf('.');
-            if (dotIndex !== -1) {
-                val = val.slice(0, dotIndex + 1) + val.slice(dotIndex + 1).replace(/\./g, '');
-                const parts = val.split('.');
-                if (parts[1] && parts[1].length > 2) {
-                    val = parts[0] + '.' + parts[1].slice(0, 2);
-                }
-            }
-            el.value = val;
-            calculate();
+function formatPercentInput(el) {
+    let val = el.value.replace(/[^\d.]/g, '');
+    const dotIndex = val.indexOf('.');
+    if (dotIndex !== -1) {
+        val = val.slice(0, dotIndex + 1) + val.slice(dotIndex + 1).replace(/\./g, '');
+        const parts = val.split('.');
+        if (parts[1] && parts[1].length > 2) {
+            val = parts[0] + '.' + parts[1].slice(0, 2);
         }
-
-        function formatPercentInput(el) {
-            let val = el.value.replace(/[^\d.]/g, '');
-            const dotIndex = val.indexOf('.');
-            if (dotIndex !== -1) {
-                val = val.slice(0, dotIndex + 1) + val.slice(dotIndex + 1).replace(/\./g, '');
-                const parts = val.split('.');
-                if (parts[1] && parts[1].length > 2) {
-                    val = parts[0] + '.' + parts[1].slice(0, 2);
-                }
-            }
-            const tipEl = el.parentElement.querySelector('.percent-tip');
-            const numVal = parseFloat(val);
-            if (val === '' || val === '.') {
-                el.value = val;
-                if (tipEl) tipEl.style.display = 'none';
-                calculate();
-                return;
-            }
-            if (isNaN(numVal) || numVal < 0 || numVal > 100) {
-                el.value = el.dataset.lastValid || '0';
-                if (tipEl) {
-                    tipEl.style.display = 'block';
-                    clearTimeout(el.tipTimer);
-                    el.tipTimer = setTimeout(() => { tipEl.style.display = 'none'; }, 2000);
-                }
-                calculate();
-                return;
-            }
-            el.dataset.lastValid = val;
-            if (tipEl) tipEl.style.display = 'none';
-            el.value = val;
-            calculate();
+    }
+    const tipEl = el.parentElement.querySelector('.percent-tip');
+    const numVal = parseFloat(val);
+    if (val === '' || val === '.') {
+        el.value = val;
+        if (tipEl) tipEl.style.display = 'none';
+        calculate();
+        return;
+    }
+    if (isNaN(numVal) || numVal < 0 || numVal > 100) {
+        el.value = el.dataset.lastValid || '0';
+        if (tipEl) {
+            tipEl.style.display = 'block';
+            clearTimeout(el.tipTimer);
+            el.tipTimer = setTimeout(() => { tipEl.style.display = 'none'; }, 2000);
         }
+        calculate();
+        return;
+    }
+    el.dataset.lastValid = val;
+    if (tipEl) tipEl.style.display = 'none';
+    el.value = val;
+    calculate();
+}
 
-        function formatIntInput(el) {
-            el.value = el.value.replace(/[^\d]/g, '');
-            calculate();
+// ★★★ 非医保相关函数（在 formatPercentInput 外面）★★★
+
+// 非医保输入框 - 自动添加 % 符号（按比例模式）
+function formatNonMedicalInput(el) {
+    // 移除已有 % 符号，只保留数字和小数点
+    let val = el.value.replace(/[^\d.]/g, '');
+    const dotIndex = val.indexOf('.');
+    if (dotIndex !== -1) {
+        val = val.slice(0, dotIndex + 1) + val.slice(dotIndex + 1).replace(/\./g, '');
+        const parts = val.split('.');
+        if (parts[1] && parts[1].length > 2) {
+            val = parts[0] + '.' + parts[1].slice(0, 2);
         }
+    }
+    el.value = val;
+    // 更新 % 符号显示
+    updateNonMedicalPercentSign();
+    calculate();
+}
 
-        function fixDecimalOnBlur(el) {
-            let val = parseFloat(el.value);
-            if (isNaN(val) || val < 0) val = 0;
-            el.value = val.toFixed(2);
-            calculate();
+// 非医保输入框失焦 - 补全格式并显示 %
+function fixNonMedicalBlur(el) {
+    let val = parseFloat(el.value);
+    if (isNaN(val) || val < 0) val = 0;
+    var mode = document.getElementById('nonMedicalMode').value;
+    if (mode === 'ratio') {
+        if (val > 100) val = 100;
+        el.value = val.toFixed(2);
+    } else {
+        el.value = val.toFixed(2);
+    }
+    updateNonMedicalPercentSign();
+    calculate();
+}
+
+// 更新非医保输入框后面的 % 符号显示
+function updateNonMedicalPercentSign() {
+    var mode = document.getElementById('nonMedicalMode').value;
+    var percentSign = document.getElementById('nonMedicalPercentSign');
+    var valueInput = document.getElementById('nonMedicalValue');
+    var val = parseFloat(valueInput.value);
+    if (mode === 'ratio' && !isNaN(val) && val >= 0) {
+        percentSign.style.display = 'inline';
+        if (valueInput.value.includes('%')) {
+            valueInput.value = valueInput.value.replace(/%/g, '');
         }
+    } else {
+        percentSign.style.display = 'none';
+    }
+}
 
-        function fixPercentOnBlur(el) {
-            let val = parseFloat(el.value);
-            if (isNaN(val) || val < 0) val = 0;
-            if (val > 100) val = 100;
-            const formatted = val.toFixed(2);
-            el.value = formatted;
-            el.dataset.lastValid = formatted;
-            const tipEl = el.parentElement.querySelector('.percent-tip');
-            if (tipEl) tipEl.style.display = 'none';
-            calculate();
+function formatIntInput(el) {
+    el.value = el.value.replace(/[^\d]/g, '');
+    calculate();
+}
+
+function fixDecimalOnBlur(el) {
+    let val = parseFloat(el.value);
+    if (isNaN(val) || val < 0) val = 0;
+    el.value = val.toFixed(2);
+    calculate();
+}
+
+function fixPercentOnBlur(el) {
+    let val = parseFloat(el.value);
+    if (isNaN(val) || val < 0) val = 0;
+    if (val > 100) val = 100;
+    const formatted = val.toFixed(2);
+    el.value = formatted;
+    el.dataset.lastValid = formatted;
+    const tipEl = el.parentElement.querySelector('.percent-tip');
+    if (tipEl) tipEl.style.display = 'none';
+    calculate();
+}
+
+function getMonthDiff(startStr, endStr) {
+    if (!startStr || !endStr) return 0;
+    const startParts = startStr.split('-').map(Number);
+    const endParts = endStr.split('-').map(Number);
+    const sy = startParts[0],
+        sm = startParts[1],
+        sd = startParts[2] || 1;
+    const ey = endParts[0],
+        em = endParts[1],
+        ed = endParts[2] || 1;
+    if (isNaN(sy) || isNaN(sm) || isNaN(ey) || isNaN(em)) return 0;
+    let months = (ey * 12 + em) - (sy * 12 + sm);
+    if (ed < sd) months--;
+    return Math.max(0, months);
+}
+
+function getDateDiffYMD(startStr, endStr) {
+    if (!startStr || !endStr) return { years: 0, months: 0, days: 0 };
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    if (start >= end) return { years: 0, months: 0, days: 0 };
+    let years = end.getFullYear() - start.getFullYear();
+    let months = end.getMonth() - start.getMonth();
+    let days = end.getDate() - start.getDate();
+    if (days < 0) { months--;
+        const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+        days += prevMonth.getDate(); }
+    if (months < 0) { years--;
+        months += 12; }
+    return { years, months, days };
+}
+
+function formatDateDiffText(diff) {
+    const { years, months, days } = diff;
+    let parts = [];
+    if (years > 0) parts.push(years + '年');
+    if (months > 0) parts.push(months + '个月');
+    if (days > 0) parts.push(days + '日');
+    return parts.length > 0 ? parts.join('') : '0日';
+}
+
+function addDaysToMonth(dateStr, days) {
+    if (!dateStr || isNaN(days)) return dateStr || '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d || 1);
+    date.setDate(date.getDate() + days);
+    const ny = date.getFullYear();
+    const nm = String(date.getMonth() + 1).padStart(2, '0');
+    return ny + '-' + nm;
+}
+
+function calcRetireDate(birthStr, gender, postType, useDelay) {
+    if (!birthStr) return { retireDateStr: '', retireAgeMonths: 720, delayMonths: 0 };
+    const [birthYear, birthMonth, birthDay] = birthStr.split('-').map(Number);
+    const birthDate = new Date(birthYear, birthMonth - 1, birthDay || 1);
+    let baseRetireAgeMonths;
+    if (gender === '男') {
+        baseRetireAgeMonths = 60 * 12;
+    } else {
+        if (postType === '工人') {
+            baseRetireAgeMonths = 50 * 12;
+        } else {
+            baseRetireAgeMonths = 55 * 12;
         }
-
-        function getMonthDiff(startStr, endStr) {
-            if (!startStr || !endStr) return 0;
-            const startParts = startStr.split('-').map(Number);
-            const endParts = endStr.split('-').map(Number);
-            const sy = startParts[0],
-                sm = startParts[1],
-                sd = startParts[2] || 1;
-            const ey = endParts[0],
-                em = endParts[1],
-                ed = endParts[2] || 1;
-            if (isNaN(sy) || isNaN(sm) || isNaN(ey) || isNaN(em)) return 0;
-            let months = (ey * 12 + em) - (sy * 12 + sm);
-            if (ed < sd) months--;
-            return Math.max(0, months);
+    }
+    const originalRetire = new Date(birthDate);
+    originalRetire.setMonth(originalRetire.getMonth() + baseRetireAgeMonths);
+    if (!useDelay) {
+        const y = originalRetire.getFullYear();
+        const m = String(originalRetire.getMonth() + 1).padStart(2, '0');
+        const d = String(originalRetire.getDate()).padStart(2, '0');
+        return { retireDateStr: y + '-' + m + '-' + d, retireAgeMonths: baseRetireAgeMonths, delayMonths: 0 };
+    }
+    let stepMonths, maxDelayMonths;
+    if (gender === '男') {
+        stepMonths = 4;
+        maxDelayMonths = 3 * 12;
+    } else {
+        if (postType === '工人') {
+            stepMonths = 2;
+            maxDelayMonths = 5 * 12;
+        } else {
+            stepMonths = 4;
+            maxDelayMonths = 3 * 12;
         }
+    }
+    const policyStart = new Date(2025, 0, 1);
+    let delayMonths = 0;
+    if (originalRetire > policyStart) {
+        const diffMonths = (originalRetire.getFullYear() - policyStart.getFullYear()) * 12 +
+            (originalRetire.getMonth() - policyStart.getMonth());
+        delayMonths = Math.ceil(diffMonths / stepMonths);
+        delayMonths = Math.min(delayMonths, maxDelayMonths);
+    }
+    const finalRetire = new Date(originalRetire);
+    finalRetire.setMonth(finalRetire.getMonth() + delayMonths);
+    const y = finalRetire.getFullYear();
+    const m = String(finalRetire.getMonth() + 1).padStart(2, '0');
+    const d = String(finalRetire.getDate()).padStart(2, '0');
+    return { retireDateStr: y + '-' + m + '-' + d, retireAgeMonths: baseRetireAgeMonths + delayMonths,
+        delayMonths: delayMonths };
+}
 
-        function getDateDiffYMD(startStr, endStr) {
-            if (!startStr || !endStr) return { years: 0, months: 0, days: 0 };
-            const start = new Date(startStr);
-            const end = new Date(endStr);
-            if (start >= end) return { years: 0, months: 0, days: 0 };
-            let years = end.getFullYear() - start.getFullYear();
-            let months = end.getMonth() - start.getMonth();
-            let days = end.getDate() - start.getDate();
-            if (days < 0) { months--;
-                const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
-                days += prevMonth.getDate(); }
-            if (months < 0) { years--;
-                months += 12; }
-            return { years, months, days };
-        }
+function getReductionRatio(std, yearsToRetire) {
+    if (!std || std.reduction === "none") return 1;
+    if (yearsToRetire >= 5) return 1;
+    if (yearsToRetire <= 0) return 0;
+    const reduceYears = 5 - Math.floor(yearsToRetire);
+    let ratio = 1 - reduceYears * (std.reductionRate || 0.2);
+    ratio = Math.max(ratio, std.minRatio || 0.1);
+    return Math.max(0, Math.min(1, ratio));
+}
 
-        function formatDateDiffText(diff) {
-            const { years, months, days } = diff;
-            let parts = [];
-            if (years > 0) parts.push(years + '年');
-            if (months > 0) parts.push(months + '个月');
-            if (days > 0) parts.push(days + '日');
-            return parts.length > 0 ? parts.join('') : '0日';
-        }
-
-        function addDaysToMonth(dateStr, days) {
-            if (!dateStr || isNaN(days)) return dateStr || '';
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const date = new Date(y, m - 1, d || 1);
-            date.setDate(date.getDate() + days);
-            const ny = date.getFullYear();
-            const nm = String(date.getMonth() + 1).padStart(2, '0');
-            return ny + '-' + nm;
-        }
-
-        function calcRetireDate(birthStr, gender, postType, useDelay) {
-            if (!birthStr) return { retireDateStr: '', retireAgeMonths: 720, delayMonths: 0 };
-            const [birthYear, birthMonth, birthDay] = birthStr.split('-').map(Number);
-            const birthDate = new Date(birthYear, birthMonth - 1, birthDay || 1);
-            let baseRetireAgeMonths;
-            if (gender === '男') {
-                baseRetireAgeMonths = 60 * 12;
-            } else {
-                if (postType === '工人') {
-                    baseRetireAgeMonths = 50 * 12;
-                } else {
-                    baseRetireAgeMonths = 55 * 12;
-                }
-            }
-            const originalRetire = new Date(birthDate);
-            originalRetire.setMonth(originalRetire.getMonth() + baseRetireAgeMonths);
-            if (!useDelay) {
-                const y = originalRetire.getFullYear();
-                const m = String(originalRetire.getMonth() + 1).padStart(2, '0');
-                const d = String(originalRetire.getDate()).padStart(2, '0');
-                return { retireDateStr: y + '-' + m + '-' + d, retireAgeMonths: baseRetireAgeMonths, delayMonths: 0 };
-            }
-            let stepMonths, maxDelayMonths;
-            if (gender === '男') {
-                stepMonths = 4;
-                maxDelayMonths = 3 * 12;
-            } else {
-                if (postType === '工人') {
-                    stepMonths = 2;
-                    maxDelayMonths = 5 * 12;
-                } else {
-                    stepMonths = 4;
-                    maxDelayMonths = 3 * 12;
-                }
-            }
-            const policyStart = new Date(2025, 0, 1);
-            let delayMonths = 0;
-            if (originalRetire > policyStart) {
-                const diffMonths = (originalRetire.getFullYear() - policyStart.getFullYear()) * 12 +
-                    (originalRetire.getMonth() - policyStart.getMonth());
-                delayMonths = Math.ceil(diffMonths / stepMonths);
-                delayMonths = Math.min(delayMonths, maxDelayMonths);
-            }
-            const finalRetire = new Date(originalRetire);
-            finalRetire.setMonth(finalRetire.getMonth() + delayMonths);
-            const y = finalRetire.getFullYear();
-            const m = String(finalRetire.getMonth() + 1).padStart(2, '0');
-            const d = String(finalRetire.getDate()).padStart(2, '0');
-            return { retireDateStr: y + '-' + m + '-' + d, retireAgeMonths: baseRetireAgeMonths + delayMonths,
-                delayMonths: delayMonths };
-        }
-
-        function getReductionRatio(std, yearsToRetire) {
-            if (!std || std.reduction === "none") return 1;
-            if (yearsToRetire >= 5) return 1;
-            if (yearsToRetire <= 0) return 0;
-            const reduceYears = 5 - Math.floor(yearsToRetire);
-            let ratio = 1 - reduceYears * (std.reductionRate || 0.2);
-            ratio = Math.max(ratio, std.minRatio || 0.1);
-            return Math.max(0, Math.min(1, ratio));
-        }
-
-        function syncAllBonusTypes(type) {
-            document.querySelector('input[name="disBonusType"][value="' + type + '"]')?.click();
-            document.querySelector('input[name="medicalBonusType"][value="' + type + '"]')?.click();
-            document.querySelector('input[name="employmentBonusType"][value="' + type + '"]')?.click();
-        }
-
+function syncAllBonusTypes(type) {
+    document.querySelector('input[name="disBonusType"][value="' + type + '"]')?.click();
+    document.querySelector('input[name="medicalBonusType"][value="' + type + '"]')?.click();
+    document.querySelector('input[name="employmentBonusType"][value="' + type + '"]')?.click();
+}
         // ================================================================
         // 页面交互
         // ================================================================
@@ -2226,6 +2306,28 @@
         // 主计算函数
         // ================================================================
 
+        // 非医保模式切换
+        // 非医保模式切换
+function onNonMedicalModeChange() {
+    var mode = document.getElementById('nonMedicalMode').value;
+    var valueInput = document.getElementById('nonMedicalValue');
+    var medTotal = parseFloat(document.getElementById('medicalTotal').value) || 0;
+    var percentSign = document.getElementById('nonMedicalPercentSign');
+
+    if (mode === 'ratio') {
+        valueInput.value = '15.00';
+        percentSign.style.display = 'inline';
+        document.getElementById('nonMedicalTip').textContent = '按比例扣减：默认15%；按金额扣减：默认医疗费总金额的15%';
+    } else {
+        var amount = Math.round(medTotal * 0.15 * 100) / 100;
+        valueInput.value = amount.toFixed(2);
+        percentSign.style.display = 'none';
+        document.getElementById('nonMedicalTip').textContent = '按金额扣减：默认医疗费总金额的15%（' + amount.toFixed(2) + '元），可手动修改';
+    }
+    calculate();
+}
+
+
         function calculate() {
             try {
                 var province = $('province').value || '山东省';
@@ -2241,8 +2343,11 @@
                 var medTotal = parseFloat($('medicalTotal').value) || 0;
                 var medReimbursed = parseFloat($('medicalReimbursed').value) || 0;
                 var medDeductible = parseFloat($('medicalDeductible').value) || 0;
-                var nonMedRaw = Math.max(0, Math.min(100, parseFloat($('nonMedicalRatio').value) || 0));
-                var nonMedRatio = nonMedRaw / 100;
+                var nonMedicalMode = $('nonMedicalMode').value || 'ratio';
+                var nonMedicalValueRaw = $('nonMedicalValue').value || '0';
+                var nonMedicalValue = parseFloat(nonMedicalValueRaw.replace(/%/g, '')) || 0;
+                var nonMedAmount = 0;
+                var nonMedDisplay = '';
                 var medRaw = Math.max(0, Math.min(100, parseFloat($('medicalRatio').value) || 0));
                 var medRatio = medRaw / 100;
                 var isOD = $('isOccupationalDisease').checked || false;
@@ -2372,8 +2477,16 @@
 
                 var actualStopDays = Math.max(0, stopDays - deductDays);
                 var stopWorkPay = dailyWage * actualStopDays;
-                var selfPayNonMed = medTotal * nonMedRatio;
-                var medPayable = Math.max(0, (medTotal - medReimbursed - selfPayNonMed - medDeductible) * medRatio);
+                if (nonMedicalMode === 'ratio') {
+                    var nonMedRatio = Math.max(0, Math.min(100, nonMedicalValue)) / 100;
+                    nonMedAmount = medTotal * nonMedRatio;
+                    nonMedDisplay = fmt(medTotal) + ' × ' + (nonMedRatio * 100).toFixed(2) + '%';
+                } else {
+                    nonMedAmount = nonMedicalValue;
+                    nonMedDisplay = fmt(nonMedicalValue);
+                }
+
+                var medPayable = Math.max(0, (medTotal - medReimbursed - nonMedAmount - medDeductible) * medRatio);
 
                 var socialTotal = disBonus + finalMedical + medPayable + allowanceTotal;
                 var companyTotal = finalEmployment + stopWorkPay;
@@ -2495,9 +2608,7 @@
                     '<tr><td class="item-name">医疗费</td>' +
                     '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第30条</span>符合目录的医疗费用从工伤保险基金支付</td>' +
                     '<td><span class="formula">(总花费-报销-非医保部分-免赔额)×赔付比例</span></td>' +
-                    '<td class="process">(' + fmt(medTotal) + ' - ' + fmt(medReimbursed) + ' - ' + fmt(medTotal) +
-                    '×' + (nonMedRatio * 100).toFixed(0) + '% - ' + fmt(medDeductible) + ') × ' + (medRatio *
-                        100).toFixed(0) + '%</td>' +
+                    '<td class="process">(' + fmt(medTotal) + ' - ' + fmt(medReimbursed) + ' - ' + nonMedDisplay + ' - ' + fmt(medDeductible) + ') × ' + (medRatio * 100).toFixed(0) + '%</td>' +
                     '<td class="payer payer-social">社保基金</td>' +
                     '<td class="amount">' + fmt(medPayable) + '</td></tr>' +
                     '<tr class="total-row"><td class="item-name">社保基金支付合计</td><td colspan="4"></td><td class="amount">' +
@@ -2703,7 +2814,7 @@ function exportExcel() {
             onProvinceChange();
             updateDateLabel();
             var decimalInputs = ['monthlySalary', 'localAvgSalary', 'medicalTotal', 'medicalReimbursed',
-                'medicalDeductible', 'nonMedicalRatio', 'medicalRatio', 'dailyWage'
+                'medicalDeductible', 'nonMedicalValue', 'medicalRatio', 'dailyWage'
             ];
             decimalInputs.forEach(function(id) {
                 var el = $(id);
@@ -2713,6 +2824,8 @@ function exportExcel() {
             recalcDailyWageNewRule();
             // ★★★ 初始化OCR表格 ★★★
             initOCRTable();
+           // ★★★ 初始化非医保 % 符号显示 ★★★
+          updateNonMedicalPercentSign();
         };
 
         // ================================================================
@@ -3327,59 +3440,63 @@ function exportExcel() {
         // ================================================================
 
         function refreshAllTableAndSum() {
-            var tableBody = $('ocrTableBody');
-            if (!tableBody) return;
-            tableBody.innerHTML = '';
-            invoiceGroupMap.clear();
+    var tableBody = $('ocrTableBody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    invoiceGroupMap.clear();
 
-            checkAndUpdateDuplicates();
+    checkAndUpdateDuplicates();
 
-            var validRecords = finishedOcrRecords;
+    var validRecords = finishedOcrRecords;
 
-            // 确保至少有一条空白行
-            var hasBlank = validRecords.some(function(r) { return r.isBlank; });
-            if (!hasBlank) {
-                var blankRecord = {
-                    invoiceNo: '',
-                    billType: '门诊票据',
-                    payerName: '',
-                    visitDate: '',
-                    makeOutDate: '',
-                    totalMoney: '0.00',
-                    medicareFundPay: '0.00',
-                    isBlank: true,
-                    originBillType: '门诊票据',
-                    originTotal: '0.00',
-                    originMedicare: '0.00'
-                };
-                finishedOcrRecords.push(blankRecord);
-                validRecords = finishedOcrRecords;
-            }
+    // 确保至少有一条空白行
+    var hasBlank = validRecords.some(function(r) { return r.isBlank; });
+    if (!hasBlank) {
+        var blankRecord = {
+            invoiceNo: '',
+            billType: '门诊票据',
+            payerName: '',
+            visitDate: '',
+            makeOutDate: '',
+            totalMoney: '0.00',
+            medicareFundPay: '0.00',
+            isBlank: true,
+            originBillType: '门诊票据',
+            originTotal: '0.00',
+            originMedicare: '0.00'
+        };
+        finishedOcrRecords.push(blankRecord);
+        validRecords = finishedOcrRecords;
+    }
 
-            validRecords.forEach(function(item, index) {
-                insertOcrRow(index + 1, item, index);
-            });
+    validRecords.forEach(function(item, index) {
+        insertOcrRow(index + 1, item, index);
+    });
 
-            // 汇总所有行的金额（排除空白行）
-            var sumTotal = validRecords.reduce(function(s, i) {
-                if (i.isBlank) return s;
-                return s + (parseFloat(i.totalMoney) || 0);
-            }, 0);
-            var sumMed = validRecords.reduce(function(s, i) {
-                if (i.isBlank) return s;
-                return s + (parseFloat(i.medicareFundPay) || 0);
-            }, 0);
+    // 汇总所有行的金额（排除空白行）
+    var sumTotal = validRecords.reduce(function(s, i) {
+        if (i.isBlank) return s;
+        return s + (parseFloat(i.totalMoney) || 0);
+    }, 0);
+    var sumMed = validRecords.reduce(function(s, i) {
+        if (i.isBlank) return s;
+        return s + (parseFloat(i.medicareFundPay) || 0);
+    }, 0);
 
-            var sumTotalEl = $('sumTotalMoney');
-            var sumMedEl = $('sumMedicareMoney');
-            var medTotalInput = $('medicalTotal');
-            var medReimbInput = $('medicalReimbursed');
-            if (sumTotalEl) sumTotalEl.textContent = sumTotal.toFixed(2);
-            if (sumMedEl) sumMedEl.textContent = sumMed.toFixed(2);
-            if (medTotalInput) medTotalInput.value = sumTotal.toFixed(2);
-            if (medReimbInput) medReimbInput.value = sumMed.toFixed(2);
-            calculate();
-        }
+    var sumTotalEl = $('sumTotalMoney');
+    var sumMedEl = $('sumMedicareMoney');
+    var medTotalInput = $('medicalTotal');
+    var medReimbInput = $('medicalReimbursed');
+    if (sumTotalEl) sumTotalEl.textContent = sumTotal.toFixed(2);
+    if (sumMedEl) sumMedEl.textContent = sumMed.toFixed(2);
+    if (medTotalInput) {
+        medTotalInput.value = sumTotal.toFixed(2);
+        // ★★★ 关键修复：触发非医保模式联动 ★★★
+        onNonMedicalModeChange();
+    }
+    if (medReimbInput) medReimbInput.value = sumMed.toFixed(2);
+    calculate();
+}
 
         // ================================================================
         // ★★★ 初始化OCR表格 ★★★
@@ -3452,7 +3569,18 @@ function exportMedicalExcel() {
         }
 
         var medDeductible = parseFloat($('medicalDeductible')?.value) || 100;
-        var nonMedicalRatio = parseFloat($('nonMedicalRatio')?.value) || 15;
+        // 根据当前模式获取非医保扣减值（用于导出Excel）
+        var nonMedicalMode = $('nonMedicalMode')?.value || 'ratio';
+        var nonMedicalVal = parseFloat($('nonMedicalValue')?.value) || 0;
+        var nonMedicalRatio = 0;
+        if (nonMedicalMode === 'ratio') {
+            nonMedicalRatio = Math.max(0, Math.min(100, nonMedicalVal));
+        } else {
+            // 按金额扣减模式：将金额转换为等效百分比（相对于医疗费总金额）
+            var medTotalForExport = parseFloat($('medicalTotal')?.value) || 0;
+            nonMedicalRatio = medTotalForExport > 0 ? (nonMedicalVal / medTotalForExport) * 100 : 0;
+            nonMedicalRatio = Math.max(0, Math.min(100, nonMedicalRatio));
+        }
         var payRatio = parseFloat($('medicalRatio')?.value) || 90;
 
         // ★★★ 四舍五入工具函数 ★★★
@@ -3954,7 +4082,17 @@ function generateRemarkText() {
 
     var medTotal = getVal('medicalTotal');
     var thirdPartyReimb = getVal('medicalReimbursed');
-    var nonMedicalRatio = getVal('nonMedicalRatio') || 0;
+    // 根据当前模式获取非医保扣减值
+    var nonMedicalMode = $('nonMedicalMode')?.value || 'ratio';
+    var nonMedicalVal = parseFloat($('nonMedicalValue')?.value) || 0;
+    var nonMedicalRatio = 0;
+    if (nonMedicalMode === 'ratio') {
+        nonMedicalRatio = Math.max(0, Math.min(100, nonMedicalVal));
+    } else {
+        var medTotalForRemark = getVal('medicalTotal') || 0;
+        nonMedicalRatio = medTotalForRemark > 0 ? (nonMedicalVal / medTotalForRemark) * 100 : 0;
+        nonMedicalRatio = Math.max(0, Math.min(100, nonMedicalRatio));
+    }
     var medOut = medTotal * (nonMedicalRatio / 100);
     var ded = getVal('medicalDeductible') || 100;
     var payRate = getVal('medicalRatio') || 90;
