@@ -4323,7 +4323,7 @@ function generateRemarkText() {
     } else if (hasComp && compTotal > 0) {
         var calcTotal2 = medFinal + workComp + disFinal;
         if (compTotal >= calcTotal2) {
-            compareNote = '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，高于/等于理算总金额 ' + calcTotal2.toFixed(2) + ' 元，故本案最终理算赔付金额为' + calcTotal2.toFixed(2) + '元';
+            compareNote = '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，不低于理算总金额 ' + calcTotal2.toFixed(2) + ' 元，故本案最终理算赔付金额为' + calcTotal2.toFixed(2) + '元';
         } else {
             compareNote = '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，低于理算总金额 ' + calcTotal2.toFixed(2) + ' 元，故本案最终理算赔付金额为' + compTotal.toFixed(2) + '元';
             var ratio2 = compTotal / calcTotal2;
@@ -4631,7 +4631,7 @@ function exportWordDocument() {
         }
         
         if (compTotal >= calcTotal) {
-            conclusionText += '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，高于/等于理算总金额 ' + calcTotal.toFixed(2) + ' 元，故本案最终理算赔付金额为' + calcTotal.toFixed(2) + '元。\n';
+            conclusionText += '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，不低于理算总金额 ' + calcTotal.toFixed(2) + ' 元，故本案最终理算赔付金额为' + calcTotal.toFixed(2) + '元。\n';
         } else {
             conclusionText += '单位赔偿总金额 ' + compTotal.toFixed(2) + ' 元，低于理算总金额 ' + calcTotal.toFixed(2) + ' 元，差额为 ' + (calcTotal - compTotal).toFixed(2) + ' 元，故本案最终理算赔付金额为' + calcTotal.toFixed(2) + '元。\n';
         }
