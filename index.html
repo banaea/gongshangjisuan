@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V6.0.3 20260831</title>
+    <title>全国工伤赔偿计算器 V6.0.4 20260831</title>
 
     <!-- ================================================================
     样式部分
@@ -2554,6 +2554,8 @@ function onNonMedicalModeChange() {
                 var socialTotal = disBonus + finalMedical + medPayable + allowanceTotal;
                 var companyTotal = finalEmployment + stopWorkPay;
                 var grandTotal = socialTotal + companyTotal;
+                // 伤残类合计：一次性伤残补助金+一次性工伤医疗补助金+一次性伤残就业补助金+伤残津贴（不含医疗费、停工留薪期工资）
+                var disabilityTotal = disBonus + finalMedical + allowanceTotal + finalEmployment;
 
                 var tbody = $('resultBody');
                 if (!tbody) return;
@@ -2674,10 +2676,8 @@ function onNonMedicalModeChange() {
                     '<td class="process">(' + fmt(medTotal) + ' - ' + fmt(medReimbursed) + ' - ' + nonMedDisplay + ' - ' + fmt(medDeductible) + ') × ' + (medRatio * 100).toFixed(0) + '%</td>' +
                     '<td class="payer payer-social">社保基金</td>' +
                     '<td class="amount">' + fmt(medPayable) + '</td></tr>' +
-                    '<tr class="total-row"><td class="item-name">社保基金支付合计</td><td colspan="4"></td><td class="amount">' +
-                    fmt(socialTotal) + '</td></tr>' +
-                    '<tr class="total-row"><td class="item-name">用人单位支付合计</td><td colspan="4"></td><td class="amount">' +
-                    fmt(companyTotal) + '</td></tr>' +
+                    '<tr class="total-row"><td class="item-name">伤残赔偿金合计</td><td colspan="4"></td><td class="amount">' +
+                    fmt(disabilityTotal) + '</td></tr>' +
                     '<tr class="total-row grand-total"><td class="item-name">赔偿总金额</td><td colspan="4"></td><td class="amount">' +
                     fmt(grandTotal) + '</td></tr>';
 
