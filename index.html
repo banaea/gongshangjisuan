@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V6.0.5 20260831</title>
+    <title>全国工伤赔偿计算器-By Shaun</title>
 
     <!-- ================================================================
     样式部分
@@ -734,6 +734,7 @@
             <p>
                 31省市全量官方标准 · 延迟退休可选开关 · 未伤残/未离职场景全覆盖
                 <span style="margin-left: 12px; color: #6b7280;"> - Version by Shaun</span>
+                <span id="versionBadge" style="margin-left: 10px; padding: 1px 10px; background: #eef2ff; color: #1a56db; border: 1px solid #c7d2fe; border-radius: 10px; font-size: 12px; font-weight: 600;"></span>
                 <button class="gen-remark-btn" onclick="openRemarkModal()">📝 生成理赔备注</button>
             </p>
         </div>
@@ -1157,6 +1158,17 @@
     JavaScript
     ============================================================ -->
     <script>
+        // ================================================================
+        // 版本号（集中定义；发布新版本请运行 _bump_version.py 自动递增）
+        // ================================================================
+        const APP_VERSION = "6.0.5";
+        const APP_BUILD_DATE = "20260831";
+
+        // 版本号统一驱动：title 与页内徽标同步，避免手工修改遗漏
+        document.title = "全国工伤赔偿计算器 V" + APP_VERSION + " " + APP_BUILD_DATE;
+        var _versionBadge = document.getElementById("versionBadge");
+        if (_versionBadge) _versionBadge.textContent = "V" + APP_VERSION + " " + APP_BUILD_DATE;
+
         // ================================================================
         // 常量定义
         // ================================================================
