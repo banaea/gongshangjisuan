@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V6.0.4 20260831</title>
+    <title>全国工伤赔偿计算器 V6.0.5 20260831</title>
 
     <!-- ================================================================
     样式部分
@@ -1431,7 +1431,6 @@
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 7322,
-                
                 odAdd: { type: "ratio", target: "medical", value: 0.3 },
                 legalBasis: [{ title: "《吉林省实施〈工伤保险条例〉办法》第40条、第 50 条", text: "确诊职业病的一次性工伤医疗补助金增发30%；就业补助金距退休不足5年每减1年递减20%、不足1年按10%、达退休不计发。一次性工伤医疗补助金和一次性伤残就业补助金计发基数为职工本人工资，低于统筹地区职工平均工资 60% 按 60% 计算、高于 300% 按 300% 计算" }],
                 desc: "职业病医疗补助金增发30%；仅就业补助金递减"
@@ -2346,15 +2345,17 @@ function syncAllBonusTypes(type) {
                     (odAddTextMed ? "\n" + odAddTextMed : "") +
                     "\n= " + fmt(medicalBase) + " × " + medicalMonthTotal.toFixed(2) + " = " + fmt(
                         medicalAmount) + " 元" +
-                    (medRatio !== 1 ? "\n⚠️ 本省份医疗补助金执行距退休年限递减规则，本次递减比例" + (medRatio * 100).toFixed(
-                        1) + "%" : "");
+                    (!isActualVersion && (province === "广东省" || std.medicalBase === "personal_salary") ? "<br><span style=\"color:#d97706; font-weight:bold;\">⚠️ 本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>" : "") +
+                    (medRatio !== 1 ? "<br><span style=\"color:#d97706; font-weight:bold;\">⚠️ 本省份医疗补助金执行距退休年限递减规则，本次递减比例" + (medRatio * 100).toFixed(
+                        1) + "%</span>" : "");
                 var empProcess = fmt(employmentBase) + " 元 × " + baseEmpValue + " 个月 × " + (empRatio * 100)
                     .toFixed(0) + "%" +
                     (odAddTextEmp ? "\n" + odAddTextEmp : "") +
                     "\n= " + fmt(employmentBase) + " × " + employmentMonthTotal.toFixed(2) + " = " + fmt(
                         employmentAmount) + " 元" +
-                    (empRatio !== 1 ? "\n⚠️ 本省份就业补助金执行距退休年限递减规则，本次递减比例" + (empRatio * 100).toFixed(
-                        1) + "%" : "");
+                    (!isActualVersion && (province === "广东省" || std.employmentBase === "personal_salary") ? "<br><span style=\"color:#d97706; font-weight:bold;\">⚠️ 本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>" : "") +
+                    (empRatio !== 1 ? "<br><span style=\"color:#d97706; font-weight:bold;\">⚠️ 本省份就业补助金执行距退休年限递减规则，本次递减比例" + (empRatio * 100).toFixed(
+                        1) + "%</span>" : "");
                 return {
                     medical: medicalAmount,
                     employment: employmentAmount,
@@ -2475,8 +2476,10 @@ function onNonMedicalModeChange() {
                     disBonusActual = salary * disBonusMonths;
                     isBelow60Percent = salary < minBase && avgSalary > 0;
                     disBonusProcessStandard = '法定计发基数（社平60%保底）：' + fmt(baseSalary) + ' 元 × ' + disBonusMonths +
-                        ' 个月';
-                    disBonusProcessActual = '本人实际月工资：' + fmt(salary) + ' 元 × ' + disBonusMonths + ' 个月';
+                        ' 个月' +
+                        '<br><span style="color:#d97706; font-weight:bold;">⚠️ 本人工资低于社平工资60%的，按社平工资的60%计算；本人工资高于社平工资300%的，按社平工资的300%计算</span>';
+                    disBonusProcessActual = '本人实际月工资：' + fmt(salary) + ' 元 × ' + disBonusMonths + ' 个月' +
+                        '<br><span style="color:#d97706; font-weight:bold;">⚠️ 本人工资低于社平工资60%，本条按实际工资核算，供与客户沟通参考（首选）</span>';
                 }
 
                 var disBonus = selectedDisBonusType === 'standard' ? disBonusStandard : disBonusActual;
