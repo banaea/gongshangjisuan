@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V6.0.0 20260824</title>
+    <title>全国工伤赔偿计算器 V6.0.1 20260831</title>
 
     <!-- ================================================================
     样式部分
@@ -1297,25 +1297,27 @@
                 employmentBase: "personal_salary",
                 medical: { 5: 10, 6: 8, 7: 6, 8: 4, 9: 2, 10: 1 },
                 employment: { 5: 50, 6: 40, 7: 25, 8: 15, 9: 8, 10: 4 },
-                reduction: "both",
+                reduction: "none",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 11456,
                 odAdd: null,
-                legalBasis: [{ title: "《广东省工伤保险条例》第32、33、64条", text: "三个一次性补助金计发基数统一为本人缴费工资；两项补助金距法定退休年龄每提前1整年递减20%，不足1年按10%计发。" }],
-                desc: "三个一次性补助金计发基数统一为本人缴费工资；两项补助金距法定退休年龄每提前1整年递减20%。"
+                legalBasis: [{ title: "《广东省工伤保险条例》第32、33、64条", text: "三个一次性补助金计发基数统一为本人缴费工资；一次性工伤医疗补助金、一次性伤残就业补助金无距退休年限递减规定。" }],
+                desc: "三个一次性补助金计发基数统一为本人缴费工资；两项补助金不递减"
             },
             "广西壮族自治区": {
-                baseType: "avg_salary",
-                medical: { 5: 20, 6: 18, 7: 15, 8: 12, 9: 9, 10: 6 },
-                employment: { 5: 34, 6: 30, 7: 22, 8: 18, 9: 14, 10: 10 },
+                baseType: "personal_salary",
+                medicalBase: "personal_salary",
+                employmentBase: "personal_salary",
+                medical: { 5: 20, 6: 18, 7: 15, 8: 13, 9: 11, 10: 9 },
+                employment: { 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 },
                 reduction: "employment",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 6756,
                 odAdd: null,
-                legalBasis: [{ title: "《广西壮族自治区实施〈工伤保险条例〉办法》第24条", text: "就业补助金距退休不足5年递减，不足1年按10%支付。" }],
-                desc: "医疗补助金固定不递减，仅就业补助金递减"
+                legalBasis: [{ title: "《广西壮族自治区实施〈工伤保险条例〉办法》（政府令第117号）第24、25条", text: "两金以解除或终止劳动关系时本人工资（前12个月平均月缴费工资）为计发基数；一次性伤残就业补助金距法定退休年龄不足5年递减：不足5年90%、不足4年80%、不足3年70%、不足2年60%、不足1年30%。" }],
+                desc: "以本人工资为基数；医疗补助金不递减，就业补助金按法定五档（90/80/70/60/30）递减"
             },
             "海南省": {
                 medicalBase: "avg_salary",
@@ -1483,7 +1485,7 @@
                     { title: "黔人社厅发〔2011〕27号 第6条", text: "一次性工伤医疗补助金固定月数标准，不递减。" },
                     { title: "黔人社厅发〔2011〕27号 第7条", text: "一次性伤残就业补助金按距退休剩余月数计算，各等级设最高/最低月数封顶保底。" }
                 ],
-                desc: "市级统筹；医疗补助金固定不递减；就业补助金按月动态计算。"
+                desc: "医疗补助金固定不递减；就业补助金按月动态计算。"
             },
             "云南省": {
                 baseType: "avg_salary",
@@ -1499,8 +1501,8 @@
             },
             "西藏自治区": {
                 baseType: "avg_salary",
-                medical: { 5: 20, 6: 18, 7: 15, 8: 12, 9: 9, 10: 6 },
-                employment: { 5: 30, 6: 25, 7: 20, 8: 15, 9: 10, 10: 5 },
+                medical: { 5: 23, 6: 19, 7: 14, 8: 12, 9: 9, 10: 5 },
+                employment: { 5: 25, 6: 21, 7: 16, 8: 13, 9: 11, 10: 7 },
                 reduction: "employment",
                 reductionRate: 0.2,
                 minRatio: 0.1,
@@ -1539,8 +1541,8 @@
                 baseType: "personal_salary",
                 medicalBase: "personal_salary",
                 employmentBase: "personal_salary",
-                medical: { 5: 15, 6: 13, 7: 11, 8: 9, 9: 7, 10: 5 },
-                employment: { 5: 15, 6: 13, 7: 11, 8: 9, 9: 7, 10: 5 },
+                medical: { 5: 15, 6: 13.5, 7: 12, 8: 10.5, 9: 9, 10: 7.5 },
+                employment: { 5: 15, 6: 13.5, 7: 12, 8: 10.5, 9: 9, 10: 7.5 },
                 reduction: "both",
                 reductionRate: 0.2,
                 minRatio: 0.1,
@@ -2220,6 +2222,25 @@ function syncAllBonusTypes(type) {
                 empRatio = baseEmpValue > 0 ? finalEmpMonths / baseEmpValue : 0;
             }
 
+            if (province === "广西壮族自治区") {
+                medRatio = 1;
+                if (yearsToRetire >= 5) {
+                    empRatio = 1;
+                } else if (yearsToRetire >= 4) {
+                    empRatio = 0.9;
+                } else if (yearsToRetire >= 3) {
+                    empRatio = 0.8;
+                } else if (yearsToRetire >= 2) {
+                    empRatio = 0.7;
+                } else if (yearsToRetire >= 1) {
+                    empRatio = 0.6;
+                } else if (yearsToRetire > 0) {
+                    empRatio = 0.3;
+                } else {
+                    empRatio = 0;
+                }
+            }
+
             var odRateMed = 1,
                 odRateEmp = 1;
             var odAddTextMed = "",
@@ -2274,7 +2295,7 @@ function syncAllBonusTypes(type) {
                 var medicalAmount = medicalBase * medicalMonthTotal;
                 var employmentAmount = employmentBase * employmentMonthTotal;
                 var medFormula = province === "广东省" ?
-                    "【广东三基数统一规则】核定基数 × 月数 × 递减比例" + (isOD && std.odAdd ? " × (1+职业病增发比例)" : "") :
+                    "【广东三基数统一规则】核定基数 × 月数" + (isOD && std.odAdd ? " × (1+职业病增发比例)" : "") :
                     "计算基数 × 月数 × 递减比例" + (isOD && std.odAdd ? " × (1+职业病增发比例)" : "");
                 var empFormula = "计算基数 × 月数 × 递减比例";
                 var medProcess = fmt(medicalBase) + " 元 × " + baseMedValue + " 个月 × " + (medRatio * 100).toFixed(
