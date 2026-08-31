@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器-By Shaun</title>
+    <title>全国工伤赔偿计算器 - By Shaun</title>
 
     <!-- ================================================================
     样式部分
@@ -733,7 +733,7 @@
             <h1>全国工伤赔偿计算器</h1>
             <p>
                 31省市全量官方标准 · 延迟退休可选开关 · 未伤残/未离职场景全覆盖
-                <span style="margin-left: 12px; color: #6b7280;"> - Version by Shaun</span>
+
                 <span id="versionBadge" style="margin-left: 10px; padding: 1px 10px; background: #eef2ff; color: #1a56db; border: 1px solid #c7d2fe; border-radius: 10px; font-size: 12px; font-weight: 600;"></span>
                 <button class="gen-remark-btn" onclick="openRemarkModal()">📝 生成理赔备注</button>
             </p>
@@ -1161,11 +1161,10 @@
         // ================================================================
         // 版本号（集中定义；发布新版本请运行 _bump_version.py 自动递增）
         // ================================================================
-        const APP_VERSION = "6.0.5";
+        const APP_VERSION = "6.0.6";
         const APP_BUILD_DATE = "20260831";
 
-        // 版本号统一驱动：title 与页内徽标同步，避免手工修改遗漏
-        document.title = "全国工伤赔偿计算器 V" + APP_VERSION + " " + APP_BUILD_DATE;
+        // 页面标题固定为“全国工伤赔偿计算器 - By Shaun”；版本号通过页内徽标展示
         var _versionBadge = document.getElementById("versionBadge");
         if (_versionBadge) _versionBadge.textContent = "V" + APP_VERSION + " " + APP_BUILD_DATE;
 
@@ -2725,6 +2724,26 @@ function exportExcel() {
         }
 
         const cloneTable = table.cloneNode(true);
+
+        // ★ 只导出选中的一次性选项行：同一选项组仅保留选中行，删除未选中行
+        //   （选项行特征：行内含 type="radio" 输入框；选中行移除单选控件本身）
+        const _optRows = Array.prototype.slice.call(cloneTable.querySelectorAll('tr'));
+        _optRows.forEach(function(row) {
+            const radio = row.querySelector('input[type="radio"]');
+            if (!radio) return; // 非选项行（普通行、合计行）保留
+            const _name = radio.getAttribute('name');
+            const _value = radio.getAttribute('value');
+            const _origin = table.querySelector('input[name="' + _name + '"][value="' + _value + '"]');
+            const _checked = _origin ? _origin.checked : radio.checked;
+            if (!_checked) {
+                if (row.parentNode) row.parentNode.removeChild(row);
+                return;
+            }
+            // 选中行：移除行内所有 input（导出表格中不显示单选按钮）
+            Array.prototype.slice.call(row.querySelectorAll('input')).forEach(function(inp) {
+                if (inp.parentNode) inp.parentNode.removeChild(inp);
+            });
+        });
 
         // ★ 关键：white-space: normal + mso-wrap-text: auto 才能自动换行
         const headerStyle = `
