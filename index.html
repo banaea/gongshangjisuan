@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 V6.0.1 20260831</title>
+    <title>全国工伤赔偿计算器 V6.0.0 20260824</title>
 
     <!-- ================================================================
     样式部分
@@ -1172,7 +1172,7 @@
                 minRatio: 0.1,
                 defaultAvg: 12049,
                 odAdd: null,
-                legalBasis: [{ title: "京人社工发〔2011〕377号", text: "本人提出解除距退休不足5年每减少1年递减20%；用人单位依据劳动合同法38条解除不递减；达到退休年龄或办理退休手续的，不享受两项补助金。" }],
+                legalBasis: [{ title: "《北京市实施〈工伤保险条例〉办法》（市政府令第140号）第36条", text: "本人提出解除劳动关系距法定退休年龄超过5年（含5年）两金全额支付；不足5年的，每减少一年扣除全额的20%，最高扣除额不超过全额的90%；达到退休年龄或办理退休手续的，不享受两项补助金。" }],
                 desc: "两项补助金合并计算标准，同步按年龄递减，退休后不予支付"
             },
             "天津市": {
@@ -1186,7 +1186,7 @@
                 odAdd: null,
                 legalBasis: [
                     { title: "《天津市工伤保险若干规定》（市政府令第14号）第29条", text: "距法定退休年龄不足五年的，一次性工伤医疗补助金和一次性伤残就业补助金同步按比例递减。" },
-                    { title: "津人社规〔2024〕4号", text: "养老保险缴费不足15年的按就高原则确定比例。" }
+                    { title: "津人社局发〔2024〕3号", text: "达到或超过法定退休年龄且养老保险累计缴费不足15年的，两金支付标准按距养老保险累计缴费年限满15年的不足年限确定。" }
                 ],
                 desc: "两项同步按距退休年限同比例递减"
             },
@@ -1199,7 +1199,7 @@
                 minRatio: 0.1,
                 defaultAvg: 12434,
                 odAdd: null,
-                legalBasis: [{ title: "《上海市工伤保险实施办法》第41条", text: "距法定退休年龄不足5年的按年限递减，不足1年递减90%。" }],
+                legalBasis: [{ title: "《上海市工伤保险实施办法》第41条", text: "距法定退休年龄不足5年的，两项补助金按不足年限每减少1年递减20%；不足1年按10%支付（实务口径）。" }],
                 desc: "两项补助金同步按年龄递减，最低支付全额的10%"
             },
             "重庆市": {
@@ -1235,7 +1235,7 @@
                 minRatio: 0.1,
                 defaultAvg: 7722,
                 odAdd: { type: "ratio", target: "medical", value: 0.4 },
-                legalBasis: [{ title: "《江苏省实施〈工伤保险条例〉办法》第28条", text: "距退休不足5年的两项补助金按比例支付，不足1年按10%支付。达到法定退休年龄 / 办理退休不支付两金" }],
+                legalBasis: [{ title: "《江苏省实施〈工伤保险条例〉办法》第27、28条", text: "两金实行定额标准（第27条）；距退休不足5年的两项补助金按比例支付，不足1年按10%支付；达到法定退休年龄/办理退休不支付两金（第28条）。" }],
                 desc: "定额标准，两项同步递减，职业病医疗补助金增发40%"
             },
             "浙江省": {
@@ -1259,8 +1259,8 @@
                 minRatio: 0.1,
                 defaultAvg: 7999,
                 odAdd: null,
-                legalBasis: [{ title: "《安徽省实施〈工伤保险条例〉办法》第26条", text: "就业补助金距退休不足5年逐年递减10%，不足1年按30%支付。" }],
-                desc: "仅就业补助金递减，距退休不足5年每减少1年递减20%，不足1年按30%支付"
+                legalBasis: [{ title: "《安徽省实施〈工伤保险条例〉办法》第26条", text: "一次性伤残就业补助金距法定退休年龄不足5年的按五档固定比例支付：不足1年30%、满1年不足2年60%、满2年不足3年70%、满3年不足4年80%、满4年不足5年90%。" }],
+                desc: "医疗补助金不递减；仅就业补助金按五档固定比例递减（不足1年30%、1-2年60%、2-3年70%、3-4年80%、4-5年90%）"
             },
             "福建省": {
                 baseType: "avg_salary_age",
@@ -1269,13 +1269,13 @@
                 minMedical: { 5: 15, 6: 15, 7: 10, 8: 10, 9: 5, 10: 3 },
                 minEmployment: { 5: 15, 6: 15, 7: 10, 8: 10, 9: 5, 10: 3 },
                 lifeExpectancy: { male: 75.81, female: 81.55 },
-                reduction: "both",
+                reduction: "none",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 8460,
                 odAdd: { type: "ratio", target: "medical", value: 0.3 },
-                legalBasis: [{ title: "《福建省实施〈工伤保险条例〉办法》第27条", text: "按人口平均预期寿命与解除劳动关系时年龄之差乘以系数计算，设最低月数保底。" }],
-                desc: "按预期寿命与年龄差动态计算月数，设最低保底；距退休不足5年两项补助金均递减（最低10%）。"
+                legalBasis: [{ title: "《福建省实施〈工伤保险条例〉办法》（闽政〔2011〕80号）第27条", text: "两金分别按人口平均预期寿命与解除或终止劳动关系时年龄之差乘以等级系数计算，设最低月数保底；患职业病一次性工伤医疗补助金在上述标准基础上增发30%。" }],
+                desc: "按预期寿命与年龄差动态计算月数，设最低保底；患职业病医疗补助金增发30%（无按年递减规定）。"
             },
             "江西省": {
                 baseType: "personal_salary",
@@ -1302,7 +1302,7 @@
                 minRatio: 0.1,
                 defaultAvg: 11456,
                 odAdd: null,
-                legalBasis: [{ title: "《广东省工伤保险条例》第32、33、64条", text: "三个一次性补助金计发基数统一为本人缴费工资；一次性工伤医疗补助金、一次性伤残就业补助金无距退休年限递减规定。" }],
+                legalBasis: [{ title: "《广东省工伤保险条例》第31、32、33、64条", text: "一次性工伤医疗补助金、一次性伤残就业补助金标准见第31、32条；计发基数统一为本人缴费工资（第33、64条）；无距退休年限递减规定。" }],
                 desc: "三个一次性补助金计发基数统一为本人缴费工资；两项补助金不递减"
             },
             "广西壮族自治区": {
@@ -1324,13 +1324,13 @@
                 employmentBase: "personal_salary",
                 medical: { 5: 18, 6: 16, 7: 14, 8: 12, 9: 10, 10: 8 },
                 employment: { 5:40, 6:30, 7:20, 8:16, 9:12, 10:9 },
-                reduction: "employment",
+                reduction: "none",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 7300,
                 odAdd: null,
-                legalBasis: [{ title: "《海南经济特区工伤保险若干规定》第21条", text: "就业补助金距退休不足5年递减。" }],
-                desc: "医疗补助金固定不递减，仅就业补助金递减"
+                legalBasis: [{ title: "《海南经济特区工伤保险实施办法》第21条", text: "一次性伤残就业补助金按本办法计算，截止至本人达到法定退休年龄；无按年递减规定。" }],
+                desc: "医疗补助金固定月数；就业补助金计算截止至达退休年龄（无按年递减）；达到退休年龄不享受两金"
             },
             "河南省": {
                 baseType: "avg_salary",
@@ -1346,14 +1346,14 @@
             },
             "湖北省": {
                 baseType: "avg_salary",
-                medical: { 5: 18, 6: 16, 7: 14, 8: 12, 9: 10, 10: 8 },
+                medical: { 5: 22, 6: 18, 7: 12, 8: 10, 9: 8, 10: 6 },
                 employment: { 5: 34, 6: 28, 7: 20, 8: 16, 9: 12, 10: 8 },
-                reduction: "both",
+                reduction: "employment",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 6948,
                 odAdd: null,
-                legalBasis: [{ title: "《湖北省工伤保险实施办法》第36条", text: "就业补助金距退休不足5年递减，不足1年按10%支付。" }],
+                legalBasis: [{ title: "《湖北省工伤保险实施办法》（省政府令第437号）第39条", text: "两金以统筹地区上年度职工月平均工资为基数；一次性伤残就业补助金距法定退休年龄不足5年每减少1年递减20%、不足1年按10%支付；达到退休年龄或办理退休手续不享受两金。" }],
                 desc: "医疗补助金固定不递减，仅就业补助金递减"
             },
             "湖南省": {
@@ -1362,13 +1362,13 @@
                 employmentBase: "personal_salary",
                 medical: { 5: 24, 6: 18, 7: 15, 8: 10, 9: 8, 10: 6 },
                 employment: { 5: 36, 6: 30, 7: 15, 8: 10, 9: 8, 10: 6 },
-                reduction: "employment",
-                reductionRate: 0.1,
-                minRatio: 0.5,
+                reduction: "both",
+                reductionRate: 0.2,
+                minRatio: 0.1,
                 defaultAvg: 6711,
                 odAdd: null,
-                legalBasis: [{ title: "《湖南省实施〈工伤保险条例〉办法》第23条", text: "距退休不足5年的两项补助金每减少1年递减10%。" }],
-                desc: "以本人工资为基数，两项同步递减，每减少1年递减10%"
+                legalBasis: [{ title: "《湖南省实施〈工伤保险条例〉办法》第27条", text: "距退休不足5年的两项补助金每少1年减除20%，最高减除额不超过全额的90%（即按80%/60%/40%/20%/10%支付）。" }],
+                desc: "以本人工资为基数，两项同步递减，距退休不足5年每少1年减除20%，最低按10%支付"
             },
             "河北省": {
                 baseType: "avg_salary",
@@ -1393,20 +1393,20 @@
                 minRatio: 0.5,
                 defaultAvg: 6855,
                 odAdd: null,
-                legalBasis: [{ title: "《山西省实施〈工伤保险条例〉办法》第26条", text: "距退休不足5年的两项补助金每少1年递减10%。" }],
+                legalBasis: [{ title: "《山西省实施〈工伤保险条例〉办法》（2023年修订）第29条", text: "距退休不足5年的两项补助金以5年为基数每少1年递减10%。" }],
                 desc: "以本人工资为基数，两项同步递减，每少1年递减10%"
             },
             "内蒙古自治区": {
                 baseType: "avg_salary",
                 medical: { 5: 26, 6: 23, 7: 16, 8: 13, 9: 10, 10: 7 },
                 employment: { 5: 26, 6: 23, 7: 16, 8: 13, 9: 10, 10: 7 },
-                reduction: "both",
-                reductionRate: 0.2,
+                reduction: "employment",
+                reductionRate: 0.1,
                 minRatio: 0.1,
                 defaultAvg: 7100,
                 odAdd: { type: "ratio", target: "medical", value: 0.2 },
-                legalBasis: [{ title: "《内蒙古自治区工伤保险条例实施办法》第37条", text: "确诊职业病一次性工伤医疗补助金上浮20%；距退休不足5年的两项补助金每减少1年递减20%。" }],
-                desc: "两项补助金同步递减，最低10%；职业病医疗补助金增发20%。"
+                legalBasis: [{ title: "《内蒙古自治区工伤保险条例实施办法》（内政发〔2014〕65号）第36、37、38条", text: "两金以统筹地区上年度职工月平均工资为基数；确诊职业病一次性工伤医疗补助金上浮20%；一次性伤残就业补助金距退休不足5年每差一年扣减10%，不足一年按一年计算。" }],
+                desc: "医疗补助金固定不递减；就业补助金距退休不足5年每差一年扣减10%（不足1年按1年）；职业病医疗补助金增发20%"
             },
             "辽宁省": {
                 medicalBase: "avg_salary",
@@ -1418,8 +1418,8 @@
                 minRatio: 0.1,
                 defaultAvg: 7121,
                 odAdd: null,
-                legalBasis: [{ title: "《辽宁省工伤保险实施办法》第39条", text: "就业补助金距退休不足5年递减，不足1年按10%支付。" }],
-                desc: "医疗补助金固定不递减，仅就业补助金递减"
+                legalBasis: [{ title: "《辽宁省工伤保险实施办法》第40条", text: "一次性伤残就业补助金距退休年龄不足5年的，提前4年、3年、2年、1年解除或终止劳动关系分别减发2个月、4个月、6个月、7个月；不足1年按1年计算。" }],
+                desc: "医疗补助金固定不递减；就业补助金按距退休年限减发固定月数（提前4/3/2/1年减发2/4/6/7个月）"
             },
             "吉林省": {
                 baseType: "personal_salary",
@@ -1457,9 +1457,9 @@
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 7518,
-                odAdd: { type: "month", target: "medical", value: 6 },
-                legalBasis: [{ title: "《四川省工伤保险条例》实施办法", text: "职业病一次性工伤医疗补助金增发6个月。就业补助金距退休不足5年递减。" }],
-                desc: "职业病医疗补助金增发6个月；仅就业补助金递减"
+                odAdd: { type: "month", target: "medical", value: 6, maxLevel: 6 },
+                legalBasis: [{ title: "《〈四川省工伤保险条例〉实施办法》（川府发〔2021〕10号）第5、7条", text: "一次性工伤医疗补助金以全省月平均工资为基数（第5条）；患职业病的五级、六级工伤职工医疗补助金在上述标准基础上增加6个月（第5条）；一次性伤残就业补助金距法定退休年龄不足5年按80%/60%/40%/20%/10%递减（第7条）。" }],
+                desc: "职业病五/六级医疗补助金增发6个月；仅就业补助金递减（距退休不足5年按80%/60%/40%/20%/10%）"
             },
             "贵州省": {
                 baseType: "guizhou_special",
@@ -1491,13 +1491,13 @@
                 baseType: "avg_salary",
                 medical: { 5: 15, 6: 13, 7: 8, 8: 6, 9: 3, 10: 2 },
                 employment: { 5: 33, 6: 29, 7: 22, 8: 18, 9: 13, 10: 7 },
-                reduction: "employment",
+                reduction: "none",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 8265,
                 odAdd: { type: "ratio", target: "medical", value: 0.3 },
-                legalBasis: [{ title: "《云南省实施〈工伤保险条例〉办法》第38条", text: "职业病医疗补助金增发30%。就业补助金距退休不足5年递减。" }],
-                desc: "职业病医疗补助金增发30%；仅就业补助金递减"
+                legalBasis: [{ title: "《云南省实施〈工伤保险条例〉办法》第36、37、38条", text: "患职业病的工伤职工一次性工伤医疗补助金在五至十级标准基础上增发30%（第36、37条）；已办理退休手续的不享受两金（第38条）；现行办法无按年递减规定。" }],
+                desc: "职业病医疗补助金增发30%；退休后不享受两金（无按年递减规定）"
             },
             "西藏自治区": {
                 baseType: "avg_salary",
@@ -1508,7 +1508,7 @@
                 minRatio: 0.1,
                 defaultAvg: 11777,
                 odAdd: null,
-                legalBasis: [{ title: "《西藏自治区实施〈工伤保险条例〉办法》", text: "就业补助金距退休不足5年递减，不足1年按10%支付。" }],
+                legalBasis: [{ title: "《西藏自治区实施〈工伤保险条例〉办法》第32条", text: "就业补助金距退休不足5年每减少1年递减20%，不足1年按10%支付。" }],
                 desc: "医疗补助金固定不递减，仅就业补助金递减"
             },
             "陕西省": {
@@ -1520,7 +1520,7 @@
                 minRatio: 0.1,
                 defaultAvg: 7750,
                 odAdd: null,
-                legalBasis: [{ title: "《陕西省实施〈工伤保险条例〉办法》第24条", text: "两项补助金距退休不足5年递减，不足1年按10%支付。" }],
+                legalBasis: [{ title: "《陕西省实施〈工伤保险条例〉办法》第25条", text: "两项补助金距退休不足5年递减，不足1年按10%支付。" }],
                 desc: "两项补助金同步递减，最低10%"
             },
             "甘肃省": {
@@ -1529,13 +1529,13 @@
                 employmentBase: "personal_salary",
                 medical: { 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 },
                 employment: { 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 },
-                reduction: "both",
+                reduction: "none",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 7194,
                 odAdd: null,
-                legalBasis: [{ title: "《甘肃省工伤保险实施办法》第28条", text: "距退休不足5年的两项补助金每减少1年递减20%，不足1年按10%支付。" }],
-                desc: "两项补助金同步递减，最低10%"
+                legalBasis: [{ title: "《甘肃省工伤保险实施办法》（省政府令第150号）第29、30、31条", text: "两金以本人工资为基数（第29、30条）；因退休或者死亡导致劳动关系终止的，不再享受两金（第31条）；现行办法无按年递减规定。" }],
+                desc: "以本人工资为基数；因退休或死亡致劳动关系终止的，不享受两金（无按年递减规定）"
             },
             "青海省": {
                 baseType: "personal_salary",
@@ -1557,25 +1557,25 @@
                 employmentBase: "personal_salary",
                 medical: { 5: 22, 6: 19, 7: 15, 8: 12, 9: 9, 10: 6 },
                 employment: { 5: 22, 6: 19, 7: 15, 8: 12, 9: 9, 10: 6 },
-                reduction: "both",
+                reduction: "employment",
                 reductionRate: 0.2,
-                minRatio: 0.1,
+                minRatio: 0.2,
                 defaultAvg: 7042,
                 odAdd: { type: "ratio", target: "both", value: 0.3 },
-                legalBasis: [{ title: "《宁夏回族自治区实施〈工伤保险条例〉办法》第31条", text: "患职业病的职工解除劳动关系，一次性工伤医疗补助金、一次性伤残就业补助金两项同步增发30%；距退休不足5年的两项补助金每减少1年递减20%。" }],
-                desc: "两项补助金同步递减，最低10%；职业病两项补助金整体同步上浮30%。"
+                legalBasis: [{ title: "《宁夏回族自治区实施〈工伤保险条例〉办法》第32条", text: "患职业病的职工解除劳动关系，两金在规定标准基础上同步增发30%（第32条第1款）；一次性伤残就业补助金距退休不足5年每减少1年递减20%、不足1年按全额的20%支付（第32条第2款）。" }],
+                desc: "仅就业补助金递减（距退休不足5年每减少1年递减20%，不足1年按20%）；职业病两金同步增发30%"
             },
             "新疆维吾尔自治区": {
                 baseType: "avg_salary",
                 medical: { 5: 11, 6: 10, 7: 9, 8: 8, 9: 7, 10: 6 },
                 employment: { 5: 27, 6: 24, 7: 21, 8: 18, 9: 15, 10: 12 },
-                reduction: "employment",
+                reduction: "both",
                 reductionRate: 0.2,
                 minRatio: 0.1,
                 defaultAvg: 7025,
                 odAdd: null,
-                legalBasis: [{ title: "《新疆维吾尔自治区实施〈工伤保险条例〉办法》第29条", text: "就业补助金距退休不足5年递减，不足1年按10%支付。" }],
-                desc: "医疗补助金固定不递减，仅就业补助金递减"
+                legalBasis: [{ title: "《新疆维吾尔自治区实施〈工伤保险条例〉办法》第30条", text: "一次性工伤医疗补助金和一次性伤残就业补助金距退休不足5年按每少1年递减20%的标准支付，不足1年按10%支付。" }],
+                desc: "两项补助金同步递减，最低10%"
             }
         };
 
@@ -2157,7 +2157,9 @@ function syncAllBonusTypes(type) {
                     if (std.reduction === "both") {
                         medicalMonths = medicalMonths * ratio;
                     }
-                    employmentMonths = employmentMonths * ratio;
+                    if (std.reduction === "both" || std.reduction === "employment") {
+                        employmentMonths = employmentMonths * ratio;
+                    }
                 }
                 if (retireDiff < 0) {
                     employmentMonths = 0;
@@ -2241,6 +2243,44 @@ function syncAllBonusTypes(type) {
                 }
             }
 
+            if (province === "安徽省") {
+                medRatio = 1;
+                if (yearsToRetire >= 5) {
+                    empRatio = 1;
+                } else if (yearsToRetire >= 4) {
+                    empRatio = 0.9;
+                } else if (yearsToRetire >= 3) {
+                    empRatio = 0.8;
+                } else if (yearsToRetire >= 2) {
+                    empRatio = 0.7;
+                } else if (yearsToRetire >= 1) {
+                    empRatio = 0.6;
+                } else if (yearsToRetire > 0) {
+                    empRatio = 0.3;
+                } else {
+                    empRatio = 0;
+                }
+            }
+
+            if (province === "内蒙古自治区") {
+                medRatio = 1;
+                if (yearsToRetire >= 5) {
+                    empRatio = 1;
+                } else if (yearsToRetire >= 4) {
+                    empRatio = 0.9;
+                } else if (yearsToRetire >= 3) {
+                    empRatio = 0.8;
+                } else if (yearsToRetire >= 2) {
+                    empRatio = 0.7;
+                } else if (yearsToRetire >= 1) {
+                    empRatio = 0.6;
+                } else if (yearsToRetire > 0) {
+                    empRatio = 0.6;
+                } else {
+                    empRatio = 0;
+                }
+            }
+
             var odRateMed = 1,
                 odRateEmp = 1;
             var odAddTextMed = "",
@@ -2258,8 +2298,10 @@ function syncAllBonusTypes(type) {
                         odAddTextEmp = "职业病两项补助金同步增发" + (std.odAdd.value * 100).toFixed(0) + "%";
                     }
                 } else if (std.odAdd.type === "month" && std.odAdd.target === "medical") {
-                    baseMedValue = baseMedValue + std.odAdd.value;
-                    odAddTextMed = "⚠️ 职业病工伤医疗补助金增发" + std.odAdd.value + "个月";
+                    if (!std.odAdd.maxLevel || level <= std.odAdd.maxLevel) {
+                        baseMedValue = baseMedValue + std.odAdd.value;
+                        odAddTextMed = "⚠️ 职业病工伤医疗补助金增发" + std.odAdd.value + "个月";
+                    }
                 }
             }
 
