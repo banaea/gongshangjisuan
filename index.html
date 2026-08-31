@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器</title>
+    <title>全国工伤赔偿计算器 - By Shaun</title>
 
     <!-- ================================================================
     样式部分
@@ -822,13 +822,13 @@
                     <div class="form-item">
                         <label>法定退休日期（自动计算）</label>
                         <input type="text" id="retireDateShow" readonly>
-                        <div class="input-tip" style="color:#6b7280; margin-top:4px;">该日期为满法定退休周岁当日，达到退休年龄后停发一次性工伤待遇，转养老保险待遇</div>
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">该日期为满法定退休周岁当日，达到退休年龄后停发一次性工伤待遇，转养老保险待遇</div>
                     </div>
 
                     <div class="form-item" id="retireDiffItem" style="display: none;">
                         <label>距法定退休时长</label>
                         <input type="text" id="retireDiffShow" readonly>
-                        <div class="input-tip" style="color:#6b7280; margin-top:4px;">精确计算至满退休周岁当日</div>
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">精确计算至满退休周岁当日</div>
                     </div>
                 </div>
             </div>
@@ -1161,7 +1161,7 @@
         // ================================================================
         // 版本号（集中定义；发布新版本请运行 _bump_version.py 自动递增）
         // ================================================================
-        const APP_VERSION = "6.0.6";
+        const APP_VERSION = "6.0.7";
         const APP_BUILD_DATE = "20260831";
 
         // 页面标题固定为“全国工伤赔偿计算器 - By Shaun”；版本号通过页内徽标展示
@@ -1901,7 +1901,7 @@ function syncAllBonusTypes(type) {
                     leaveDateTip.style.color = '#d97706';
                 } else {
                     leaveDateTip.textContent = '未离职，无需填写';
-                    leaveDateTip.style.color = '#6b7280';
+                    leaveDateTip.style.color = '#d97706';
                 }
             }
         }
@@ -1929,7 +1929,7 @@ function syncAllBonusTypes(type) {
                 leaveDateInput.disabled = true;
                 leaveDateInput.value = '';
                 leaveDateTip.textContent = '未离职，无需填写';
-                leaveDateTip.style.color = '#6b7280';
+                leaveDateTip.style.color = '#d97706';
             }
         }
 
@@ -1945,7 +1945,7 @@ function syncAllBonusTypes(type) {
                 if (gender === '男') {
                     postSelect.disabled = true;
                     postTip.textContent = '男性无需选择岗位类型';
-                    postTip.style.color = '#6b7280';
+                    postTip.style.color = '#d97706';
                 } else {
                     postSelect.disabled = false;
                     postTip.textContent = '⚠️ 请按实际岗位类型选择';
