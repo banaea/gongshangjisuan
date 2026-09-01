@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器 - By Shaun</title>
+    <title>全国工伤赔偿计算器</title>
 
     <!-- ================================================================
     样式部分
@@ -830,16 +830,26 @@
                         <input type="text" id="retireDiffShow" readonly>
                         <div class="input-tip" style="color:#d97706; margin-top:4px;">精确计算至满退休周岁当日</div>
                     </div>
+                    <div class="form-item">
+                        <label>事故发生日期</label>
+                        <input type="date" id="accidentDate" onchange="syncAccidentDate(); calculate();">
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">理赔备注出险时间关联此日期</div>
+                    </div>
+                    <div class="form-item" id="deathDateItem" style="display:none;">
+                        <label>工亡日期</label>
+                        <input type="date" id="deathDate" onchange="calculate();">
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">工亡案件专用，默认同事故发生日期，可人工修正</div>
+                    </div>
                 </div>
             </div>
 
             <!-- 第二组：伤残与待遇基数 -->
             <div class="form-group">
-                <div class="group-title">伤残等级与待遇基数</div>
+                <div class="group-title">伤残等级/工亡与待遇基数</div>
                 <div class="form-grid">
                     <div class="form-item">
-                        <label>伤残等级</label>
-                        <select id="disabilityLevel" onchange="calculate(); updateDateLabel();">
+                        <label>伤残等级/工亡</label>
+                        <select id="disabilityLevel" onchange="updateDateLabel(); updateDeathState(); calculate();">
                             <option value="0" selected>未达伤残等级</option>
                             <option value="1">一级</option>
                             <option value="2">二级</option>
@@ -851,6 +861,7 @@
                             <option value="8">八级</option>
                             <option value="9">九级</option>
                             <option value="10">十级</option>
+                            <option value="death">工亡</option>
                         </select>
                     </div>
 
@@ -1084,10 +1095,6 @@
 
 <div class="form-item" style="margin-bottom: 8px;">
     <div class="inline-flex">
-        <input type="checkbox" id="rmIsDeathCase" onchange="autoUpdateRemark()">
-        <label for="rmIsDeathCase">☠️ 是否死亡案件</label>
-    </div>
-    <div class="inline-flex" style="margin-top:4px;">
         <input type="checkbox" id="rmIsReimbursedByInsurance" onchange="autoUpdateRemark()">
         <label for="rmIsReimbursedByInsurance">🏥 是否已通过工伤保险基金报销</label>
     </div>
@@ -1161,7 +1168,7 @@
         // ================================================================
         // 版本号（集中定义；发布新版本请运行 _bump_version.py 自动递增）
         // ================================================================
-        const APP_VERSION = "6.0.8";
+        const APP_VERSION = "6.0.15";
         const APP_BUILD_DATE = "20260901";
 
         // 页面标题固定为“全国工伤赔偿计算器 - By Shaun”；版本号通过页内徽标展示
@@ -1637,6 +1644,14 @@
         ];
         const STORAGE_PREFIX = 'remark_';
         const PER_CAPITA_INCOME = 56502;
+    var deathSupportResult = null;  // 供养亲属抚恤金一次性了结计算结果
+
+        // 工亡：供养亲属下拉选择状态（配偶/子女/父母）
+        var deathSupport = { spouse: 1, children: 0, parents: 0 };
+        function isMainDeath() {
+            var el = document.getElementById('disabilityLevel');
+            return !!el && el.value === 'death';
+        }
 
         // ================================================================
         // ================================================================
@@ -1911,6 +1926,7 @@ function syncAllBonusTypes(type) {
         }
 
         function updateDateLabel() {
+            if (isMainDeath()) return;
             const level = parseInt($('disabilityLevel').value) || 0;
             const label = $('leaveDateLabel');
             const leaveDateInput = $('leaveDate');
@@ -1942,6 +1958,7 @@ function syncAllBonusTypes(type) {
         }
 
         function updateResignStatus() {
+            if (isMainDeath()) return;
             const level = parseInt($('disabilityLevel').value) || 0;
             if (level >= 1 && level <= 4) {
                 $('isResigned').value = '0';
@@ -1968,7 +1985,37 @@ function syncAllBonusTypes(type) {
             }
         }
 
+        function syncAccidentDate() {
+            var ad = document.getElementById('accidentDate');
+            if (!ad) return;
+            var rm = document.getElementById('rmAccidentDate');
+            if (rm) rm.value = ad.value;
+            var dd = document.getElementById('deathDate');
+            if (dd && !dd.value) dd.value = ad.value;
+        }
+
+        function updateDeathState() {
+            var d = isMainDeath();
+            var ids = ['isResigned', 'leaveDate', 'isOccupationalDisease', 'useDelayRetire', 'birthDate', 'postType', 'retireDateShow', 'retireDiffShow'];
+            for (var i = 0; i < ids.length; i++) {
+                var el = $(ids[i]);
+                if (el) el.disabled = d;
+            }
+            var ddi = $('deathDateItem');
+            if (ddi) ddi.style.display = d ? '' : 'none';
+            if (d) {
+                var ldt = $('leaveDateTip');
+                if (ldt) { ldt.textContent = '工亡案件，无需填写离职信息'; ldt.style.color = '#d97706'; }
+                var pt = $('postTip');
+                if (pt) { pt.textContent = '工亡案件，无需选择岗位类型'; pt.style.color = '#d97706'; }
+            } else {
+                updateDateLabel();
+                updatePostAndRetire();
+            }
+        }
+
         function updatePostAndRetire() {
+            if (isMainDeath()) return;
             const gender = $('gender').value || '男';
             const postSelect = $('postType');
             const postTip = $('postTip');
@@ -2438,7 +2485,8 @@ function onNonMedicalModeChange() {
             try {
                 var province = $('province').value || '山东省';
                 var std = PROVINCE_STANDARDS[province] || PROVINCE_STANDARDS['山东省'];
-                var level = parseInt($('disabilityLevel').value) || 0;
+                var isDeath = isMainDeath();
+                var level = isDeath ? 0 : (parseInt($('disabilityLevel').value) || 0);
                 var salary = parseFloat($('monthlySalary').value) || 0;
                 var avgSalary = parseFloat($('localAvgSalary').value) || 0;
                 var birthStr = $('birthDate').value || '1969-01-01';
@@ -2604,6 +2652,77 @@ function onNonMedicalModeChange() {
 
                 var tbody = $('resultBody');
                 if (!tbody) return;
+
+                if (isDeath) {
+                    // 读取供养亲属下拉选择（重建前保存）
+                    var dsS = document.querySelector('select[name="deathSpouse"]');
+                    if (dsS) deathSupport.spouse = parseInt(dsS.value) || 0;
+                    var dsC = document.querySelector('select[name="deathChildren"]');
+                    if (dsC) deathSupport.children = parseInt(dsC.value) || 0;
+                    var dsP = document.querySelector('select[name="deathParents"]');
+                    if (dsP) deathSupport.parents = parseInt(dsP.value) || 0;
+                    var oneTimeDeath = PER_CAPITA_INCOME * 20;
+                    var burial = avgSalary * 6;
+                    var supportRatio = 0.4 * deathSupport.spouse + 0.3 * deathSupport.children + 0.3 * deathSupport.parents;
+                    var supportMonthly = Math.min(salary * supportRatio, salary);
+                    var dsLumpSum = (deathSupportResult && deathSupportResult.total > 0) ? deathSupportResult.total : 0;
+                    var deathItemsTotal = oneTimeDeath + burial + dsLumpSum;  // 含一次性工亡补助金+丧葬补助金+供养亲属抚恤金一次性了结
+                    var grandDeathTotal = deathItemsTotal + stopWorkPay + medPayable;
+                    function deathSelect(name, opts, cur) {
+                        var s = '<select name="' + name + '" onchange="calculate()" style="font-size:12px; padding:2px 4px; margin:0 4px 0 2px; border:1px solid #d1d5db; border-radius:4px;">';
+                        opts.forEach(function(o) { s += '<option value="' + o.v + '"' + (cur === o.v ? ' selected' : '') + '>' + o.t + '</option>'; });
+                        return s + '</select>';
+                    }
+                    var spouseSel = deathSelect('deathSpouse', [{ v: 0, t: '无' }, { v: 1, t: '1人' }], deathSupport.spouse);
+                    var childrenSel = deathSelect('deathChildren', [{ v: 0, t: '无' }, { v: 1, t: '1人' }, { v: 2, t: '2人' }, { v: 3, t: '3人' }], deathSupport.children);
+                    var parentsSel = deathSelect('deathParents', [{ v: 0, t: '无' }, { v: 1, t: '1人' }, { v: 2, t: '2人' }], deathSupport.parents);
+                    var supProcess = '配偶40%×' + deathSupport.spouse + '人 + 子女30%×' + deathSupport.children + '人 + 父母30%×' + deathSupport.parents + '人\n' +
+                        '= ' + fmt(salary) + ' × (' + (40 * deathSupport.spouse) + '% + ' + (30 * deathSupport.children) + '% + ' + (30 * deathSupport.parents) + '%)\n' +
+                        '= ' + fmt(supportMonthly) + ' 元/月\n（各供养亲属抚恤金之和不超过本人工资，按月支付）';
+                    var html = '';
+                    html += '<tr><td class="item-name">一次性工亡补助金</td>' +
+                        '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第39条</span>上一年度全国城镇居民人均可支配收入的20倍，从工伤保险基金支付</td>' +
+                        '<td><span class="formula">上一年度全国城镇居民人均可支配收入 × 20</span></td>' +
+                        '<td class="process">' + fmt(PER_CAPITA_INCOME) + ' × 20 = ' + fmt(oneTimeDeath) + '</td>' +
+                        '<td class="payer payer-social">工伤保险基金</td>' +
+                        '<td class="amount">' + fmt(oneTimeDeath) + '</td></tr>';
+                    html += '<tr><td class="item-name">丧葬补助金</td>' +
+                        '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第39条</span>6个月的统筹地区上年度职工月平均工资，从工伤保险基金支付</td>' +
+                        '<td><span class="formula">统筹地区上年度职工月平均工资 × 6</span></td>' +
+                        '<td class="process">' + fmt(avgSalary) + ' × 6 = ' + fmt(burial) + '</td>' +
+                        '<td class="payer payer-social">工伤保险基金</td>' +
+                        '<td class="amount">' + fmt(burial) + '</td></tr>';
+                    html += '<tr><td class="item-name">供养亲属抚恤金（按月支付）<br><button onclick="openDeathSupportModal()" style="margin-top:4px; padding:3px 10px; font-size:11px; background:#1a56db; color:#fff; border:none; border-radius:3px; cursor:pointer;">📊 一次性了结计算</button></td>' +
+                        '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第41条</span>按职工本人工资一定比例发给<b>无劳动能力亲属</b>：配偶40%、其他亲属30%，孤寡老人或孤儿增加10%，<b>各供养亲属抚恤金之和不超过生前工资</b>。<br><span style="font-size:11px;color:#6b7280;">申请条件：完全丧失劳动能力；配偶男60女55；父母男60女55；子女未满18；祖父母/外祖父母符合条件等。</span></td>' +
+                        '<td>' + (deathSupportResult ? '<div style="font-size:12px; color:#1a56db; line-height:24px;">配偶' + deathSupportResult.spouseCount + '人，子女' + deathSupportResult.childrenCount + '人，父母' + deathSupportResult.parentsCount + '人</div><span class="formula">已通过一次性了结计算确定</span>' : '<div style="margin-bottom:4px; font-size:12px; color:#4b5563; line-height:28px;"><div>配偶 ' + spouseSel + '</div><div>子女 ' + childrenSel + '</div><div>父母 ' + parentsSel + '</div></div><span class="formula">本人工资 × (配偶40% + 子女30% + 父母30%)，封顶本人工资</span>') + '</td>' +
+                        '<td class="process">' + (deathSupportResult ? (function() {
+                            var d = '<b>一次性了结计算（是否计算=是）：</b><br>';
+                            deathSupportResult.details.forEach(function(item) {
+                                d += item.name + '：' + item.months + '月×' + (item.ratio*100) + '% = ' + fmt(item.amount) + '元<br>';
+                            });
+                            d += '<b>合计：' + fmt(deathSupportResult.total) + '元</b>';
+                            return d;
+                        })() : supProcess.replace(/\n/g, '<br>')) + '</td>' +
+                        '<td class="payer payer-social">工伤保险基金</td>' +
+                        '<td class="amount">' + (deathSupportResult ? '<span style="color:#16a34a;">' + fmt(deathSupportResult.total) + '</span>' : fmt(supportMonthly) + '<br><span style="font-size:11px; color:#6b7280;">元/月（按月支付，不计入工亡待遇合计）</span>') + '</td></tr>' +
+                        '';
+                    html += '<tr><td class="item-name">停工留薪期工资</td>' +
+                        '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第33条</span>停工留薪期内原工资福利待遇不变，由所在单位按月支付</td>' +
+                        '<td><span class="formula">日工资标准 × (总天数 - 免赔天数)</span></td>' +
+                        '<td class="process">' + fmt(dailyWage) + ' 元/天 × (' + stopDays + ' - ' + deductDays + ') 天</td>' +
+                        '<td class="payer payer-company">用人单位</td>' +
+                        '<td class="amount">' + fmt(stopWorkPay) + '</td></tr>';
+                    html += '<tr><td class="item-name">医疗费</td>' +
+                        '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第30条</span>符合目录的医疗费用从工伤保险基金支付</td>' +
+                        '<td><span class="formula">(总花费-报销-非医保部分-免赔额)×赔付比例</span></td>' +
+                        '<td class="process">(' + fmt(medTotal) + ' - ' + fmt(medReimbursed) + ' - ' + nonMedDisplay + ' - ' + fmt(medDeductible) + ') × ' + (medRatio * 100).toFixed(0) + '%</td>' +
+                        '<td class="payer payer-social">社保基金</td>' +
+                        '<td class="amount">' + fmt(medPayable) + '</td></tr>';
+                    html += '<tr class="total-row"><td class="item-name">工亡待遇合计</td><td colspan="4"></td><td class="amount">' + fmt(deathItemsTotal) + '</td></tr>';
+                    html += '<tr class="total-row grand-total"><td class="item-name">赔偿总金额</td><td colspan="4"></td><td class="amount">' + fmt(grandDeathTotal) + '</td></tr>';
+                    tbody.innerHTML = html;
+                    return;
+                }
 
                 var html = '';
                 if (isBelow60Percent && level > 0) {
@@ -2773,6 +2892,14 @@ function exportExcel() {
             Array.prototype.slice.call(row.querySelectorAll('input')).forEach(function(inp) {
                 if (inp.parentNode) inp.parentNode.removeChild(inp);
             });
+        });
+
+        // ★ 工亡供养亲属下拉：导出时转为选中项文本（不导出控件）
+        Array.prototype.slice.call(cloneTable.querySelectorAll('select')).forEach(function(sel) {
+            var txt = (sel.options && sel.options[sel.selectedIndex]) ? sel.options[sel.selectedIndex].text : (sel.value || '');
+            var span = document.createElement('span');
+            span.textContent = txt;
+            if (sel.parentNode) sel.parentNode.replaceChild(span, sel);
         });
 
         // ★ 关键：white-space: normal + mso-wrap-text: auto 才能自动换行
@@ -3865,7 +3992,7 @@ function saveFieldValue(id) {
 
 function getStoredData() {
     var data = {};
-    var allIds = REQUIRED_FIELDS.concat(['rmHasCompensated', 'rmCompensated', 'rmTreatment', 'rmIsDeathCase', 'rmIsReimbursedByInsurance']);
+    var allIds = REQUIRED_FIELDS.concat(['rmHasCompensated', 'rmCompensated', 'rmTreatment', 'rmIsReimbursedByInsurance']);
     allIds.forEach(function(id) {
         var stored = localStorage.getItem(STORAGE_PREFIX + id);
         if (stored !== null) {
@@ -3886,12 +4013,12 @@ function openRemarkModal() {
     $('rmEmployeeName').value = storedData?.rmEmployeeName || '';
     $('rmEmployeeId').value = storedData?.rmEmployeeId || '';
     $('rmInsuranceAmount').value = storedData?.rmInsuranceAmount || '';
-    $('rmAccidentDate').value = storedData?.rmAccidentDate || $('leaveDate')?.value || '';
+    $('rmAccidentDate').value = storedData?.rmAccidentDate || $('accidentDate')?.value || $('leaveDate')?.value || '';
     $('rmAccidentTime').value = storedData?.rmAccidentTime || '';
     $('rmDiagnosis').value = storedData?.rmDiagnosis || '';
     $('rmDisabilityRatio').value = storedData?.rmDisabilityRatio || '5';
-    $('rmIsDeathCase').checked = storedData?.rmIsDeathCase === 'true';
     $('rmIsReimbursedByInsurance').checked = storedData?.rmIsReimbursedByInsurance === 'true';
+    $('rmDisabilityRatio').disabled = isMainDeath();
     $('rmHasCompensated').value = storedData?.rmHasCompensated || '否';
     toggleCompInput();
     $('rmCompensated').value = storedData?.rmCompensated || '';
@@ -4174,7 +4301,7 @@ function generateRemarkText() {
     var ratioNum = parseFloat(ratioRaw) || 5;
     var ratioDisplay = ratioNum + '%';
 
-    var isDeath = $('rmIsDeathCase').checked;
+    var isDeath = isMainDeath();
     var isReimbursedByInsurance = $('rmIsReimbursedByInsurance').checked;
     var where = $('rmWhere').value.trim() || '工作车间';
     var doing = $('rmDoing').value.trim() || '收拾物料';
@@ -4398,15 +4525,28 @@ function generateRemarkText() {
 
     if (isDeath) {
         var deathLimit = firstAmount * 10000;
-        var calcAmount = PER_CAPITA_INCOME * 20;
+        var dsSpouse = document.querySelector('select[name="deathSpouse"]');
+        var dSpCount = dsSpouse ? (parseInt(dsSpouse.value) || 0) : 0;
+        var dsChildren = document.querySelector('select[name="deathChildren"]');
+        var dChCount = dsChildren ? (parseInt(dsChildren.value) || 0) : 0;
+        var dsParents = document.querySelector('select[name="deathParents"]');
+        var dPaCount = dsParents ? (parseInt(dsParents.value) || 0) : 0;
+        var oneTimeDeath = PER_CAPITA_INCOME * 20;
+        var burial = avgSalary * 6;
+        var supRatio = 0.4 * dSpCount + 0.3 * dChCount + 0.3 * dPaCount;
+        var supMonthly = Math.min(salary * supRatio, salary);
+        var calcAmount = oneTimeDeath + burial + supMonthly;
         disFinal = Math.min(calcAmount, deathLimit);
         disTypeLabel = '死亡赔偿金';
         if (calcAmount > deathLimit) {
-            disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) + '元），低于死亡赔偿金核算金额' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + deathLimit.toFixed(2) + '元';
+            disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) + '元），低于工亡待遇合计' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + deathLimit.toFixed(2) + '元';
         } else {
-            disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) + '元），高于死亡赔偿金核算金额' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + calcAmount.toFixed(2) + '元';
+            disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) + '元），高于工亡待遇合计' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + calcAmount.toFixed(2) + '元';
         }
-        disDetailProcess = '死亡赔偿金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + PER_CAPITA_INCOME.toFixed(2) + ' × 20 = ' + calcAmount.toFixed(2) + '元';
+        disDetailProcess = '一次性工亡补助金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + fmt(PER_CAPITA_INCOME) + ' × 20 = ' + fmt(oneTimeDeath) + '元\n' +
+            '丧葬补助金 = 统筹地区上年度职工月平均工资 × 6 = ' + fmt(avgSalary) + ' × 6 = ' + fmt(burial) + '元\n' +
+            '供养亲属抚恤金（按月）：配偶40%×' + dSpCount + '人 + 子女30%×' + dChCount + '人 + 父母30%×' + dPaCount + '人，封顶本人工资 = ' + fmt(supMonthly) + '元/月\n' +
+            '工亡待遇合计 = ' + fmt(oneTimeDeath) + ' + ' + fmt(burial) + ' + ' + fmt(supMonthly) + '（抚恤金按月标准计1个月）= ' + fmt(calcAmount) + '元';
     } else if (level === 0) {
         disFinal = 0;
         disCompareNote = '';
@@ -4487,7 +4627,7 @@ function generateRemarkText() {
     }
 
     if (isDeath) {
-        remark += '死亡赔偿金：\n';
+        remark += '死亡赔偿金（工亡待遇）：\n';
         if (isReimbursedByInsurance) {
             remark += '已通过工伤保险基金赔付，我司不再核算。\n\n';
         } else {
@@ -4650,7 +4790,7 @@ function exportWordDocument() {
     var level = parseInt($('disabilityLevel')?.value || '0');
     var levelMap = { 1: '一级', 2: '二级', 3: '三级', 4: '四级', 5: '五级', 6: '六级', 7: '七级', 8: '八级', 9: '九级', 10: '十级' };
     var levelText = levelMap[level] || '';
-    var isDeath = $('rmIsDeathCase').checked;
+    var isDeath = isMainDeath();
     var isReimbursedByInsurance = $('rmIsReimbursedByInsurance').checked;
 
     // 计算伤残赔偿金
@@ -4680,7 +4820,17 @@ function exportWordDocument() {
     var disFinal = 0;
     if (isDeath) {
         var deathLimit = parseFloat(amount.split('+')[0] || 0) * 10000;
-        var calcAmount = PER_CAPITA_INCOME * 20;
+        var oneTimeDeath = PER_CAPITA_INCOME * 20;
+        var burial = avgSalary * 6;
+        var dsSpouse = document.querySelector('select[name="deathSpouse"]');
+        var dSpCount = dsSpouse ? (parseInt(dsSpouse.value) || 0) : 0;
+        var dsChildren = document.querySelector('select[name="deathChildren"]');
+        var dChCount = dsChildren ? (parseInt(dsChildren.value) || 0) : 0;
+        var dsParents = document.querySelector('select[name="deathParents"]');
+        var dPaCount = dsParents ? (parseInt(dsParents.value) || 0) : 0;
+        var supRatio = 0.4 * dSpCount + 0.3 * dChCount + 0.3 * dPaCount;
+        var supMonthly = Math.min(salary * supRatio, salary);
+        var calcAmount = oneTimeDeath + burial + supMonthly;
         disFinal = Math.min(calcAmount, deathLimit);
         if (isReimbursedByInsurance) disFinal = 0;
     } else if (level !== 0) {
@@ -5108,7 +5258,304 @@ function exportWordDocument() {
     }
 }
 
+
+    // ===== 供养亲属抚恤金详细计算 =====
+    function openDeathSupportModal() {
+        var genderEl = document.getElementById('gender');
+        var empGender = genderEl ? genderEl.value : '男';
+        var spouseLabel = document.getElementById('dsSpouseLabel');
+        if (spouseLabel) spouseLabel.textContent = (empGender === '女') ? '配偶（男，40%）' : '配偶（女，40%）';
+        document.getElementById('deathSupportModal').style.display = 'flex';
+        calcDeathSupport();
+    }
+    function closeDeathSupportModal() {
+        document.getElementById('deathSupportModal').style.display = 'none';
+    }
+    function toggleDsDeath(key) {
+        var status = document.getElementById('ds_' + key + '_status').value;
+        var input = document.getElementById('ds_' + key + '_death');
+        if (input) { input.disabled = (status === 'alive'); input.style.background = (status === 'alive') ? '#f3f4f6' : '#fff'; }
+    }
+    function calcDeathSupport() {
+        var ddEl = document.getElementById('deathDate');
+        var adEl = document.getElementById('accidentDate');
+        var deathDateStr = (ddEl && ddEl.value) ? ddEl.value : (adEl ? adEl.value : '');
+        var salaryEl = document.getElementById('monthlySalary');
+        var salary = parseFloat(salaryEl ? salaryEl.value : 0) || 0;
+        var maleLife = parseFloat(document.getElementById('dsMaleLife').value) || 76.4;
+        var femaleLife = parseFloat(document.getElementById('dsFemaleLife').value) || 81.8;
+        var body = document.getElementById('dsResultBody');
+        var summary = document.getElementById('dsSummary');
+        if (!deathDateStr || !salary) {
+            body.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#9ca3af; padding:20px;">请填写工亡日期和本人工资</td></tr>';
+            summary.innerHTML = '';
+            deathSupportResult = null;
+            return;
+        }
+        var deathDate = new Date(deathDateStr);
+        var empGenderEl = document.getElementById('gender');
+        var empGender = empGenderEl ? empGenderEl.value : '男';
+        var spouseLife = (empGender === '女') ? maleLife : femaleLife;
+        var relatives = [
+            { key: 'spouse', name: '配偶', ratio: 0.4, life: spouseLife, type: 'adult' },
+            { key: 'father', name: '父亲', ratio: 0.3, life: maleLife, type: 'adult' },
+            { key: 'mother', name: '母亲', ratio: 0.3, life: femaleLife, type: 'adult' },
+            { key: 'child1', name: '子女1', ratio: 0.3, life: 0, type: 'child' },
+            { key: 'child2', name: '子女2', ratio: 0.3, life: 0, type: 'child' }
+        ];
+        // 第一遍：计算每个亲属数据
+        var results = [];
+        var totalMonthlyRatio = 0;
+        relatives.forEach(function(r) {
+            var birthEl = document.getElementById('ds_' + r.key + '_birth');
+            var statusEl = document.getElementById('ds_' + r.key + '_status');
+            var deathEl = document.getElementById('ds_' + r.key + '_death');
+            var birth = birthEl ? birthEl.value : '';
+            var status = statusEl ? statusEl.value : 'alive';
+            var death = deathEl ? deathEl.value : '';
+            if (!birth) {
+                results.push({ name: r.name, ratio: r.ratio, noBirth: true, months: 0, amount: 0, priority: 0, include: false });
+                return;
+            }
+            var birthDate = new Date(birth + '-01');
+            var ageAtDeath = (deathDate - birthDate) / (365.25 * 24 * 3600 * 1000);
+            var endDate;
+            if (r.type === 'child') {
+                endDate = new Date(birthDate.getFullYear() + 18, birthDate.getMonth(), 1);
+            } else {
+                var ly = Math.floor(r.life);
+                var lm = Math.round((r.life - ly) * 12);
+                endDate = new Date(birthDate.getFullYear() + ly, birthDate.getMonth() + lm, 1);
+            }
+            var deathMonthStr = '存续';
+            if (status === 'dead' && death) {
+                endDate = new Date(death + '-01');
+                deathMonthStr = death;
+            }
+            var months = 0;
+            if (endDate > deathDate) {
+                months = (endDate.getFullYear() - deathDate.getFullYear()) * 12 + (endDate.getMonth() - deathDate.getMonth());
+                if (months < 0) months = 0;
+            }
+            var amount = salary * r.ratio * months;
+            totalMonthlyRatio += r.ratio;
+            var endStr = endDate.getFullYear() + '-' + String(endDate.getMonth() + 1).padStart(2, '0');
+            results.push({
+                name: r.name, ratio: r.ratio, birth: birth, ageStr: ageAtDeath.toFixed(1) + '岁',
+                endStr: endStr, deathMonthStr: deathMonthStr, months: months,
+                amount: amount, amountStr: amount.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                priority: months * r.ratio, include: false, noBirth: false
+            });
+        });
+        // 自动选择：份额超100%时，按"需补月数×份额"从高到低选择，使选中份额之和≤100%
+        if (totalMonthlyRatio > 1.0001) {
+            var valid = results.filter(function(r) { return !r.noBirth && r.months > 0; });
+            valid.sort(function(a, b) { return b.priority - a.priority; });
+            var cumRatio = 0;
+            valid.forEach(function(r) {
+                if (cumRatio + r.ratio <= 1.0001) {
+                    r.include = true;
+                    cumRatio += r.ratio;
+                }
+            });
+        } else {
+            results.forEach(function(r) { if (!r.noBirth) r.include = true; });
+        }
+        // 生成表格行（9列）
+        var html = '';
+        var includedTotal = 0, includedMonths = 0, includedCount = 0;
+        results.forEach(function(r) {
+            if (r.noBirth) {
+                html += '<tr><td>' + r.name + '</td><td colspan="8" style="color:#9ca3af;">未填写出生年月</td></tr>';
+                return;
+            }
+            if (r.include) { includedTotal += r.amount; includedMonths += r.months; includedCount++; }
+            var incStyle = r.include ? 'color:#16a34a; font-weight:600;' : 'color:#9ca3af;';
+            var rowStyle = r.include ? '' : 'opacity:0.55;';
+            html += '<tr style="' + rowStyle + '"><td>' + r.name + '</td><td>' + r.birth + '</td><td>' + r.ageStr + '</td><td>' + r.endStr + '</td><td>' + r.deathMonthStr + '</td><td>' + r.months + '</td><td>' + (r.ratio * 100) + '%</td><td style="text-align:right;">' + r.amountStr + '</td><td style="' + incStyle + ' text-align:center;">' + (r.include ? '是' : '否') + '</td></tr>';
+        });
+        // 汇总行
+        html += '<tr style="background:#f0f9ff; font-weight:600;"><td colspan="5">纳入计算汇总（' + includedCount + '人）</td><td>' + includedMonths + '</td><td colspan="2"></td><td style="text-align:right;">' + includedTotal.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td></tr>';
+        body.innerHTML = html;
+        // 统计各类亲属填写数
+        var spouseCount = 0, childrenCount = 0, parentsCount = 0;
+        results.forEach(function(r) {
+            if (r.noBirth || !r.include) return;
+            if (r.name === '配偶') spouseCount = 1;
+            else if (r.name.indexOf('子女') === 0) childrenCount++;
+            else if (r.name === '父亲' || r.name === '母亲') parentsCount++;
+        });
+        // 收集是否计算=是的详情
+        var dsDetails = [];
+        results.forEach(function(r) {
+            if (!r.noBirth && r.include) dsDetails.push({ name: r.name, months: r.months, ratio: r.ratio, amount: r.amount });
+        });
+        // 结果回传主工具
+        deathSupportResult = { total: includedTotal, months: includedMonths, count: includedCount, spouseCount: spouseCount, childrenCount: childrenCount, parentsCount: parentsCount, details: dsDetails };
+        // 自动刷新主工具（回传一次性了结结果）
+        if (typeof calculate === 'function') try { calculate(); } catch(e) {}
+        // 警告与操作指引
+        var capNote = '';
+        if (totalMonthlyRatio > 1.0001) {
+            capNote = '<br><span style="color:#dc2626;">⚠️ 各供养亲属抚恤金月标准之和（' + (totalMonthlyRatio * 100).toFixed(0) + '%）超过本人工资，已按"需补月数×份额"从高到低自动选择' + includedCount + '人纳入计算，选中份额之和' + (cumRatio * 100).toFixed(0) + '%不超100%。</span>';
+        }
+        var guideNote = '<br><span style="color:#1a56db;">操作指引：当份额之和超100%时，系统按"需补月数×份额"得数从高到低自动选择纳入计算的亲属，使选中份额之和不超100%；"是否计算=是"的亲属纳入汇总，结果自动回传主工具供养亲属抚恤金行。</span>';
+        summary.innerHTML =
+            '<div><b>工亡日期：</b>' + deathDateStr + '　<b>本人月工资：</b>' + salary.toLocaleString('zh-CN', {minimumFractionDigits: 2}) + '元</div>' +
+            '<div><b>纳入计算抚恤金合计：</b><span style="color:#16a34a; font-weight:600;">' + includedTotal.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>元（' + includedCount + '人，' + includedMonths + '个月累计）</div>' +
+            '<div style="font-size:12px; color:#6b7280; margin-top:4px;">注：以上为各亲属独立计算的总额；实际支付时各供养亲属抚恤金月标准之和不超过本人生前工资。' + capNote + guideNote + '</div>';
+    }
+
     </script>
+
+<!-- 供养亲属抚恤金一次性了结计算弹窗 -->
+<div class="remark-modal-overlay" id="deathSupportModal" style="display:none;">
+    <div class="remark-modal" style="max-width:1280px;">
+        <div class="modal-title">
+            <span>📊 供养亲属抚恤金一次性了结计算</span>
+            <button class="close-btn" onclick="closeDeathSupportModal()">✕</button>
+        </div>
+        <div class="modal-sub">预计寿命按2025年全国数据（男76.4岁、女81.8岁）；配偶性别随主工具工亡职工性别自动相反</div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
+            <div style="flex:0 0 400px; min-width:360px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div class="form-item" style="flex:1; margin-bottom:0;">
+                        <label>男性预计寿命（岁）</label>
+                        <input type="number" id="dsMaleLife" value="76.4" step="0.1" onchange="calcDeathSupport();">
+                    </div>
+                    <div class="form-item" style="flex:1; margin-bottom:0;">
+                        <label>女性预计寿命（岁）</label>
+                        <input type="number" id="dsFemaleLife" value="81.8" step="0.1" onchange="calcDeathSupport();">
+                    </div>
+                </div>
+                <hr style="margin:8px 0; border:none; border-top:1px solid #e5e7eb;">
+                <div style="font-weight:600; margin-bottom:6px; color:#1f2937; font-size:13px;">供养亲属信息（两人一行）</div>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <div style="flex:1; min-width:160px; padding:8px; background:#f9fafb; border-radius:6px;">
+                        <div style="font-weight:600; color:#1a56db; margin-bottom:5px; font-size:12px;"><span id="dsSpouseLabel">配偶（女，40%）</span></div>
+                        <div style="display:flex; gap:4px; margin-bottom:4px;">
+                            <div style="flex:1;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">出生年月</div>
+                                <input type="month" id="ds_spouse_birth" onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                            </div>
+                            <div style="flex:0 0 60px;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">状态</div>
+                                <select id="ds_spouse_status" onchange="toggleDsDeath('spouse'); calcDeathSupport();" style="width:100%; padding:4px 2px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                                    <option value="alive">存续</option>
+                                    <option value="dead">亡故</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#dc2626; margin-bottom:1px;">死亡年月</div>
+                            <input type="month" id="ds_spouse_death" disabled onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px; background:#f3f4f6;">
+                        </div>
+                    </div>
+                    <div style="flex:1; min-width:160px; padding:8px; background:#f9fafb; border-radius:6px;">
+                        <div style="font-weight:600; color:#1a56db; margin-bottom:5px; font-size:12px;">父亲（男，30%）</div>
+                        <div style="display:flex; gap:4px; margin-bottom:4px;">
+                            <div style="flex:1;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">出生年月</div>
+                                <input type="month" id="ds_father_birth" onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                            </div>
+                            <div style="flex:0 0 60px;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">状态</div>
+                                <select id="ds_father_status" onchange="toggleDsDeath('father'); calcDeathSupport();" style="width:100%; padding:4px 2px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                                    <option value="alive">存续</option>
+                                    <option value="dead">亡故</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#dc2626; margin-bottom:1px;">死亡年月</div>
+                            <input type="month" id="ds_father_death" disabled onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px; background:#f3f4f6;">
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <div style="flex:1; min-width:160px; padding:8px; background:#f9fafb; border-radius:6px;">
+                        <div style="font-weight:600; color:#1a56db; margin-bottom:5px; font-size:12px;">母亲（女，30%）</div>
+                        <div style="display:flex; gap:4px; margin-bottom:4px;">
+                            <div style="flex:1;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">出生年月</div>
+                                <input type="month" id="ds_mother_birth" onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                            </div>
+                            <div style="flex:0 0 60px;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">状态</div>
+                                <select id="ds_mother_status" onchange="toggleDsDeath('mother'); calcDeathSupport();" style="width:100%; padding:4px 2px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                                    <option value="alive">存续</option>
+                                    <option value="dead">亡故</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#dc2626; margin-bottom:1px;">死亡年月</div>
+                            <input type="month" id="ds_mother_death" disabled onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px; background:#f3f4f6;">
+                        </div>
+                    </div>
+                    <div style="flex:1; min-width:160px; padding:8px; background:#f9fafb; border-radius:6px;">
+                        <div style="font-weight:600; color:#1a56db; margin-bottom:5px; font-size:12px;">子女1（30%，至18岁）</div>
+                        <div style="display:flex; gap:4px; margin-bottom:4px;">
+                            <div style="flex:1;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">出生年月</div>
+                                <input type="month" id="ds_child1_birth" onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                            </div>
+                            <div style="flex:0 0 60px;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">状态</div>
+                                <select id="ds_child1_status" onchange="toggleDsDeath('child1'); calcDeathSupport();" style="width:100%; padding:4px 2px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                                    <option value="alive">存续</option>
+                                    <option value="dead">亡故</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#dc2626; margin-bottom:1px;">死亡年月</div>
+                            <input type="month" id="ds_child1_death" disabled onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px; background:#f3f4f6;">
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <div style="flex:1; min-width:160px; padding:8px; background:#f9fafb; border-radius:6px;">
+                        <div style="font-weight:600; color:#1a56db; margin-bottom:5px; font-size:12px;">子女2（30%，至18岁）</div>
+                        <div style="display:flex; gap:4px; margin-bottom:4px;">
+                            <div style="flex:1;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">出生年月</div>
+                                <input type="month" id="ds_child2_birth" onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                            </div>
+                            <div style="flex:0 0 60px;">
+                                <div style="font-size:10px; color:#6b7280; margin-bottom:1px;">状态</div>
+                                <select id="ds_child2_status" onchange="toggleDsDeath('child2'); calcDeathSupport();" style="width:100%; padding:4px 2px; font-size:11px; border:1px solid #d1d5db; border-radius:3px;">
+                                    <option value="alive">存续</option>
+                                    <option value="dead">亡故</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#dc2626; margin-bottom:1px;">死亡年月</div>
+                            <input type="month" id="ds_child2_death" disabled onchange="calcDeathSupport();" style="width:100%; padding:4px 6px; font-size:11px; border:1px solid #d1d5db; border-radius:3px; background:#f3f4f6;">
+                        </div>
+                    </div>
+                    <div style="flex:1; min-width:160px;"></div>
+                </div>
+                <div style="margin-top:10px; text-align:right;">
+                    <button onclick="closeDeathSupportModal()" style="padding:7px 20px; background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px;">返回主工具</button>
+                </div>
+            </div>
+            <div style="flex:1; min-width:600px;">
+                <table class="detail-table" style="width:100%; font-size:11px; table-layout:fixed;">
+                    <colgroup>
+                        <col style="width:50px;"><col style="width:80px;"><col style="width:65px;"><col style="width:85px;"><col style="width:80px;"><col style="width:60px;"><col style="width:50px;"><col style="width:85px;"><col style="width:65px;">
+                    </colgroup>
+                    <thead><tr style="background:#f0f9ff;">
+                        <th>亲属</th><th>出生年月</th><th>工亡年龄</th><th>赔付截止日</th><th>死亡年月</th><th>需补月数</th><th>份额</th><th>抚恤金</th><th>是否计算</th>
+                    </tr></thead>
+                    <tbody id="dsResultBody"><tr><td colspan="9" style="text-align:center; color:#9ca3af; padding:16px;">请填写左侧供养亲属信息</td></tr></tbody>
+                </table>
+                <div id="dsSummary" style="margin-top:10px; padding:10px; background:#f9fafb; border-radius:6px; font-size:12px; line-height:1.7;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
