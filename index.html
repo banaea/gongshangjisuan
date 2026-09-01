@@ -1202,7 +1202,7 @@
         // ================================================================
         // 版本号（集中定义；发布新版本请运行 _bump_version.py 自动递增）
         // ================================================================
-        const APP_VERSION = "6.0.24";
+        const APP_VERSION = "6.0.26";
         const APP_BUILD_DATE = "20260901";
 
         // 页面标题固定为“全国工伤赔偿计算器 - By Shaun”；版本号通过页内徽标展示
@@ -4670,9 +4670,10 @@ function generateRemarkText() {
         if (compMed > 0 && compMed < medFinal) finalMed = compMed;
         var workCompare = compWork > 0 ? (compWork >= workComp ? '单位误工费赔偿金额' + compWork.toFixed(2) + '元不低于核算误工费' + workComp.toFixed(2) + '元' : '单位误工费赔偿金额' + compWork.toFixed(2) + '元低于核算误工费' + workComp.toFixed(2) + '元') : '单位未赔偿误工费，按核算金额' + workComp.toFixed(2) + '元赔付';
         if (compWork > 0 && compWork < workComp) finalWork = compWork;
-        var disCompare = compDis > 0 ? (compDis >= disFinal ? '单位伤残赔偿金额' + compDis.toFixed(2) + '元不低于核算伤残赔偿金' + disFinal.toFixed(2) + '元' : '单位伤残赔偿金额' + compDis.toFixed(2) + '元低于核算伤残赔偿金' + disFinal.toFixed(2) + '元') : '单位未赔偿伤残赔偿金，按核算金额' + disFinal.toFixed(2) + '元赔付';
+        var disLabel = isDeath ? '死亡赔偿' : '伤残赔偿';
+        var disCompare = compDis > 0 ? (compDis >= disFinal ? '单位' + disLabel + '金额' + compDis.toFixed(2) + '元不低于核算' + disLabel + '金' + disFinal.toFixed(2) + '元' : '单位' + disLabel + '金额' + compDis.toFixed(2) + '元低于核算' + disLabel + '金' + disFinal.toFixed(2) + '元') : '单位未赔偿' + disLabel + '金，按核算金额' + disFinal.toFixed(2) + '元赔付';
         if (compDis > 0 && compDis < disFinal) finalDis = compDis;
-        compareNote = medCompare + '，' + workCompare + '，' + disCompare + '，故本案最终理算赔付金额为两者取低医疗费' + finalMed.toFixed(2) + '元+两者取低误工费' + finalWork.toFixed(2) + '元+两者取低伤残赔偿金' + finalDis.toFixed(2) + '元=' + (finalMed + finalWork + finalDis).toFixed(2) + '元';
+        compareNote = medCompare + '，' + workCompare + '，' + disCompare + '，故本案最终理算赔付金额为两者取低医疗费' + finalMed.toFixed(2) + '元+两者取低误工费' + finalWork.toFixed(2) + '元+两者取低' + disLabel + '金' + finalDis.toFixed(2) + '元=' + (finalMed + finalWork + finalDis).toFixed(2) + '元';
     } else if (hasComp && compTotal > 0) {
         var calcTotal2 = medFinal + workComp + disFinal;
         if (compTotal >= calcTotal2) {
@@ -4702,7 +4703,8 @@ function generateRemarkText() {
         treatmentDisplay = treatment + '，后于' + deathDateStr + '经抢救无效死亡';
     }
     remark += '1、保险责任认定：\n';
-    remark += '员工' + name + '（' + idInfo + '，' + ageDisplay + '，保额' + amount + '，伤残比例' + ratioDisplay + '）于' + dateStr + timeStr + '在' + where + doing + '时，' + because + '导致' + result + '，' + action + '。经诊断为' + diagnosis + '，' + treatmentDisplay + '。\n';
+    var ratioPart = isDeath ? '' : '，伤残比例' + ratioDisplay;
+    remark += '员工' + name + '（' + idInfo + '，' + ageDisplay + '，保额' + amount + ratioPart + '）于' + dateStr + timeStr + '在' + where + doing + '时，' + because + '导致' + result + '，' + action + '。经诊断为' + diagnosis + '，' + treatmentDisplay + '。\n';
     remark += '被保险人的员工在工作时因工作原因受伤，属于雇主责任险保险责任范围。\n\n';
 
     remark += '2、损失核定\n';
@@ -4742,7 +4744,7 @@ function generateRemarkText() {
     remark += '3、单位赔偿情况/单位授权我司支付情况及结论：\n';
     if (hasComp) {
         if (compStr.includes('+')) {
-            remark += '单位已赔偿伤者医疗费' + compMed.toFixed(2) + '元+误工费' + compWork.toFixed(2) + '元+伤残赔偿金' + compDis.toFixed(2) + '元。\n';
+            remark += '单位已赔偿伤者医疗费' + compMed.toFixed(2) + '元+误工费' + compWork.toFixed(2) + '元+' + disLabel + '金' + compDis.toFixed(2) + '元。\n';
         } else {
             remark += '单位已赔偿伤者总金额' + compTotal.toFixed(2) + '元。\n';
         }
@@ -4972,7 +4974,7 @@ function exportWordDocument() {
                 continue;
             }
             if (inWorkSection) {
-                if (line.indexOf('伤残赔偿金：') !== -1 || line.indexOf('3、') !== -1) {
+                if (line.indexOf('伤残赔偿金：') !== -1 || line.indexOf('死亡赔偿金（') !== -1 || line.indexOf('3、') !== -1) {
                     break;
                 }
                 if (line.trim() !== '') {
@@ -4989,7 +4991,7 @@ function exportWordDocument() {
         var disLines = [];
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
-            if (line.indexOf('伤残赔偿金：') !== -1) {
+            if (line.indexOf('伤残赔偿金：') !== -1 || line.indexOf('死亡赔偿金（') !== -1) {
                 inDisSection = true;
                 continue;
             }
@@ -5276,7 +5278,7 @@ function exportWordDocument() {
             rows.push(detailHeader());
             rows.push(detailRow('医疗费', safeFixed(d.medTotal), safeFixed(d.medFinal), d.fullMedicalNote));
             rows.push(detailRow('误工费', '', safeFixed(d.workComp), d.fullWorkNote));
-            rows.push(detailRow('死残赔偿金', '', safeFixed(d.disFinal), d.fullDisNote));
+            rows.push(detailRow(isDeath ? '死亡赔偿金' : '死残赔偿金', '', safeFixed(d.disFinal), d.fullDisNote));
             rows.push(detailRow('护理费', '', '', ''));
             rows.push(detailRow('住院伙补', '', '', ''));
             rows.push(detailRow('后续治疗费', '', '', ''));
