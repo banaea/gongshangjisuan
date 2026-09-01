@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国工伤赔偿计算器</title>
+    <title>全国工伤赔偿计算器 - By Shaun</title>
 
     <!-- ================================================================
     样式部分
@@ -20,25 +20,49 @@
             background: #f5f7fa;
             color: #333;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            line-height: 1.6;
-            padding: 20px;
+            line-height: 1.5;
+            padding: 8px;
+            overflow: hidden;
         }
 
         .container {
-            max-width: 1300px;
-            margin: 0 auto;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .main-content {
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 8px;
+            flex: 1;
+            min-height: 0;
+        }
+        .left-panel {
+            flex: 1.1;
+            min-width: 0;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .right-panel {
+            flex: 0.9;
+            min-width: 0;
+            overflow-y: auto;
+            padding-left: 4px;
+            padding-bottom: 40px;
         }
 
         /* ---------- 头部 ---------- */
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
 
         .header h1 {
-            font-size: 28px;
+            font-size: 22px;
             color: #1a56db;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .header p {
@@ -49,24 +73,24 @@
         /* ---------- 卡片 ---------- */
         .card {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            padding: 24px;
-            margin-bottom: 24px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
         }
 
         .card-title {
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 600;
             color: #111827;
-            border-left: 4px solid #1a56db;
-            padding-left: 12px;
-            margin-bottom: 20px;
+            border-left: 3px solid #1a56db;
+            padding-left: 10px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
 
         .export-btn {
@@ -87,8 +111,8 @@
         /* ---------- 表单 ---------- */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
         }
 
         .form-group {
@@ -96,11 +120,11 @@
         }
 
         .group-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             color: #1f2937;
-            margin: 22px 0 12px 0;
-            padding-bottom: 6px;
+            margin: 14px 0 8px 0;
+            padding-bottom: 4px;
             border-bottom: 1px solid #e5e7eb;
         }
 
@@ -114,18 +138,19 @@
         }
 
         .form-item label {
-            font-size: 14px;
+            font-size: 12px;
             color: #4b5563;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             font-weight: 500;
         }
 
         .form-item input,
         .form-item select {
-            padding: 10px 12px;
+            width: 100%;
+            padding: 7px 10px;
             border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             outline: none;
             transition: border-color 0.2s;
         }
@@ -176,9 +201,9 @@
         .salary-note {
             background: #eff6ff;
             border-left: 3px solid #1a56db;
-            padding: 8px 12px;
-            margin-bottom: 16px;
-            font-size: 13px;
+            padding: 6px 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
             color: #1e40af;
             border-radius: 0 6px 6px 0;
         }
@@ -188,13 +213,13 @@
             width: 100%;
             table-layout: fixed;
             border-collapse: collapse;
-            font-size: 13px;
-            margin-top: 10px;
+            font-size: 12px;
+            margin-top: 6px;
         }
 
         .detail-table th,
         .detail-table td {
-            padding: 12px 10px;
+            padding: 7px 8px;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
             vertical-align: top;
@@ -215,7 +240,7 @@
         }
         .detail-table th:nth-child(2),
         .detail-table td:nth-child(2) {
-            width: 28%;
+            width: 26%;
         }
         .detail-table th:nth-child(3),
         .detail-table td:nth-child(3) {
@@ -223,11 +248,11 @@
         }
         .detail-table th:nth-child(4),
         .detail-table td:nth-child(4) {
-            width: 27%;
+            width: 25%;
         }
         .detail-table th:nth-child(5),
         .detail-table td:nth-child(5) {
-            width: 7%;
+            width: 10%;
         }
         .detail-table th:nth-child(6),
         .detail-table td:nth-child(6) {
@@ -739,6 +764,7 @@
             </p>
         </div>
 
+        <div class="main-content"><div class="right-panel">
         <!-- ============================================================
         主卡片
         ============================================================ -->
@@ -756,7 +782,7 @@
                     <div class="form-item" style="grid-column: span 1;">
                         <div style="display:flex; gap:12px; align-items:flex-end;">
                             <div style="flex:1; display:flex; flex-direction:column;">
-                                <label>参保省/直辖市/自治区</label>
+                                <label>参保地区</label>
                                 <select id="province" onchange="onProvinceChange()" style="width:100%;"></select>
                             </div>
                             <div id="gdCityOuter" style="flex:1; display:none; flex-direction:column;">
@@ -784,7 +810,7 @@
                     </div>
 
                     <div class="form-item">
-                        <label>是否离职/解除劳动关系</label>
+                        <label>是否离职</label>
                         <select id="isResigned" onchange="updateResignStatus(); calculate();">
                             <option value="0" selected>否</option>
                             <option value="1">是</option>
@@ -792,8 +818,8 @@
                     </div>
 
                     <div class="form-item">
-                        <label id="leaveDateLabel">离职/解除劳动关系日期</label>
-                        <input type="date" id="leaveDate" disabled onchange="calculate()">
+                        <label id="leaveDateLabel">离职日期</label>
+                        <input type="date" id="leaveDate" disabled onchange="syncAccidentDate(); calculate();">
                         <div class="input-tip" id="leaveDateTip">未离职，无需填写</div>
                     </div>
 
@@ -820,25 +846,25 @@
                     </div>
 
                     <div class="form-item">
-                        <label>法定退休日期（自动计算）</label>
+                        <label>法定退休日期（自动）</label>
                         <input type="text" id="retireDateShow" readonly>
-                        <div class="input-tip" style="color:#d97706; margin-top:4px;">该日期为满法定退休周岁当日，达到退休年龄后停发一次性工伤待遇，转养老保险待遇</div>
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">满法定退休周岁当日</div>
                     </div>
 
                     <div class="form-item" id="retireDiffItem" style="display: none;">
                         <label>距法定退休时长</label>
                         <input type="text" id="retireDiffShow" readonly>
-                        <div class="input-tip" style="color:#d97706; margin-top:4px;">精确计算至满退休周岁当日</div>
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">计算至满退休周岁当日</div>
                     </div>
-                    <div class="form-item">
+                    <div class="form-item" id="accidentDateItem">
                         <label>事故发生日期</label>
                         <input type="date" id="accidentDate" onchange="syncAccidentDate(); calculate();">
-                        <div class="input-tip" style="color:#d97706; margin-top:4px;">理赔备注出险时间关联此日期</div>
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">与备注出险时间关联</div>
                     </div>
                     <div class="form-item" id="deathDateItem" style="display:none;">
                         <label>工亡日期</label>
                         <input type="date" id="deathDate" onchange="calculate();">
-                        <div class="input-tip" style="color:#d97706; margin-top:4px;">工亡案件专用，默认同事故发生日期，可人工修正</div>
+                        <div class="input-tip" style="color:#d97706; margin-top:4px;">工亡，可人工修正</div>
                     </div>
                 </div>
             </div>
@@ -871,14 +897,15 @@
                         <div class="input-tip" id="avgSalaryTip">⚠️ 此标准每年更新，请人工确认当地最新数值后再使用</div>
                     </div>
 
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="isOccupationalDisease" onchange="calculate()">
-                        <label for="isOccupationalDisease">是否为职业病工伤（按当地标准增发医疗补助金）</label>
-                    </div>
-
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="useDelayRetire" onchange="updatePostAndRetire(); calculate();">
-                        <label for="useDelayRetire">适用渐进式延迟退休规定（默认按原法定退休年龄计算）</label>
+                    <div style="grid-column: span 3; display: flex; flex-direction: column; gap: 14px; justify-content: flex-start; padding-top: 2px; padding-left: 18px;">
+                        <div class="checkbox-item" style="padding: 0; align-items: flex-start;">
+                            <input type="checkbox" id="isOccupationalDisease" onchange="calculate()" style="margin-top: 2px;">
+                            <label for="isOccupationalDisease" style="font-size: 12px; line-height: 1.4;">是否为职业病工伤（按当地标准增发医疗补助金）</label>
+                        </div>
+                        <div class="checkbox-item" style="padding: 0; align-items: flex-start;">
+                            <input type="checkbox" id="useDelayRetire" onchange="updatePostAndRetire(); calculate();" style="margin-top: 2px;">
+                            <label for="useDelayRetire" style="font-size: 12px; line-height: 1.4;">适用渐进式延迟退休规定（默认按原法定退休年龄计算）</label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -929,7 +956,7 @@
         </div>
 
         <div class="form-item">
-            <label>医保/其他方式已报销金额（元）</label>
+            <label>已报销金额（元）</label>
             <input type="text" inputmode="decimal" id="medicalReimbursed" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
         </div>
 
@@ -947,12 +974,16 @@
 
         <div class="form-item">
             <label>非医保扣减方式</label>
-            <div class="non-med-group">
-                <select id="nonMedicalMode" onchange="onNonMedicalModeChange(); calculate();">
-                    <option value="ratio">按比例扣减</option>
-                    <option value="amount">按金额扣减</option>
-                </select>
-                <input type="text" inputmode="decimal" id="nonMedicalValue" value="15.00"
+            <select id="nonMedicalMode" onchange="onNonMedicalModeChange(); calculate();">
+                <option value="ratio">按比例扣减</option>
+                <option value="amount">按金额扣减</option>
+            </select>
+        </div>
+
+        <div class="form-item">
+            <label>非医保扣减值</label>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <input type="text" inputmode="decimal" id="nonMedicalValue" value="15.00" style="flex:1;"
                 oninput="formatNonMedicalInput(this);calculate();"
                 onblur="fixNonMedicalBlur(this);calculate();">
                 <span class="non-med-percent" id="nonMedicalPercentSign" style="display:none; font-size:14px; color:#4b5563; font-weight:500;">%</span>
@@ -967,7 +998,7 @@
                 <div class="group-title">停工留薪期（误工费）</div>
                 <div class="form-grid">
                     <div class="form-item">
-                        <label>误工费保单日限额（元/日）</label>
+                        <label>误工费保单日限额</label>
                         <select id="insuranceDayLimitSelect" onchange="handleInsuranceLimitChange()">
                             <option value="50.00">50.00</option>
                             <option value="80.00">80.00</option>
@@ -986,7 +1017,7 @@
                     </div>
 
                     <div class="form-item">
-                        <label>停工留薪期日工资标准（元/天）</label>
+                        <label>误工日工资标准</label>
                         <input type="text" inputmode="decimal" id="dailyWage" value="100.00" readonly>
                         <div class="input-tip">⚠️ 此处与本人月工资联动，最高不超保单限额</div>
                     </div>
@@ -999,6 +1030,7 @@
             </div>
         </div>
 
+        </div><div class="left-panel">
         <!-- ============================================================
         赔偿明细
         ============================================================ -->
@@ -1040,6 +1072,7 @@
             6. 天津市专项规则：按建设项目参加工伤保险的工伤职工，未领取基本养老保险待遇的，全额享受一次性工伤医疗补助金与一次性伤残就业补助金；已领取基本养老保险待遇的，仅享受一次性工伤医疗补助金。<br>
             - Version by Shaun
         </div>
+        </div></div>
     </div>
 
     <!-- ============================================================
@@ -1168,7 +1201,7 @@
         // ================================================================
         // 版本号（集中定义；发布新版本请运行 _bump_version.py 自动递增）
         // ================================================================
-        const APP_VERSION = "6.0.15";
+        const APP_VERSION = "6.0.24";
         const APP_BUILD_DATE = "20260901";
 
         // 页面标题固定为“全国工伤赔偿计算器 - By Shaun”；版本号通过页内徽标展示
@@ -1936,24 +1969,37 @@ function syncAllBonusTypes(type) {
             if (level >= 1 && level <= 4) {
                 label.textContent = '事故发生日期';
                 leaveDateInput.disabled = false;
-                leaveDateTip.textContent = '⚠️ 请填写准确的工伤事故发生日期';
+                leaveDateTip.textContent = '⚠️ 请准确填写';
                 leaveDateTip.style.color = '#d97706';
+                var adi = $('accidentDateItem');
+                if (adi) adi.style.display = 'none';
                 if (!leaveDateInput.value) {
                     var now = new Date();
                     leaveDateInput.value = now.getFullYear() + '-' +
                         String(now.getMonth() + 1).padStart(2, '0') + '-' +
                         String(now.getDate()).padStart(2, '0');
                 }
+                syncAccidentDate();
             } else {
-                label.textContent = '离职/解除劳动关系日期';
+                label.textContent = '离职日期';
                 leaveDateInput.disabled = !isResigned;
+                var adi2 = $('accidentDateItem');
+                if (adi2) adi2.style.display = '';
+                var adInput = $('accidentDate');
+                if (adInput && !adInput.value) {
+                    var now2 = new Date();
+                    adInput.value = now2.getFullYear() + '-' +
+                        String(now2.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(now2.getDate()).padStart(2, '0');
+                }
                 if (isResigned) {
-                    leaveDateTip.textContent = '⚠️ 请修正为准确的离职/解除劳动关系日期';
+                    leaveDateTip.textContent = '⚠️ 请修正准确';
                     leaveDateTip.style.color = '#d97706';
                 } else {
                     leaveDateTip.textContent = '未离职，无需填写';
                     leaveDateTip.style.color = '#d97706';
                 }
+                syncAccidentDate();
             }
         }
 
@@ -1975,7 +2021,7 @@ function syncAllBonusTypes(type) {
                 leaveDateInput.value = now.getFullYear() + '-' +
                     String(now.getMonth() + 1).padStart(2, '0') + '-' +
                     String(now.getDate()).padStart(2, '0');
-                leaveDateTip.textContent = '⚠️ 请修正为准确的离职/解除劳动关系日期';
+                leaveDateTip.textContent = '⚠️ 请修正准确';
                 leaveDateTip.style.color = '#d97706';
             } else {
                 leaveDateInput.disabled = true;
@@ -1986,12 +2032,23 @@ function syncAllBonusTypes(type) {
         }
 
         function syncAccidentDate() {
-            var ad = document.getElementById('accidentDate');
-            if (!ad) return;
-            var rm = document.getElementById('rmAccidentDate');
-            if (rm) rm.value = ad.value;
-            var dd = document.getElementById('deathDate');
-            if (dd && !dd.value) dd.value = ad.value;
+            var level = parseInt($('disabilityLevel').value) || 0;
+            var isDeath = isMainDeath();
+            var sourceDate = '';
+            if (isDeath) {
+                var ad = $('accidentDate');
+                sourceDate = ad ? ad.value : '';
+            } else if (level >= 1 && level <= 4) {
+                var ld = $('leaveDate');
+                sourceDate = ld ? ld.value : '';
+            } else {
+                var ad2 = $('accidentDate');
+                sourceDate = ad2 ? ad2.value : '';
+            }
+            var rm = $('rmAccidentDate');
+            if (rm) rm.value = sourceDate;
+            var dd = $('deathDate');
+            if (dd && !dd.value) dd.value = sourceDate;
         }
 
         function updateDeathState() {
@@ -2005,9 +2062,9 @@ function syncAllBonusTypes(type) {
             if (ddi) ddi.style.display = d ? '' : 'none';
             if (d) {
                 var ldt = $('leaveDateTip');
-                if (ldt) { ldt.textContent = '工亡案件，无需填写离职信息'; ldt.style.color = '#d97706'; }
+                if (ldt) { ldt.textContent = '工亡案件，无需填写'; ldt.style.color = '#d97706'; }
                 var pt = $('postTip');
-                if (pt) { pt.textContent = '工亡案件，无需选择岗位类型'; pt.style.color = '#d97706'; }
+                if (pt) { pt.textContent = '工亡案件，无需选择'; pt.style.color = '#d97706'; }
             } else {
                 updateDateLabel();
                 updatePostAndRetire();
@@ -2030,7 +2087,7 @@ function syncAllBonusTypes(type) {
                     postTip.style.color = '#d97706';
                 } else {
                     postSelect.disabled = false;
-                    postTip.textContent = '⚠️ 请按实际岗位类型选择';
+                    postTip.textContent = '⚠️ 请按实际选择';
                     postTip.style.color = '#d97706';
                 }
             }
@@ -2470,12 +2527,12 @@ function onNonMedicalModeChange() {
     if (mode === 'ratio') {
         valueInput.value = '15.00';
         percentSign.style.display = 'inline';
-        document.getElementById('nonMedicalTip').textContent = '按比例扣减：默认15%；按金额扣减：默认医疗费总金额的15%';
+        document.getElementById('nonMedicalTip').textContent = '默认15%';
     } else {
         var amount = Math.round(medTotal * 0.15 * 100) / 100;
         valueInput.value = amount.toFixed(2);
         percentSign.style.display = 'none';
-        document.getElementById('nonMedicalTip').textContent = '按金额扣减：默认医疗费总金额的15%（' + amount.toFixed(2) + '元），可手动修改';
+        document.getElementById('nonMedicalTip').textContent = '默认总金额的15%（' + amount.toFixed(2) + '元），可手动修改';
     }
     calculate();
 }
@@ -2654,6 +2711,20 @@ function onNonMedicalModeChange() {
                 if (!tbody) return;
 
                 if (isDeath) {
+                    // 工亡时误工天数不超过事故发生日期到工亡日期的天数差
+                    var accDateStr = $('accidentDate').value;
+                    var deathDateStr = $('deathDate').value;
+                    if (accDateStr && deathDateStr && stopDays > 0) {
+                        var accDt = new Date(accDateStr);
+                        var deathDt = new Date(deathDateStr);
+                        var diffDays = Math.max(0, Math.ceil((deathDt - accDt) / (1000 * 60 * 60 * 24)));
+                        if (stopDays > diffDays) {
+                            stopDays = diffDays;
+                            $('stopWorkDays').value = stopDays;
+                            actualStopDays = Math.max(0, stopDays - deductDays);
+                            stopWorkPay = dailyWage * actualStopDays;
+                        }
+                    }
                     // 读取供养亲属下拉选择（重建前保存）
                     var dsS = document.querySelector('select[name="deathSpouse"]');
                     if (dsS) deathSupport.spouse = parseInt(dsS.value) || 0;
@@ -2692,7 +2763,7 @@ function onNonMedicalModeChange() {
                         '<td class="process">' + fmt(avgSalary) + ' × 6 = ' + fmt(burial) + '</td>' +
                         '<td class="payer payer-social">工伤保险基金</td>' +
                         '<td class="amount">' + fmt(burial) + '</td></tr>';
-                    html += '<tr><td class="item-name">供养亲属抚恤金（按月支付）<br><button onclick="openDeathSupportModal()" style="margin-top:4px; padding:3px 10px; font-size:11px; background:#1a56db; color:#fff; border:none; border-radius:3px; cursor:pointer;">📊 一次性了结计算</button></td>' +
+                    html += '<tr><td class="item-name">' + (deathSupportResult ? '供养亲属抚恤金（一次性）' : '供养亲属抚恤金（按月支付）') + '<br><button onclick="openDeathSupportModal()" style="margin-top:4px; padding:3px 10px; font-size:11px; background:#1a56db; color:#fff; border:none; border-radius:3px; cursor:pointer;">📊 一次性了结计算</button></td>' +
                         '<td class="legal-basis"><span class="basis-title">《工伤保险条例》第41条</span>按职工本人工资一定比例发给<b>无劳动能力亲属</b>：配偶40%、其他亲属30%，孤寡老人或孤儿增加10%，<b>各供养亲属抚恤金之和不超过生前工资</b>。<br><span style="font-size:11px;color:#6b7280;">申请条件：完全丧失劳动能力；配偶男60女55；父母男60女55；子女未满18；祖父母/外祖父母符合条件等。</span></td>' +
                         '<td>' + (deathSupportResult ? '<div style="font-size:12px; color:#1a56db; line-height:24px;">配偶' + deathSupportResult.spouseCount + '人，子女' + deathSupportResult.childrenCount + '人，父母' + deathSupportResult.parentsCount + '人</div><span class="formula">已通过一次性了结计算确定</span>' : '<div style="margin-bottom:4px; font-size:12px; color:#4b5563; line-height:28px;"><div>配偶 ' + spouseSel + '</div><div>子女 ' + childrenSel + '</div><div>父母 ' + parentsSel + '</div></div><span class="formula">本人工资 × (配偶40% + 子女30% + 父母30%)，封顶本人工资</span>') + '</td>' +
                         '<td class="process">' + (deathSupportResult ? (function() {
@@ -4535,7 +4606,8 @@ function generateRemarkText() {
         var burial = avgSalary * 6;
         var supRatio = 0.4 * dSpCount + 0.3 * dChCount + 0.3 * dPaCount;
         var supMonthly = Math.min(salary * supRatio, salary);
-        var calcAmount = oneTimeDeath + burial + supMonthly;
+        var dsLumpSum = (deathSupportResult && deathSupportResult.total > 0) ? deathSupportResult.total : 0;
+        var calcAmount = oneTimeDeath + burial + dsLumpSum;
         disFinal = Math.min(calcAmount, deathLimit);
         disTypeLabel = '死亡赔偿金';
         if (calcAmount > deathLimit) {
@@ -4543,10 +4615,22 @@ function generateRemarkText() {
         } else {
             disCompareNote = '本保单死亡赔偿限额为' + firstAmount + '万（即' + deathLimit.toFixed(2) + '元），高于工亡待遇合计' + calcAmount.toFixed(2) + '元，故死亡赔偿金最终核算金额为' + calcAmount.toFixed(2) + '元';
         }
-        disDetailProcess = '一次性工亡补助金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + fmt(PER_CAPITA_INCOME) + ' × 20 = ' + fmt(oneTimeDeath) + '元\n' +
-            '丧葬补助金 = 统筹地区上年度职工月平均工资 × 6 = ' + fmt(avgSalary) + ' × 6 = ' + fmt(burial) + '元\n' +
-            '供养亲属抚恤金（按月）：配偶40%×' + dSpCount + '人 + 子女30%×' + dChCount + '人 + 父母30%×' + dPaCount + '人，封顶本人工资 = ' + fmt(supMonthly) + '元/月\n' +
-            '工亡待遇合计 = ' + fmt(oneTimeDeath) + ' + ' + fmt(burial) + ' + ' + fmt(supMonthly) + '（抚恤金按月标准计1个月）= ' + fmt(calcAmount) + '元';
+        if (deathSupportResult && deathSupportResult.total > 0) {
+            var dsDetailStr = '';
+            deathSupportResult.details.forEach(function(item) {
+                dsDetailStr += item.name + '：' + item.months + '月×' + (item.ratio*100) + '% = ' + fmt(item.amount) + '元\n';
+            });
+            disDetailProcess = '一次性工亡补助金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + fmt(PER_CAPITA_INCOME) + ' × 20 = ' + fmt(oneTimeDeath) + '元\n' +
+                '丧葬补助金 = 统筹地区上年度职工月平均工资 × 6 = ' + fmt(avgSalary) + ' × 6 = ' + fmt(burial) + '元\n' +
+                '供养亲属抚恤金（一次性了结）：\n' + dsDetailStr +
+                '合计：' + fmt(deathSupportResult.total) + '元\n' +
+                '工亡待遇合计 = ' + fmt(oneTimeDeath) + ' + ' + fmt(burial) + ' + ' + fmt(dsLumpSum) + ' = ' + fmt(calcAmount) + '元';
+        } else {
+            disDetailProcess = '一次性工亡补助金 = 上一年度全国城镇居民人均可支配收入 × 20 = ' + fmt(PER_CAPITA_INCOME) + ' × 20 = ' + fmt(oneTimeDeath) + '元\n' +
+                '丧葬补助金 = 统筹地区上年度职工月平均工资 × 6 = ' + fmt(avgSalary) + ' × 6 = ' + fmt(burial) + '元\n' +
+                '供养亲属抚恤金（按月支付）：配偶40%×' + dSpCount + '人 + 子女30%×' + dChCount + '人 + 父母30%×' + dPaCount + '人，封顶本人工资 = ' + fmt(supMonthly) + '元/月（按月支付，不计入一次性赔付金额，由工伤保险基金按月发放）\n' +
+                '工亡待遇合计 = ' + fmt(oneTimeDeath) + ' + ' + fmt(burial) + ' = ' + fmt(calcAmount) + '元';
+        }
     } else if (level === 0) {
         disFinal = 0;
         disCompareNote = '';
@@ -4605,8 +4689,19 @@ function generateRemarkText() {
 
     // ----- 构建备注文本 -----
     var remark = '';
+    // 工亡时treatment后追加死亡描述
+    var treatmentDisplay = treatment;
+    if (isDeath) {
+        var deathDateVal = $('deathDate').value || '';
+        var deathDateStr = deathDateVal;
+        if (deathDateVal) {
+            var dp = deathDateVal.split('-');
+            if (dp.length === 3) deathDateStr = dp[0] + '年' + dp[1] + '月' + dp[2] + '日';
+        }
+        treatmentDisplay = treatment + '，后于' + deathDateStr + '经抢救无效死亡';
+    }
     remark += '1、保险责任认定：\n';
-    remark += '员工' + name + '（' + idInfo + '，' + ageDisplay + '，保额' + amount + '，伤残比例' + ratioDisplay + '）于' + dateStr + timeStr + '在' + where + doing + '时，' + because + '导致' + result + '，' + action + '。经诊断为' + diagnosis + '，' + treatment + '。\n';
+    remark += '员工' + name + '（' + idInfo + '，' + ageDisplay + '，保额' + amount + '，伤残比例' + ratioDisplay + '）于' + dateStr + timeStr + '在' + where + doing + '时，' + because + '导致' + result + '，' + action + '。经诊断为' + diagnosis + '，' + treatmentDisplay + '。\n';
     remark += '被保险人的员工在工作时因工作原因受伤，属于雇主责任险保险责任范围。\n\n';
 
     remark += '2、损失核定\n';
@@ -5405,6 +5500,10 @@ function exportWordDocument() {
             '<div><b>纳入计算抚恤金合计：</b><span style="color:#16a34a; font-weight:600;">' + includedTotal.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>元（' + includedCount + '人，' + includedMonths + '个月累计）</div>' +
             '<div style="font-size:12px; color:#6b7280; margin-top:4px;">注：以上为各亲属独立计算的总额；实际支付时各供养亲属抚恤金月标准之和不超过本人生前工资。' + capNote + guideNote + '</div>';
     }
+
+    // 页面初始化：设置默认日期并计算
+    try { updateDateLabel(); } catch(e) {}
+    try { calculate(); } catch(e) {}
 
     </script>
 
