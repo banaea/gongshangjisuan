@@ -746,6 +746,15 @@
             }
         }
     </style>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?b126aeab232c61db84bae8293ac08866";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
 </head>
 
 <body>
@@ -2016,10 +2025,12 @@ function syncAllBonusTypes(type) {
             if (!leaveDateInput || !leaveDateTip) return;
             if (isResigned) {
                 leaveDateInput.disabled = false;
-                var now = new Date();
-                leaveDateInput.value = now.getFullYear() + '-' +
-                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(now.getDate()).padStart(2, '0');
+                if (!leaveDateInput.value) {
+                    var now = new Date();
+                    leaveDateInput.value = now.getFullYear() + '-' +
+                        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(now.getDate()).padStart(2, '0');
+                }
                 leaveDateTip.textContent = '⚠️ 请修正准确';
                 leaveDateTip.style.color = '#d97706';
             } else {
