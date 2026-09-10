@@ -4768,6 +4768,35 @@ function generateRemarkText() {
         }
     }
     remark += '请领导审核，谢谢';
+    // ★★★ 导出计算书数据桥：保证 主工具页面/备注预览/导出计算书 三者金额完全同步 ★★★
+    window.__lastLossCalc = {
+        medTotal: medTotal,
+        thirdPartyReimb: thirdPartyReimb,
+        medOut: medOut,
+        ded: ded,
+        payRate: payRate,
+        medLoss: medLoss,
+        medLimit: medLimit,
+        medFinal: medFinal,
+        medCompareNote: medCompareNote,
+        wDays: wDays,
+        dWage: dWage,
+        deductDays: deductDays,
+        workComp: workComp,
+        level: level,
+        isDeath: isDeath,
+        oneTimeBonus: oneTimeBonus,
+        medicalBonus: medicalBonus,
+        employmentBonus: employmentBonus,
+        totalDisCalc: totalDisCalc,
+        disLimit: disLimit,
+        disFinal: disFinal,
+        disCompareNote: disCompareNote,
+        finalMed: finalMed,
+        finalWork: finalWork,
+        finalDis: finalDis,
+        finalCalcTotal: finalCalcTotal
+    };
     return remark;
 }
 
@@ -4949,6 +4978,33 @@ function exportWordDocument() {
 
     // ==================== 从备注预览中提取完整说明 ====================
     var fullRemarkText = generateRemarkText();
+
+    // ★★★ 数据同步修复：导出金额改用与主工具/备注一致的理算结果（覆盖下方独立简化计算，
+    //      修复：伤残补助金/医疗/就业补助金未按递减规则、职业病增发、计发基数类型、60%/300%封顶、
+    //      工亡供养亲属抚恤金未用一次性了结金额 等问题）★★★
+    var lossCalc = window.__lastLossCalc;
+    if (lossCalc) {
+        medTotal = lossCalc.medTotal;
+        thirdPartyReimb = lossCalc.thirdPartyReimb;
+        medOut = lossCalc.medOut;
+        ded = lossCalc.ded;
+        payRate = lossCalc.payRate;
+        medLoss = lossCalc.medLoss;
+        medLimit = lossCalc.medLimit;
+        medFinal = lossCalc.medFinal;
+        wDays = lossCalc.wDays;
+        dWage = lossCalc.dWage;
+        deductDays = lossCalc.deductDays;
+        workComp = lossCalc.workComp;
+        oneTimeBonus = lossCalc.oneTimeBonus;
+        medicalBonus = lossCalc.medicalBonus;
+        employmentBonus = lossCalc.employmentBonus;
+        totalDisCalc = lossCalc.totalDisCalc;
+        disLimit = lossCalc.disLimit;
+        disFinal = lossCalc.disFinal;
+        // 最终理算赔付金额（已含单位赔偿两者取低），与备注结论完全一致
+        finalCalcTotal = lossCalc.finalCalcTotal;
+    }
 
     function extractMedicalNote(fullText) {
         var lines = fullText.split('\n');
