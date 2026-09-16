@@ -814,7 +814,7 @@ var _hmt = _hmt || [];
                     </div>
 
                     <div class="form-item">
-                        <label>出生日期</label>
+                        <label>出生日期（身份证号）</label>
                         <input type="text" id="birthDate" value="1969-01-01" placeholder="请输入18位身份证号或出生日期" autocomplete="off" oninput="parseBirthInput(this)">
                         <div class="input-tip" id="birthDateTip" style="display:none;"></div>
                     </div>
@@ -1985,10 +1985,14 @@ function parseBirthInput(el) {
         updatePostAndRetire(); calculate();
         return;
     }
-    // 三种日期格式统一规范化
+    // 三种日期格式统一规范化（年份限制1900~当前年份，避免身份证前8位如"37030619"被误判为日期）
+    var curYear = new Date().getFullYear();
     var dateStd = /^\d{4}-\d{2}-\d{2}$/.test(val);
     var dateCompact = /^\d{8}$/.test(val);
     var dateSlash = /^\d{4}\/\d{2}\/\d{2}$/.test(val);
+    var y4 = -1;
+    if (dateStd || dateCompact || dateSlash) y4 = parseInt(val.substring(0, 4), 10);
+    if (y4 < 1900 || y4 > curYear) { dateStd = false; dateCompact = false; dateSlash = false; }
     if (dateCompact) val = val.slice(0,4) + '-' + val.slice(4,6) + '-' + val.slice(6,8);
     else if (dateSlash) val = val.replace(/\//g, '-');
     if (dateStd || dateCompact || dateSlash) {
