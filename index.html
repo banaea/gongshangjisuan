@@ -2022,7 +2022,8 @@ function parseBirthInput(el) {
     if (/^\d{15}$/.test(val)) { showBirthTip('仅支持18位身份证号或出生日期'); return; }
     // 含非法字符
     if (!/^[\dXx/-]*$/.test(val)) { showBirthTip('请输入18位身份证号或出生日期'); return; }
-    // 其余为输入中间态，不报错
+    // 输入中间态：持续粉红底色+红色提示，直到录入完整合法值
+    showBirthTip('请输入18位身份证号或出生日期');
 }
 
 function getReductionRatio(std, yearsToRetire) {
