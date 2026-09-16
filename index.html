@@ -815,7 +815,8 @@ var _hmt = _hmt || [];
 
                     <div class="form-item">
                         <label>出生日期</label>
-                        <input type="date" id="birthDate" value="1969-01-01" onchange="updatePostAndRetire(); calculate()">
+                        <input type="text" id="birthDate" value="1969-01-01" placeholder="请输入18位身份证号或出生日期" autocomplete="off" oninput="parseBirthInput(this)">
+                        <div class="input-tip" id="birthDateTip" style="display:none;"></div>
                     </div>
 
                     <div class="form-item">
@@ -1932,6 +1933,75 @@ function calcRetireDate(birthStr, gender, postType, useDelay) {
     const d = String(finalRetire.getDate()).padStart(2, '0');
     return { retireDateStr: y + '-' + m + '-' + d, retireAgeMonths: baseRetireAgeMonths + delayMonths,
         delayMonths: delayMonths };
+}
+
+function validateIdCard(id) {
+    var weights = [7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2];
+    var codes = ['1','0','X','9','8','7','6','5','4','3','2'];
+    var sum = 0;
+    for (var i = 0; i < 17; i++) sum += parseInt(id.charAt(i)) * weights[i];
+    return codes[sum % 11] === id.charAt(17).toUpperCase();
+}
+
+function isValidDateStr(str) {
+    var parts = str.split('-').map(Number);
+    if (parts.length !== 3) return false;
+    var y = parts[0], m = parts[1], d = parts[2];
+    if (m < 1 || m > 12 || d < 1) return false;
+    var dim = new Date(y, m, 0).getDate();
+    return d <= dim;
+}
+
+function showBirthTip(msg) {
+    var tip = document.getElementById('birthDateTip');
+    if (!tip) return;
+    tip.textContent = msg;
+    tip.style.display = 'block';
+    tip.style.color = '#dc2626';
+}
+
+function hideBirthTip() {
+    var tip = document.getElementById('birthDateTip');
+    if (tip) tip.style.display = 'none';
+}
+
+function parseBirthInput(el) {
+    if (!el) return;
+    var val = el.value.trim();
+    hideBirthTip();
+    if (!val) return;
+    // 18位身份证号（含末位X）
+    if (/^\d{17}[\dXx]$/.test(val)) {
+        if (!validateIdCard(val)) { showBirthTip('身份证号校验失败，请核对'); return; }
+        var birth = val.substring(6, 14);
+        var birthStr = birth.slice(0,4) + '-' + birth.slice(4,6) + '-' + birth.slice(6,8);
+        if (!isValidDateStr(birthStr)) { showBirthTip('身份证号中的出生日期无效'); return; }
+        // 第17位奇男偶女，自动带出性别
+        var genderBit = parseInt(val.charAt(16));
+        var gen = (genderBit % 2 === 1) ? '男' : '女';
+        var g = document.getElementById('gender');
+        if (g && g.value !== gen) { g.value = gen; }
+        el.value = birthStr;
+        updatePostAndRetire(); calculate();
+        return;
+    }
+    // 三种日期格式统一规范化
+    var dateStd = /^\d{4}-\d{2}-\d{2}$/.test(val);
+    var dateCompact = /^\d{8}$/.test(val);
+    var dateSlash = /^\d{4}\/\d{2}\/\d{2}$/.test(val);
+    if (dateCompact) val = val.slice(0,4) + '-' + val.slice(4,6) + '-' + val.slice(6,8);
+    else if (dateSlash) val = val.replace(/\//g, '-');
+    if (dateStd || dateCompact || dateSlash) {
+        if (!isValidDateStr(val)) { showBirthTip('出生日期格式不正确'); return; }
+        el.value = val;
+        updatePostAndRetire(); calculate();
+        return;
+    }
+    // 15位旧证
+    if (/^\d{15}$/.test(val)) { showBirthTip('仅支持18位身份证号或出生日期'); return; }
+    // 含非法字符
+    if (!/^[\dXx/-]*$/.test(val)) { showBirthTip('请输入18位身份证号或出生日期'); return; }
+    // 其余为输入中间态，不报错
 }
 
 function getReductionRatio(std, yearsToRetire) {
@@ -4750,6 +4820,12 @@ function generateRemarkText() {
     }
 
     // ★★★ 结论部分 ★★★
+    // ★★★ 损失核定金额汇总（仅备注文本展示；导出docx不包含此段）★★★
+    var lossLabel = isDeath ? '死亡赔偿金' : '伤残赔偿金';
+    remark += '损失核定金额汇总：' + '\n';
+    remark += '核定总金额=医疗费+误工费+' + lossLabel + '\n';
+    remark += '=' + fmt(medFinal) + '元+' + fmt(workComp) + '元+' + fmt(disFinal) + '元' + '\n';
+    remark += '=' + fmt(medFinal + workComp + disFinal) + '元' + '\n\n';
     remark += '3、单位赔偿情况/单位授权我司支付情况及结论：\n';
     if (hasComp) {
         if (compStr.includes('+')) {
@@ -4762,9 +4838,9 @@ function generateRemarkText() {
         remark += '被保险人授权我司将理赔款直接支付伤者。\n';
         if (isReimbursedByInsurance && isDeath) {
             var deathAmount = 0;
-            remark += '本案最终核定金额为医疗费+误工费+死亡赔偿金=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + deathAmount.toFixed(2) + '元=' + (medFinal + workComp + deathAmount).toFixed(2) + '元。\n';
+            remark += '本案最终核定金额=医疗费+误工费+死亡赔偿金' + '\n' + '=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + deathAmount.toFixed(2) + '元' + '\n' + '=' + (medFinal + workComp + deathAmount).toFixed(2) + '元。' + '\n';
         } else {
-            remark += '本案最终核定金额为医疗费+误工费+' + disTypeLabel + '=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元=' + (medFinal + workComp + disFinal).toFixed(2) + '元。\n';
+            remark += '本案最终核定金额=医疗费+误工费+' + disTypeLabel + '\n' + '=' + medFinal.toFixed(2) + '元+' + workComp.toFixed(2) + '元+' + disFinal.toFixed(2) + '元' + '\n' + '=' + (medFinal + workComp + disFinal).toFixed(2) + '元。' + '\n';
         }
     }
     remark += '请领导审核，谢谢';
@@ -5061,7 +5137,7 @@ function exportWordDocument() {
                 continue;
             }
             if (inDisSection) {
-                if (line.indexOf('3、') !== -1) {
+                if (line.indexOf('3、') !== -1 || line.indexOf('损失核定金额汇总') !== -1) {
                     break;
                 }
                 if (line.trim() !== '') {
