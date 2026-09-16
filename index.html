@@ -111,7 +111,7 @@
         /* ---------- 表单 ---------- */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr)); /* 列严格等宽，不被控件内容撑开 */
+            grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.8fr) minmax(0,0.7fr) minmax(0,1.2fr) minmax(0,1fr); /* 固定比例：出生日期列加宽、是否离职列收窄，不被内容撑开 */
             gap: 8px;
         }
 
