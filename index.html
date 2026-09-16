@@ -851,7 +851,7 @@ var _hmt = _hmt || [];
                         </select>
                     </div>
 
-                    <div class="form-item" style="grid-column: span 2;">
+                    <div class="form-item" id="postFormItem" style="grid-column: span 2;">
                         <label>岗位类型</label>
                         <select id="postType" onchange="updatePostAndRetire(); calculate();">
                             <option value="工人">工人（原50岁退休）</option>
@@ -2178,6 +2178,7 @@ function syncAllBonusTypes(type) {
             const gender = $('gender').value || '男';
             const postSelect = $('postType');
             const postTip = $('postTip');
+            const postItem = $('postFormItem');
             const birthStr = $('birthDate').value;
             const postType = $('postType').value || '工人';
             const useDelay = $('useDelayRetire').checked || false;
@@ -2185,10 +2186,12 @@ function syncAllBonusTypes(type) {
             if (postSelect && postTip) {
                 if (gender === '男') {
                     postSelect.disabled = true;
+                    if (postItem) postItem.style.display = 'none';
                     postTip.textContent = '男性无需选择岗位类型';
                     postTip.style.color = '#d97706';
                 } else {
                     postSelect.disabled = false;
+                    if (postItem) postItem.style.display = '';
                     postTip.textContent = '⚠️ 请按实际选择';
                     postTip.style.color = '#d97706';
                 }
