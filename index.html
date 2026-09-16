@@ -111,7 +111,7 @@
         /* ---------- 表单 ---------- */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(6, minmax(0, 1fr)); /* 列严格等宽，不被控件内容撑开 */
             gap: 8px;
         }
 
