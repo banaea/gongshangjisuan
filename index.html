@@ -179,6 +179,11 @@
             margin-top: 4px;
         }
 
+        .input-error-bg {
+            background-color: #fde8e8 !important;
+            border-color: #f87171 !important;
+        }
+
         .checkbox-item {
             grid-column: 1 / -1;
             display: flex;
@@ -1958,11 +1963,23 @@ function showBirthTip(msg) {
     tip.textContent = msg;
     tip.style.display = 'block';
     tip.style.color = '#dc2626';
+    // 出生日期输入框及联动文本框（年龄/法定退休日期/距退休日期）同步粉红底色提示
+    var ids = ['birthDate', 'age', 'retireDateShow', 'retireDiffShow'];
+    for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        if (el) el.classList.add('input-error-bg');
+    }
 }
 
 function hideBirthTip() {
     var tip = document.getElementById('birthDateTip');
     if (tip) tip.style.display = 'none';
+    // 恢复联动文本框原样式
+    var ids = ['birthDate', 'age', 'retireDateShow', 'retireDiffShow'];
+    for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        if (el) el.classList.remove('input-error-bg');
+    }
 }
 
 function parseBirthInput(el) {
