@@ -111,7 +111,7 @@
         /* ---------- 表单 ---------- */
         .form-grid {
             display: grid;
-            grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.8fr) minmax(0,0.7fr) minmax(0,1.2fr) minmax(0,1fr); /* 固定比例：出生日期列加宽、是否离职列收窄，不被内容撑开 */
+            grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr); /* 温和比例：出生日期列相对宽、是否离职列相对窄，列4保持可用宽度 */
             gap: 8px;
         }
 
@@ -851,8 +851,8 @@ var _hmt = _hmt || [];
                         </select>
                     </div>
 
-                    <div class="form-item">
-                        <label>岗位类型（女性适用）</label>
+                    <div class="form-item" style="grid-column: span 2;">
+                        <label>岗位类型</label>
                         <select id="postType" onchange="updatePostAndRetire(); calculate();">
                             <option value="工人">工人（原50岁退休）</option>
                             <option value="干部">干部/管理岗（原55岁退休）</option>
@@ -861,7 +861,7 @@ var _hmt = _hmt || [];
                     </div>
 
                     <div class="form-item">
-                        <label>法定退休日期（自动）</label>
+                        <label>法定退休日期</label>
                         <input type="text" id="retireDateShow" readonly>
                         <div class="input-tip" style="color:#d97706; margin-top:4px;">满法定退休周岁当日</div>
                     </div>
