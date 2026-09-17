@@ -1986,7 +1986,7 @@ function parseBirthInput(el) {
     if (!el) return;
     var val = el.value.trim();
     hideBirthTip();
-    if (!val) return;
+    if (!val) { showBirthTip('请输入18位身份证号或出生日期'); return; }
     // 18位身份证号（含末位X）
     if (/^\d{17}[\dXx]$/.test(val)) {
         if (!validateIdCard(val)) { showBirthTip('身份证号校验失败，请核对'); return; }
