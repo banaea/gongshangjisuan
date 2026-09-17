@@ -1991,6 +1991,7 @@ function syncIdCardToRemark() {
     if (el) {
         el.value = gIdCardNo || '';
         if (gIdCardNo) el.classList.remove('input-error-bg');
+        else el.classList.add('input-error-bg');
     }
 }
 function onRmIdCardInput(el) {
@@ -4217,7 +4218,11 @@ function openRemarkModal() {
 
     $('rmEmployeeName').value = storedData?.rmEmployeeName || '';
     var idcEl = $('rmEmployeeIdCard');
-    if (idcEl) { idcEl.value = gIdCardNo || ''; idcEl.classList.remove('input-error-bg'); }
+    if (idcEl) {
+        idcEl.value = gIdCardNo || '';
+        if (gIdCardNo) idcEl.classList.remove('input-error-bg');
+        else idcEl.classList.add('input-error-bg');
+    }
     $('rmEmployeeId').value = storedData?.rmEmployeeId || '';
     $('rmInsuranceAmount').value = storedData?.rmInsuranceAmount || '';
     $('rmAccidentDate').value = storedData?.rmAccidentDate || $('accidentDate')?.value || $('leaveDate')?.value || '';
