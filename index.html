@@ -1982,11 +1982,13 @@ function hideBirthTip() {
     }
 }
 
+var gIdCardNo = '';
+
 function parseBirthInput(el) {
     if (!el) return;
     var val = el.value.trim();
     hideBirthTip();
-    if (!val) { showBirthTip('请输入18位身份证号或出生日期'); return; }
+    if (!val) { gIdCardNo = ''; showBirthTip('请输入18位身份证号或出生日期'); return; }
     // 18位身份证号（含末位X）
     if (/^\d{17}[\dXx]$/.test(val)) {
         if (!validateIdCard(val)) { showBirthTip('身份证号校验失败，请核对'); return; }
@@ -1999,6 +2001,7 @@ function parseBirthInput(el) {
         var g = document.getElementById('gender');
         if (g && g.value !== gen) { g.value = gen; }
         el.value = birthStr;
+        gIdCardNo = val;
         updatePostAndRetire(); calculate();
         return;
     }
@@ -2014,6 +2017,7 @@ function parseBirthInput(el) {
     else if (dateSlash) val = val.replace(/\//g, '-');
     if (dateStd || dateCompact || dateSlash) {
         if (!isValidDateStr(val)) { showBirthTip('出生日期格式不正确'); return; }
+        gIdCardNo = '';
         el.value = val;
         updatePostAndRetire(); calculate();
         return;
@@ -5420,7 +5424,7 @@ function exportWordDocument() {
                 createCell(d.accidentTimeStr, { align: AlignmentType.LEFT, size: 20 }),
             ]));
 
-            rows.push(labelValueBlock('证件号：', '伤情：', '', d.diagnosis));
+            rows.push(labelValueBlock('证件号：', '伤情：', gIdCardNo || '', d.diagnosis));
 
             // 费用明细行
             function detailHeader() {
