@@ -1108,6 +1108,8 @@ var _hmt = _hmt || [];
                         <div class="form-item">
                             <label>👤 员工姓名 <span class="required-star">*</span></label>
                             <input id="rmEmployeeName" type="text" placeholder="请输入员工姓名">
+                            <label style="margin-top:8px; display:block;">🪪 员工身份证号</label>
+                            <input id="rmEmployeeIdCard" type="text" placeholder="请输入18位身份证号" autocomplete="off" oninput="onRmIdCardInput(this)">
                         </div>
                         <div class="form-item">
                             <label>🆔 标的/工种 <span class="required-star">*</span></label>
@@ -1983,12 +1985,34 @@ function hideBirthTip() {
 }
 
 var gIdCardNo = '';
+var _idCardSyncing = false;
+function syncIdCardToRemark() {
+    var el = document.getElementById('rmEmployeeIdCard');
+    if (el) {
+        el.value = gIdCardNo || '';
+        if (gIdCardNo) el.classList.remove('input-error-bg');
+    }
+}
+function onRmIdCardInput(el) {
+    if (!el) return;
+    var val = el.value.trim();
+    if (/^\d{17}[\dXx]$/.test(val) && validateIdCard(val)) {
+        el.classList.remove('input-error-bg');
+        _idCardSyncing = true;
+        gIdCardNo = val;
+        var b = document.getElementById('birthDate');
+        if (b && b.value !== val) { b.value = val; parseBirthInput(b); }
+        _idCardSyncing = false;
+    } else {
+        el.classList.add('input-error-bg');
+    }
+}
 
 function parseBirthInput(el) {
     if (!el) return;
     var val = el.value.trim();
     hideBirthTip();
-    if (!val) { gIdCardNo = ''; showBirthTip('请输入18位身份证号或出生日期'); return; }
+    if (!val) { gIdCardNo = ''; syncIdCardToRemark(); showBirthTip('请输入18位身份证号或出生日期'); return; }
     // 18位身份证号（含末位X）
     if (/^\d{17}[\dXx]$/.test(val)) {
         if (!validateIdCard(val)) { showBirthTip('身份证号校验失败，请核对'); return; }
@@ -2002,6 +2026,7 @@ function parseBirthInput(el) {
         if (g && g.value !== gen) { g.value = gen; }
         el.value = birthStr;
         gIdCardNo = val;
+        if (!_idCardSyncing) syncIdCardToRemark();
         updatePostAndRetire(); calculate();
         return;
     }
@@ -2017,7 +2042,7 @@ function parseBirthInput(el) {
     else if (dateSlash) val = val.replace(/\//g, '-');
     if (dateStd || dateCompact || dateSlash) {
         if (!isValidDateStr(val)) { showBirthTip('出生日期格式不正确'); return; }
-        gIdCardNo = '';
+        gIdCardNo = ''; syncIdCardToRemark();
         el.value = val;
         updatePostAndRetire(); calculate();
         return;
@@ -4191,6 +4216,8 @@ function openRemarkModal() {
     var storedData = getStoredData();
 
     $('rmEmployeeName').value = storedData?.rmEmployeeName || '';
+    var idcEl = $('rmEmployeeIdCard');
+    if (idcEl) { idcEl.value = gIdCardNo || ''; idcEl.classList.remove('input-error-bg'); }
     $('rmEmployeeId').value = storedData?.rmEmployeeId || '';
     $('rmInsuranceAmount').value = storedData?.rmInsuranceAmount || '';
     $('rmAccidentDate').value = storedData?.rmAccidentDate || $('accidentDate')?.value || $('leaveDate')?.value || '';
