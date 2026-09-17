@@ -5255,8 +5255,8 @@ function exportWordDocument() {
     }
 
     Promise.all([
-        loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js'),
-        loadScript('https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js')
+        loadScript('./lib/docx.umd.min.js'),
+        loadScript('./lib/FileSaver.min.js')
     ]).then(function() {
         createDocx();
     }).catch(function(err) {
