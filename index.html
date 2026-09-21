@@ -474,6 +474,7 @@
             width: 95%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             position: relative;
+            overflow: hidden;
         }
 
         .remark-modal .modal-title {
@@ -596,9 +597,9 @@
             -ms-user-select: none;
             cursor: default;
             flex: 1;
-            min-height: 450px;
-            max-height: 600px;
-            height: 100%;
+            min-height: 0;
+            max-height: none;
+            height: auto;
         }
 
         .remark-modal .copy-tip-btn {
@@ -1100,7 +1101,7 @@ var _hmt = _hmt || [];
             </div>
             <div class="modal-sub">左侧填写信息，右侧实时预览备注</div>
 
-            <div style="display: flex; gap: 24px; flex: 1; min-height: 0; flex-wrap: wrap;">
+            <div style="display: flex; gap: 24px; flex: 1; min-height: 0; flex-wrap: nowrap;">
                 <!-- 左侧：输入区 -->
                 <div style="flex: 0 0 38%; min-width: 300px; max-height: 75vh; overflow-y: auto; padding-right: 4px;">
 
@@ -1194,7 +1195,7 @@ var _hmt = _hmt || [];
                 </div>
 
                 <!-- 右侧：预览区 -->
-                <div style="flex: 1 1 58%; min-width: 350px; display: flex; flex-direction: column; min-height: 500px;">
+                <div style="flex: 1 1 58%; min-width: 350px; display: flex; flex-direction: column; min-height: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-shrink:0;">
     <span style="font-weight:600; font-size:15px; color:#111827;">📌 备注预览</span>
     <div style="display:flex; gap:8px;">
@@ -1202,7 +1203,7 @@ var _hmt = _hmt || [];
         <button class="copy-tip-btn" onclick="copyRemarkText()" style="padding:5px 16px; background:#059669; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px;">📋 复制</button>
     </div>
 </div>
-                    <div class="remark-output" id="remarkOutput" style="flex:1; min-height:450px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:14px 16px; white-space:pre-wrap; font-size:13px; line-height:1.7; overflow-y:auto; font-family:'Segoe UI',Roboto,sans-serif; height:100%; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; cursor: default;">
+                    <div class="remark-output" id="remarkOutput" style="flex:1; min-height:0; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:14px 16px; white-space:pre-wrap; font-size:13px; line-height:1.7; overflow-y:auto; font-family:'Segoe UI',Roboto,sans-serif; height:auto; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; cursor: default;">
                         💡 请填写左侧信息，备注将自动生成
                     </div>
                 </div>
@@ -4352,6 +4353,7 @@ function autoUpdateRemark() {
         var output = $('remarkOutput');
         var remark = generateRemarkText();
         output.textContent = remark || '（请补充必要信息）';
+        output.scrollTop = 0;
         
         // ★★★ 检查必填项，控制是否可选中 ★★★
         var allFilled = checkAllRequiredFilled();
