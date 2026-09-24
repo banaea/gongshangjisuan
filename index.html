@@ -5293,8 +5293,8 @@ function exportWordDocument() {
     }
 
     Promise.all([
-        loadScript('./lib/docx.umd.min.js'),
-        loadScript('./lib/FileSaver.min.js')
+        loadScript('./lib/docx.umd.min.js?v=20260924'),
+        loadScript('./lib/FileSaver.min.js?v=20260924')
     ]).then(function() {
         createDocx();
     }).catch(function(err) {
