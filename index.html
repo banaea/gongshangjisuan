@@ -5486,12 +5486,12 @@ function exportWordDocument() {
             rows.push(detailRow('护理费', '', '', ''));
             rows.push(detailRow('住院伙补', '', '', ''));
             rows.push(detailRow('后续治疗费', '', '', ''));
-            rows.push(detailRow('总 计', '', safeFixed(d.finalCalcTotal), d.fullConclusion));
+            rows.push(detailRow('总 计', '', safeFixed(d.finalCalcTotal), ''));
 
-            // 备注行
+            // 备注行：理赔结论文本移至备注右侧空白单元格（总 计行核定说明列留空）
             rows.push(createRow([
                 createCell('备 注', { align: AlignmentType.CENTER, size: 22, bold: true }),
-                createCell('', { colSpan: 6, align: AlignmentType.LEFT, size: 20 }),
+                createCell(d.fullConclusion, { colSpan: 6, align: AlignmentType.LEFT, size: 20 }),
             ]));
 
             var table = new Table({
