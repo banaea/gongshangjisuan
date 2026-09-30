@@ -5489,9 +5489,11 @@ function exportWordDocument() {
             rows.push(detailRow('总 计', '', safeFixed(d.finalCalcTotal), ''));
 
             // 备注行：理赔结论文本移至备注右侧空白单元格（总 计行核定说明列留空）
+            // 导出 Word 时去掉结尾客套语"请领导审核，谢谢"（页面备注预览保留原文）
+            var remarkConclusion = String(d.fullConclusion || '').replace(/，?请领导审核，谢谢。?\s*$/g, '').replace(/\s+$/g, '');
             rows.push(createRow([
                 createCell('备 注', { align: AlignmentType.CENTER, size: 22, bold: true }),
-                createCell(d.fullConclusion, { colSpan: 6, align: AlignmentType.LEFT, size: 20 }),
+                createCell(remarkConclusion, { colSpan: 6, align: AlignmentType.LEFT, size: 20 }),
             ]));
 
             var table = new Table({
