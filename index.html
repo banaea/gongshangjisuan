@@ -1685,6 +1685,17 @@ var _hmt = _hmt || [];
         // 全国统一标准常量
         const DISABILITY_BONUS_MONTHS = { 1: 27, 2: 25, 3: 23, 4: 21, 5: 18, 6: 16, 7: 13, 8: 11, 9: 9, 10: 7 };
         const DISABILITY_ALLOWANCE_RATIO = { 1: 0.9, 2: 0.85, 3: 0.8, 4: 0.75 };
+        // 各省月最低工资标准（第一档，元/月）——数据来源：人社部《全国各省、自治区、直辖市最低工资标准情况（截至2025年10月1日）》
+        // 用途：伤残津贴按"本人工资×等级比例"计算后，低于当地最低工资标准的，由工伤保险基金补足差额
+        const MIN_WAGE_BY_PROVINCE = {
+            "北京市": 2540, "天津市": 2510, "河北省": 2200, "山西省": 2150, "内蒙古自治区": 2270,
+            "辽宁省": 2100, "吉林省": 2120, "黑龙江省": 2080, "上海市": 2740, "江苏省": 2490,
+            "浙江省": 2490, "安徽省": 2320, "福建省": 2265, "江西省": 2000, "山东省": 2400,
+            "河南省": 2100, "湖北省": 2210, "湖南省": 2200, "广东省": 2500, "广西壮族自治区": 2200,
+            "海南省": 2010, "重庆市": 2330, "四川省": 2330, "贵州省": 2130, "云南省": 2170,
+            "西藏自治区": 2100, "陕西省": 2160, "甘肃省": 2020, "青海省": 2080, "宁夏回族自治区": 2235,
+            "新疆维吾尔自治区": 2070
+        };
 
         // 理赔备注需要校验的字段
         const REQUIRED_FIELDS = [
@@ -2770,7 +2781,13 @@ function onNonMedicalModeChange() {
                 var allowanceTotal = 0;
                 if (level >= 1 && level <= 4) {
                     var ratio = DISABILITY_ALLOWANCE_RATIO[level] || 0;
-                    var allowanceMonthly = baseSalary * ratio;
+                    var minWage = MIN_WAGE_BY_PROVINCE[province] || 0;
+                    // 计发基数直接用本人工资（不做社平60%保底/300%封顶）；按比例计算金额与当地最低工资标准比较取 max（低于最低工资由基金补足差额）
+                    var allowanceByRatio = salary * ratio;
+                    var allowanceMonthly = Math.max(allowanceByRatio, minWage);
+                    var minWageNote = (minWage > 0 && allowanceByRatio < minWage)
+                        ? '（按比例计算 ' + fmt(allowanceByRatio) + ' 元低于当地最低工资标准 ' + fmt(minWage) + ' 元，由工伤保险基金补足差额）'
+                        : '';
                     var accidentDate = leaveStr || calcDateStr;
                     var stopWorkEndMonth = addDaysToMonth(accidentDate, stopDays);
                     var allowanceStartMonth = stopWorkEndMonth;
@@ -2787,8 +2804,8 @@ function onNonMedicalModeChange() {
                             '伤残津贴起始年月：' + allowanceStartMonth + '\n' +
                             '法定退休日期：' + retireInfo.retireDateStr + '\n' +
                             '计发月数：' + allowancePayMonths + ' 个月\n' +
-                            '月标准计算：' + fmt(baseSalary) + ' 元 × ' + (ratio * 100).toFixed(0) + '% = ' + fmt(
-                                allowanceMonthly) + ' 元/月\n' +
+                            '月标准计算：' + fmt(salary) + ' 元（本人工资）× ' + (ratio * 100).toFixed(0) + '% = ' + fmt(
+                                allowanceByRatio) + ' 元/月' + minWageNote + '\n' +
                             '一次性支付总额：' + fmt(allowanceMonthly) + ' 元/月 × ' + allowancePayMonths +
                             ' 个月 = ' + fmt(allowanceTotal) + ' 元';
                     }
