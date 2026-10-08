@@ -2807,7 +2807,8 @@ function onNonMedicalModeChange() {
                             '月标准计算：' + fmt(salary) + ' 元（本人工资）× ' + (ratio * 100).toFixed(0) + '% = ' + fmt(
                                 allowanceByRatio) + ' 元/月' + minWageNote + '\n' +
                             '一次性支付总额：' + fmt(allowanceMonthly) + ' 元/月 × ' + allowancePayMonths +
-                            ' 个月 = ' + fmt(allowanceTotal) + ' 元';
+                            ' 个月 = ' + fmt(allowanceTotal) + ' 元\n' +
+                            '<span style="color:#d97706; font-weight:bold;">⚠️ 最低工资标准每年更新，请人工确认当地最新数值后再使用</span>';
                     }
                     allowanceHtml =
                         '<tr><td class="item-name">伤残津贴（一次性计发）</td>' +
