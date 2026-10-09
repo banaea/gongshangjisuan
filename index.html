@@ -479,18 +479,53 @@
             margin: 14px 0;
         }
         .ocr-preview-item {
-            width: 110px;
+            width: 150px;
+            height: auto;
+            min-height: 106px;
             position: relative;
             border: 1px solid #e5e7eb;
-            background: #fff;
-            padding: 4px;
+            background: #f9fafb;
             border-radius: 4px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+        }
+        .ocr-preview-item .ocr-preview-img-box {
+            width: 100%;
+            height: 106px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
         .ocr-preview-item img {
-            width: 100px;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
             height: auto;
             display: block;
+            object-fit: contain;
         }
+        .ocr-row-labels {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #374151;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .ocr-row-link {
+            color: #1a56db;
+            text-decoration: underline;
+            cursor: pointer;
+            margin: 0 1px;
+            font-weight: 600;
+        }
+        .ocr-row-link:hover { color: #1e3a8a; }
+        .ocr-row-empty { color: #9ca3af; }
+        .ocr-table tr.green-row td { background-color: #d1fae5 !important; }
         .ocr-preview-item .del-btn {
             position: absolute;
             right: -6px;
@@ -6481,18 +6516,27 @@ function renderOcrPreview() {
     const wrap = document.createElement('div');
     wrap.className = 'ocr-preview-item';
     wrap.dataset.uid = item.uid;
+    const imgBox = document.createElement('div');
+    imgBox.className = 'ocr-preview-img-box';
     if (item.isPdf) {
       const ph = document.createElement('div');
-      ph.style.cssText = 'width:100px;height:130px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;color:#6b7280;font-size:12px;text-align:center;word-break:break-all;padding:4px;box-sizing:border-box;';
+      ph.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f3f4f6;color:#6b7280;font-size:11px;text-align:center;word-break:break-all;padding:4px;box-sizing:border-box;';
       ph.textContent = 'PDF\n' + item.file.name;
-      wrap.appendChild(ph);
+      imgBox.appendChild(ph);
     } else {
       const img = document.createElement('img');
       const reader = new FileReader();
       reader.onload = ev => { img.src = ev.target.result; item.base64 = ev.target.result.split(',')[1]; };
       reader.readAsDataURL(item.file);
-      wrap.appendChild(img);
+      imgBox.appendChild(img);
     }
+    wrap.appendChild(imgBox);
+    // 行号标签区（点击可重新识别）
+    const labels = document.createElement('div');
+    labels.className = 'ocr-row-labels';
+    labels.dataset.uid = item.uid;
+    labels.innerHTML = '<span class="ocr-row-empty">识别后显示对应行号</span>';
+    wrap.appendChild(labels);
     const delBtn = document.createElement('button');
     delBtn.className = 'del-btn';
     delBtn.textContent = '×';
@@ -7046,6 +7090,7 @@ function insertOcrRow(seq, data, idx) {
   const tr = document.createElement('tr');
   if (!data.error && data.billType === "重复票据") tr.classList.add('repeat-row');
   if (data.isBlank) { tr.classList.add('blank-row'); tr.style.opacity = '0.7'; }
+  if (data.greenFlag) tr.classList.add('green-row');
   if (data.error) {
     tr.innerHTML = `<td>${seq}</td><td colspan="7" style="color:#dc2626">${data.error}</td><td></td>`;
   } else {
@@ -7253,6 +7298,7 @@ function refreshAllTableAndSum() {
   medicalReimbursedInput.value = sumMed.toFixed(2);
   calcPersonal();
   try { if (window.onNonMedicalModeChange) onNonMedicalModeChange(); } catch (e) {}
+  updatePreviewRowLabels();
 }
 
 // 个人负担联动
@@ -7274,6 +7320,218 @@ $('exportExcelBtn').onclick = () => { exportMedicalExcel(); };
 // 记录文件名供完整数据弹层显示
 const _origAdd = addOcrFiles;
 window.__ocrFileNames = {};
+
+// ---------- 缩略图行号同步（点击行号 → 级联重识别） ----------
+function updatePreviewRowLabels() {
+  const map = {};
+  finishedOcrRecords.forEach((r, i) => {
+    if (!r.bindUid) return;
+    if (!map[r.bindUid]) map[r.bindUid] = [];
+    map[r.bindUid].push(i + 1);
+  });
+  const labelsAll = ocrPreviewBox.querySelectorAll('.ocr-row-labels');
+  labelsAll.forEach(lb => {
+    const rows = map[lb.dataset.uid] || [];
+    if (lb.dataset.busy === '1') return; // 重识别中保持状态
+    if (!rows.length) {
+      lb.innerHTML = '<span class="ocr-row-empty">无识别结果</span>';
+      return;
+    }
+    lb.innerHTML = '对应行：' + rows.map(n =>
+      `<span class="ocr-row-link" data-uid="${lb.dataset.uid}" data-rows="${rows.join('、')}">${n}</span>`
+    ).join('、');
+  });
+  ocrPreviewBox.querySelectorAll('.ocr-row-link').forEach(ln => {
+    ln.onclick = () => {
+      const uid = ln.dataset.uid;
+      const rows = ln.dataset.rows;
+      const item = ocrFileList.find(f => f.uid === uid);
+      const fname = item ? item.file.name : '（文件已移除）';
+      if (!confirm(`该数据来自文件：${fname}\n对应表格第 ${rows} 行。\n\n将按「正则 → AI智能体 → 本地引擎」逐级重新识别，是否继续？`)) return;
+      reRecognizeFile(uid, rows);
+    };
+  });
+}
+
+// 绿色底色提示（重识别完成）
+function showGreenToast(msg) {
+  let el = document.getElementById('ocrGreenToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ocrGreenToast';
+    el.style.cssText = 'position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:10001;box-shadow:0 4px 16px rgba(0,0,0,.15);opacity:0;transition:opacity .3s;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 3200);
+}
+
+// 用正则解析结果更新既有记录（仅覆盖非空新值，避免抹掉已有正确值）
+function applyParsed(rec, d) {
+  if (d.invoiceNo) rec.invoiceNo = d.invoiceNo;
+  if (d.payerName) rec.payerName = d.payerName;
+  if (d.visitDate) rec.visitDate = d.visitDate;
+  if (d.makeOutDate) rec.makeOutDate = d.makeOutDate;
+  if (d.totalMoney && d.totalMoney !== '0.00') rec.totalMoney = d.totalMoney;
+  if (d.medicareFundPay && d.medicareFundPay !== '0.00') rec.medicareFundPay = d.medicareFundPay;
+  if (d.billType && !/^private/.test(rec.billType)) rec.billType = d.billType;
+  rec.originBillType = rec.billType;
+  rec.originTotal = rec.totalMoney;
+  rec.originMedicare = rec.medicareFundPay;
+}
+
+// 级联重识别：L1 正则 → L2 Agent → L3 引擎重跑 → L4 空值兜底；最终统一标绿
+async function reRecognizeFile(uid, rowLabel) {
+  const suid = String(uid);
+  const lb = ocrPreviewBox.querySelector('.ocr-row-labels[data-uid="' + suid + '"]');
+  if (lb) { lb.dataset.busy = '1'; lb.innerHTML = '<span class="ocr-row-link" style="text-decoration:none;cursor:default;color:#b45309;">重识别中…</span>'; }
+  try {
+    const records = finishedOcrRecords.filter(r => String(r.bindUid) === suid);
+    const pend = records.filter(r => !r.error && r.rawText);
+    if (!pend.length) {
+      // 全为错误行（如 PDF 解析失败）→ 直接引擎重跑
+      await reRunEngineLayer(uid);
+      finishGreen(uid, rowLabel);
+      return;
+    }
+    // L1 正则（逐条用缓存原文重跑）
+    let allOk = true;
+    for (const rec of pend) {
+      rec._pending = false;
+      const d = parseOcrText(rec.rawText);
+      d.failFields = failFieldsOf(d);
+      d.warnings = validateRecord(d);
+      if (!d.failFields.length && !d.warnings.length) {
+        applyParsed(rec, d);
+        rec.source = 'regex';
+        rec.greenFlag = true;
+        rec.aiDone = false;
+      } else {
+        allOk = false;
+        rec._pending = true;
+      }
+    }
+    if (allOk) { finishGreen(uid, rowLabel); return; }
+    // L2 Agent（对正则未通过的逐条解析，等待结果）
+    let agentOk = true;
+    for (const rec of pend) {
+      if (!rec._pending) continue;
+      const ai = await aiEnqueue(() => aiParseOcrText(rec.rawText));
+      if (ai) {
+        if (ai.invoiceNo) rec.invoiceNo = ai.invoiceNo;
+        if (ai.payerName) rec.payerName = ai.payerName;
+        if (ai.visitDate) rec.visitDate = ai.visitDate;
+        if (ai.makeOutDate) rec.makeOutDate = ai.makeOutDate;
+        if (ai.totalMoney) rec.totalMoney = ai.totalMoney;
+        if (ai.medicareFundPay) rec.medicareFundPay = ai.medicareFundPay;
+        if (ai.billType && !/^private/.test(rec.billType)) rec.billType = ai.billType;
+        rec.source = 'agent';
+        rec.aiDone = true;
+        rec.failFields = failFieldsOf(rec);
+        rec.warnings = validateRecord(rec);
+        if (rec.failFields.length || rec.warnings.length) { agentOk = false; rec._pending = true; }
+        else rec.greenFlag = true;
+      } else { agentOk = false; rec._pending = true; }
+    }
+    if (agentOk) { finishGreen(uid, rowLabel); return; }
+    // L3 引擎重跑整个文件（替换该文件全部记录）
+    await reRunEngineLayer(uid);
+    finishGreen(uid, rowLabel);
+  } catch (e) {
+    console.error('重识别过程异常', e);
+    showGreenToast('重识别过程出错，请重试');
+  } finally {
+    if (lb) { delete lb.dataset.busy; }
+    updatePreviewRowLabels();
+  }
+}
+
+// L3 引擎重跑：按文件/PDF页重新预测 → 拆分 → 正则 → 必要 Agent → 仍异常空值兜底
+async function reRunEngineLayer(uid) {
+  const suid = String(uid);
+  const fileItem = ocrFileList.find(f => String(f.uid) === suid);
+  if (!fileItem) return;
+  const engine = await getEngine();
+  engineReady = true;
+  // 删除该文件旧记录（原地 splice 保持 window.finishedOcrRecords 引用一致）
+  for (let i = finishedOcrRecords.length - 1; i >= 0; i--) {
+    if (String(finishedOcrRecords[i].bindUid) === suid) finishedOcrRecords.splice(i, 1);
+  }
+  let tasks = [];
+  if (fileItem.isPdf) {
+    let pages;
+    try { pages = await renderPdfToImages(fileItem.file); }
+    catch (e) {
+      finishedOcrRecords.push({ error: `重识别PDF解析失败：${e.message}`, bindUid: uid, greenFlag: true });
+      return;
+    }
+    pages.forEach(p => tasks.push({ fileItem, blob: p.blob, pageNo: p.pageNo }));
+  } else {
+    tasks.push({ fileItem, blob: fileItem.file, pageNo: 0 });
+  }
+  for (const t of tasks) {
+    const name = t.fileItem.file.name + (t.pageNo ? `（第${t.pageNo}页）` : '');
+    try {
+      const results = await engine.predict(t.blob, { textDetLimitSideLen: 1280, textDetLimitType: 'max', textRecScoreThresh: 0.5 });
+      const items = (results && results[0] && results[0].items) || [];
+      const fullJson = JSON.stringify(results, null, 2);
+      const invoiceGroups = splitInvoices(preprocessItems(items));
+      for (let g = 0; g < invoiceGroups.length; g++) {
+        const groupItems = invoiceGroups[g];
+        const rawText = groupItems.map(it => it.text).join('\n');
+        const data = parseOcrText(rawText);
+        data.failFields = failFieldsOf(data);
+        data.warnings = validateRecord(data);
+        data.source = 'regex';
+        data.bindUid = uid;
+        data.fileName = name + (invoiceGroups.length > 1 ? `（票${g + 1}/${invoiceGroups.length}）` : '');
+        data.rawLines = groupItems;
+        data.rawText = rawText;
+        data.fullJson = fullJson;
+        data.originBillType = data.billType;
+        data.originTotal = data.totalMoney;
+        data.originMedicare = data.medicareFundPay;
+        data.greenFlag = true;
+        if (data.failFields.length || data.warnings.length) {
+          const ai = await aiEnqueue(() => aiParseOcrText(rawText));
+          if (ai) {
+            if (ai.invoiceNo) data.invoiceNo = ai.invoiceNo;
+            if (ai.payerName) data.payerName = ai.payerName;
+            if (ai.visitDate) data.visitDate = ai.visitDate;
+            if (ai.makeOutDate) data.makeOutDate = ai.makeOutDate;
+            if (ai.totalMoney) data.totalMoney = ai.totalMoney;
+            if (ai.medicareFundPay) data.medicareFundPay = ai.medicareFundPay;
+            if (ai.billType && !/^private/.test(data.billType)) data.billType = ai.billType;
+            data.source = 'agent';
+            data.failFields = failFieldsOf(data);
+            data.warnings = validateRecord(data);
+          }
+        }
+        // 最终仍异常 → L4 空值兜底（对应字段画 -）
+        if (data.failFields.length || data.warnings.length) {
+          data.failFlag = true;
+          ['invoiceNo', 'payerName', 'visitDate', 'makeOutDate', 'totalMoney', 'medicareFundPay'].forEach(k => {
+            if (data.failFields.includes(k)) data[k] = '-';
+          });
+          if ((data.warnings || []).some(w => /医保统筹/.test(w))) data.medicareFundPay = '-';
+        }
+        finishedOcrRecords.push(data);
+      }
+      fileItem.hasRecognized = true;
+    } catch (err) {
+      console.error('重识别引擎异常', err);
+      finishedOcrRecords.push({ error: `重识别失败：${err.message}`, bindUid: uid, greenFlag: true });
+    }
+  }
+}
+
+function finishGreen(uid, rowLabel) {
+  finishedOcrRecords.forEach(r => { if (r.bindUid === uid && !r.error) r.greenFlag = true; });
+  refreshAllTableAndSum();
+  showGreenToast('已重新识别完毕，该行数据标绿');
+}
 
 </script>
 
