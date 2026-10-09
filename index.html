@@ -6615,6 +6615,15 @@ ocrSubmitBtn.onclick = async () => {
         const groupItems = invoiceGroups[g];
         const rawText = groupItems.map(it => it.text).join('\n');
         const data = parseOcrText(rawText);
+        // ROI 日期重识别：主识别日期异常（缺失/错乱/单日期住院）时，裁「住院时间」行局部区域单独识别，
+        // 规避邻近文本粘连导致的日期错乱；成功则纯本地修复，不再走 Agent
+        if (!data.visitDate || data.dateOcrErr || !/^\d{4}-\d{2}-\d{2}至\d{4}-\d{2}-\d{2}$/.test(data.visitDate || '')) {
+          const roiVisit = await roiOcrHospitalDate(t.blob, groupItems);
+          if (roiVisit) {
+            data.visitDate = roiVisit;
+            delete data.dateOcrErr;
+          }
+        }
         data.failFields = failFieldsOf(data);
         data.warnings = validateRecord(data);
         data.source = 'regex';
@@ -6667,16 +6676,76 @@ ocrSubmitBtn.onclick = async () => {
 };
 
 // ---------- 识别文本 → 结构化字段（规则解析，表格可人工校正） ----------
-// 金额清洗：删千分位/全角逗号；识别把千分位逗号误识为点时，最后一个点保留为小数点，其余点删除
+// 金额清洗：删千分位/全角逗号/数字间空格；识别把千分位逗号误识为点时，最后一个点保留为小数点，其余点删除；保留负号
 function cleanAmount(s) {
-  let t = String(s).trim().replace(/[,，]/g, "");
+  let t = String(s).trim().replace(/[,\uFF0C\s]/g, "");
+  const neg = /^[-－]/.test(t) ? "-" : "";
+  t = t.replace(/^[-－]/, "");
   const dots = [];
   for (let i = 0; i < t.length; i++) if (t[i] === ".") dots.push(i);
   if (dots.length > 1) {
     const last = dots[dots.length - 1];
     t = t.slice(0, last).replace(/\./g, "") + t.slice(last);
   }
-  return t;
+  return neg + t;
+}
+
+// 中文大写金额转数字：玖仟贰佰肆拾壹元柒角陆分 → 9241.76；贰仟贰佰捌拾陆圆整 → 2286.00
+// 用于"金额合计（大写）"字段的交叉验证与兜底（借鉴开源发票识别项目的多策略校验思想）
+function cnUpperToNumber(s) {
+  if (!s) return '';
+  const chnNum = {零:0,〇:0,一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,壹:1,贰:2,叁:3,肆:4,伍:5,陆:6,柒:7,捌:8,玖:9};
+  const chnUnit = {拾:10,佰:100,仟:1000,万:10000,亿:100000000};
+  const chnFrac = {角:0.1,分:0.01};
+  const t = String(s).replace(/\s+/g, '');
+  const m = t.match(/[零〇一二三四五六七八九壹贰叁肆伍陆柒捌玖拾佰仟万亿]+(?:元|圆)?(?:[零〇一二三四五六七八九壹贰叁肆伍陆柒捌玖]?[角])?(?:[零〇一二三四五六七八九壹贰叁肆伍陆柒捌玖]?[分])?/);
+  if (!m) return '';
+  const str = m[0];
+  let result = 0, section = 0, number = 0, fracVal = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (chnNum[c] !== undefined) { number = chnNum[c]; continue; }
+    if (c === '元' || c === '圆') { section += number; result += section; section = 0; number = 0; continue; }
+    if (chnUnit[c]) {
+      const u = chnUnit[c];
+      // 中文大写"拾元整"等省略"壹"：unit=拾 且无前置数字时按 1×10 处理
+      if (number === 0 && u === 10) number = 1;
+      if (u === 10000 || u === 100000000) { section = (section + number) * u; result += section; section = 0; number = 0; }
+      else { section += number * u; number = 0; }
+      continue;
+    }
+    if (chnFrac[c]) { fracVal += (number || 0) * chnFrac[c]; number = 0; }
+  }
+  const out = ((result + section + number) + fracVal).toFixed(2);
+  return out === '0.00' ? '' : out;
+}
+
+// 日期合法性：YYYY-MM-DD 格式且月/日合法
+function isValidDateStr(s) {
+  const m = String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return false;
+  const mo = Number(m[2]), da = Number(m[3]);
+  return mo >= 1 && mo <= 12 && da >= 1 && da <= 31;
+}
+// 8 位数字日期 → YYYY-MM-DD
+function fmtEight(s8) {
+  return `${s8.slice(0,4)}-${s8.slice(4,6)}-${s8.slice(6,8)}`;
+}
+// 编辑距离 ≤1 修复：bad8（如 28248994）相对 ref8（如 20240918）逐位替换，返回合法日期；无法修复返回 ''
+function fixEightDigits(bad8, ref8) {
+  if (!/^\d{8}$/.test(bad8) || !/^\d{8}$/.test(ref8)) return '';
+  if (isValidDateStr(fmtEight(bad8))) return fmtEight(bad8);
+  // 逐位替换为参考位（Levenshtein 距离 1 内）
+  for (let i = 0; i < 8; i++) {
+    if (bad8[i] === ref8[i]) continue;
+    const cand = bad8.slice(0, i) + ref8[i] + bad8.slice(i + 1);
+    if (isValidDateStr(fmtEight(cand))) return fmtEight(cand);
+  }
+  // bad8 与 ref8 仅差 1 位：直接取参考日期
+  let d = 0;
+  for (let i = 0; i < 8; i++) if (bad8[i] !== ref8[i]) d++;
+  if (d <= 1 && isValidDateStr(fmtEight(ref8))) return fmtEight(ref8);
+  return '';
 }
 
 // ---------- AI 结构化解析（腾讯元器 Agent，规则解析的升级版） ----------
@@ -6858,8 +6927,9 @@ function maybeTriggerAgent(rec) {
     if (ai.totalMoney) rec.totalMoney = ai.totalMoney;
     if (ai.medicareFundPay) rec.medicareFundPay = ai.medicareFundPay;
     if (ai.billType && !/^private/.test(rec.billType)) rec.billType = ai.billType;
-    // Agent 输出后重新校验（异常仍保留告警标记）
+    // Agent 输出后重新校验（异常仍保留告警标记）；Agent 已补齐字段时清除"OCR错位"残留标记
     rec.failFields = failFieldsOf(rec);
+    if (!rec.failFields.length) delete rec.dateOcrErr;
     rec.warnings = validateRecord(rec);
     refreshAllTableAndSum();
   });
@@ -6902,8 +6972,9 @@ function parsePrivateHospital(t) {
   // 发票号码
   let m = t.match(/发票号码[:：]\s*([0-9A-Za-z]{4,30})/);
   if (m) ret.invoiceNo = m[1].trim();
-  // 患者姓名（购买方名称，兼容"名 称:"空格）
-  m = t.match(/名\s*称[:：]\s*([^\s\n]{2,16})/);
+  // 患者姓名（购买方名称，兼容"名 称:"空格、无冒号、购买方名称前缀）
+  m = t.match(/名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/) ||
+      t.match(/购买方\s*名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/);
   if (m) ret.payerName = m[1].trim();
   // 开票日期（中文格式 2023年04月04日 → 2023-04-04；也兼容 2023-04-04）
   m = t.match(/开票日期[:：]\s*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/) ||
@@ -6917,13 +6988,14 @@ function parsePrivateHospital(t) {
   else if (d2) ret.visitDate = d2;
   // 类型：有入院/出院/住院号 → 私立医院住院票据；否则私立医院门诊票据
   ret.billType = (d1 || d2 || /住院号/.test(t)) ? 'private_inpatient' : 'private_outpatient';
-  // 总金额：优先个人支付（含医保扣除后的实付），其次"合计 ¥"或"(小写)¥"
+  // 总金额：优先个人支付（含医保扣除后的实付），其次价税合计/合计 ¥/(小写)¥
   m = t.match(/个人支付[:：]?\s*[¥￥]?\s*([0-9][0-9.,]*)/) ||
+      t.match(/价税合计\s*[:：]?\s*[^\d]*[¥￥]?\s*([0-9][0-9.,]*)/) ||
       t.match(/合计\s*[¥￥]?\s*([0-9][0-9.,]*)/) ||
       t.match(/\(小写\)\s*[¥￥]?\s*([0-9][0-9.,]*)/);
   if (m) ret.totalMoney = cleanAmount(m[1]);
-  // 医保统筹支付：私立医院备注字段为"医保报销"
-  m = t.match(/医保报销[:：]?\s*([0-9][0-9.,]*)/);
+  // 医保统筹支付：私立医院备注字段为"医保报销"，兼容"医保支付/统筹支付"变体
+  m = t.match(/(?:医保报销|医保支付|统筹支付)[:：]?\s*([0-9][0-9.,]*)/);
   if (m) ret.medicareFundPay = cleanAmount(m[1]);
   return ret;
 }
@@ -6938,9 +7010,9 @@ function parseOcrText(allRawText) {
     makeOutDate: "", totalMoney: "0.00", medicareFundPay: "0.00"
   };
   let m; // 供后续多个字段提取复用（就诊日期/医保统筹/金额等）
-  // 金额清洗：删千分位/全角逗号；识别把千分位逗号误识为点时，最后一个点保留为小数点，其余点删除
+  // 金额清洗（与顶层 cleanAmount 一致：删千分位/全角逗号/空格，多点点号取最后点为小数点）
   function cleanAmount(s) {
-    let t = String(s).trim().replace(/[,，]/g, "");
+    let t = String(s).trim().replace(/[,\uFF0C\s]/g, "");
     const dots = [];
     for (let i = 0; i < t.length; i++) if (t[i] === ".") dots.push(i);
     if (dots.length > 1) {
@@ -6986,23 +7058,37 @@ function parseOcrText(allRawText) {
     }
     if (numFound) ret.invoiceNo = numFound;
   }
-  // 2. 姓名：兼容"交款人/交众人/缴款人/文款人"等OCR变体、有无冒号、多行并列；排除"统一社会信用代码/收款人/复核人"等非患者
+  // 2. 姓名：兼容"交款人/交众人/缴款人/文款人/交款几/交款八"等OCR变体（含[人认从入几八力乃]结尾变体与"款"字锚定）、
+  //    有无冒号、多行并列；排除"统一社会信用代码/收款人/复核人"等非患者
   {
     let nameFound = '';
-    for (const mm of allRawText.matchAll(/([^：:\n，,]{1,4}?[人认从])[：:]\s*([^\n：:，,]{2,12}?)(?=\n|[，,：:]|$)/g)) {
+    // 通道A：标签以人/认/从/入/几/八/力/乃结尾（如 交款人/交众人/交款几）
+    for (const mm of allRawText.matchAll(/([^：:\n，,]{1,4}?[人认从入几八力乃])[：:]\s*([^\n：:，,]{2,12}?)(?=\n|[，,：:]|$)/g)) {
       const tag = (mm[1] || '').trim();
       const cand = (mm[2] || '').trim();
       if (!tag || !cand) continue;
-      if (/收款单位|收款人|复核人|开票人|经办人|结算人|单位|医院/.test(tag)) continue;
+      if (/收款单位|收款人|复核人|开票人|经办人|结算人|单位|医院|机器/.test(tag)) continue;
       if (!/[\u4e00-\u9fa5]/.test(cand) || /统一|信用|证件|身份证|代码|号码|^\d/.test(cand)) continue;
       nameFound = cand;
       break;
+    }
+    // 通道B：标签含"款"字但"人"字被吞（如 交款：/缴款：），值可能同行或下一行
+    if (!nameFound) {
+      for (const mm of allRawText.matchAll(/([^：:\n，,]{1,3}?款)\s*[:：]\s*([^\n：:，,]{2,12}?)(?=\n|[，,：:]|$)/g)) {
+        const tag = (mm[1] || '').trim();
+        const cand = (mm[2] || '').trim();
+        if (!tag || !cand) continue;
+        if (/收款单位|收款人|复核人|开票人|经办人|单位|医院/.test(tag)) continue;
+        if (!/[\u4e00-\u9fa5]/.test(cand) || /统一|信用|证件|身份证|代码|号码|^\d/.test(cand)) continue;
+        nameFound = cand;
+        break;
+      }
     }
     // 拆行兜底："交款人:" 与姓名分两行时，取其后 2 行内的纯汉字行
     if (!nameFound) {
       const lines = allRawText.split('\n');
       for (let li = 0; li < lines.length; li++) {
-        if (!/[文交众缴]?.{0,2}[款缴].{0,1}人/.test(lines[li])) continue;
+        if (!/[文交众缴]?.{0,2}[款缴].{0,1}[人认从入几八力乃]/.test(lines[li])) continue;
         for (let k = 1; k <= 2 && li + k < lines.length; k++) {
           const nm = lines[li + k].match(/^([\u4e00-\u9fa5]{2,8})$/);
           if (nm) { nameFound = nm[1]; break; }
@@ -7046,7 +7132,33 @@ function parseOcrText(allRawText) {
       if (hp) {
         const n1 = hp[1].replace(/[\/年月]/g,'-').replace(/-+/g,'-').replace(/-$/,'');
         const n2 = hp[2].replace(/[\/年月]/g,'-').replace(/-+/g,'-').replace(/-$/,'');
-        ret.visitDate = fmtDate(n1) + "至" + fmtDate(n2);
+        const d1s = fmtDate(n1), d2s = fmtDate(n2);
+        if (isValidDateStr(d1s) && isValidDateStr(d2s)) {
+          ret.visitDate = d1s + "至" + d2s;
+        } else {
+          // 一侧非法：先用合法侧做参考，尝试编辑距离 ≤1 修复（覆盖"丢/多/错一位"常见错位）
+          const ref8 = (isValidDateStr(d2s) ? n2 : (isValidDateStr(d1s) ? n1 : '')).replace(/[\/年月]/g,'').replace(/-/g,'');
+          let fixed = '';
+          if (!isValidDateStr(d1s) && isValidDateStr(d2s)) {
+            const f = fixEightDigits(n1.replace(/[\/年月]/g,'').replace(/-/g,''), ref8);
+            if (f) fixed = f + "至" + d2s;
+          } else if (isValidDateStr(d1s) && !isValidDateStr(d2s)) {
+            const f = fixEightDigits(n2.replace(/[\/年月]/g,'').replace(/-/g,''), ref8);
+            if (f) fixed = d1s + "至" + f;
+          }
+          if (fixed) {
+            ret.visitDate = fixed;
+          } else if (isValidDateStr(d2s)) {
+            // 修复不了：取合法侧单日期并标记人工核对（住院单日期将触发 Agent 兜底，输出不产生"月份非法"噪声告警）
+            ret.visitDate = d2s;
+            ret.dateOcrErr = true;
+          } else if (isValidDateStr(d1s)) {
+            ret.visitDate = d1s;
+            ret.dateOcrErr = true;
+          } else {
+            ret.visitDate = '';
+          }
+        }
       } else if (hp7) {
         // 7 位无法可靠复原：取 8 位日期为单日期并标记人工核对
         const eight = (hp7[1].length === 8) ? hp7[1] : hp7[2];
@@ -7062,9 +7174,40 @@ function parseOcrText(allRawText) {
     m = allRawText.match(/就诊日期[:：\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/);
     if (m) ret.visitDate = fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,''));
   }
-  // 5. 医保统筹支付（兼容"医保统筹基金支付"；千分位逗号可能被误识为点）
-  m = allRawText.match(/医保统筹[^：:\n]*支付[:：\s]*([\d,，.]+\.\d{2})/);
-  if (m) ret.medicareFundPay = cleanAmount(m[1]);
+  // 4.5 兜底：仍无就诊/住院日期时，用"入院日期/出院日期"标签分别提取再合成区间（兼容标签空格/拆行/夹杂字）
+  if (!ret.visitDate) {
+    const d1 = extractDate(allRawText, '入院日期');
+    const d2 = extractDate(allRawText, '出院日期');
+    if (d1 && d2) ret.visitDate = `${d1}至${d2}`;
+    else if (d1) ret.visitDate = d1;
+    else if (d2) ret.visitDate = d2;
+  }
+  // 5. 医保统筹支付：完整锚定"医保统筹(基金)支付"标签，排除"个人账户支付/个人现金支付/个人自付/自费"等干扰标签；
+  //    兼容标签被截断（"医保统筹基金支付"→"统筹支付"）与标签值拆行；千分位逗号可能被误识为点
+  let medRaw = '';
+  {
+    // 同行模式：标签后 0-12 字内金额；用标签前文判断非个人账户类
+    const medTag = allRawText.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[:：\s]*([\d,，.]+\.\d{2})/);
+    if (medTag) {
+      const hitIdx = allRawText.indexOf(medTag[0]);
+      const preSeg = allRawText.slice(Math.max(0, hitIdx - 10), hitIdx);
+      if (!/个人|账户|自付|自费|大病/.test(preSeg)) medRaw = medTag[1];
+    }
+    // 拆行模式：标签行（含"医保统筹支付"字样）后 1-2 行找独立金额
+    if (!medRaw) {
+      const lines = allRawText.split('\n');
+      for (let li = 0; li < lines.length; li++) {
+        if (!/(医保统筹|统筹基金|统筹)\s*支付/.test(lines[li])) continue;
+        if (/个人|账户|自付|自费/.test(lines[li])) continue;
+        for (let k = 1; k <= 2 && li + k < lines.length; k++) {
+          const mm2 = lines[li + k].match(/^([\d,，.]+\.\d{2})$/);
+          if (mm2) { medRaw = mm2[1]; break; }
+        }
+        if (medRaw) break;
+      }
+    }
+  }
+  if (medRaw) ret.medicareFundPay = cleanAmount(medRaw);
   // 6. 总金额：优先"金额合计/小写"，金额数字兼容全角逗号与误识点
   let totalVal = "";
   m = allRawText.match(/(?:金额合计|合计金额|总金额|小写)[^\d]*([\d,，.]+\.\d{2})/);
@@ -7081,8 +7224,54 @@ function parseOcrText(allRawText) {
       totalVal = allAmounts[maxIdx];
     }
   }
+  // 6.5 大写金额兜底：小写数字缺失时，从"金额合计（大写）玖仟...元...角...分"解析中文大写（多策略交叉验证思想）
+  if (!totalVal) {
+    m = allRawText.match(/(?:金额合计|合计金额|总金额|价税合计)[^（(]*[（(]?大写[）)]?\s*[:：]?\s*([零〇一二三四五六七八九壹贰叁肆伍陆柒捌玖拾佰仟万亿元圆角分整正]+)/);
+    if (m) {
+      const upVal = cnUpperToNumber(m[1]);
+      if (upVal) totalVal = upVal;
+    }
+  }
   if (totalVal) ret.totalMoney = cleanAmount(totalVal);
   return ret;
+}
+
+// ROI 区域重识别：主识别日期异常时，用「住院时间」行 poly 坐标裁出局部区域单独识别，
+// 规避邻近文本（如业务流水号）粘连导致的日期错乱；识别出合法日期则返回（区间或单日期）
+async function roiOcrHospitalDate(blob, items) {
+  try {
+    const hit = (items || []).find(it => /住\s*院\s*时\s*间/.test(String(it.text || '')));
+    if (!hit || !hit.poly || hit.poly.length < 4) return '';
+    const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
+    let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    const padX = Math.max(30, (maxX - minX) * 0.15);
+    const padY = Math.max(15, (maxY - minY) * 0.25);
+    minX = Math.max(0, minX - padX); maxX += padX;
+    minY = Math.max(0, minY - padY); maxY += padY;
+    const bmp = await createImageBitmap(blob);
+    const sx = Math.floor(minX), sy = Math.floor(minY);
+    const cw = Math.min(bmp.width, Math.ceil(maxX)) - sx;
+    const ch = Math.min(bmp.height, Math.ceil(maxY)) - sy;
+    if (cw <= 0 || ch <= 0) return '';
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    canvas.getContext('2d').drawImage(bmp, sx, sy, cw, ch, 0, 0, cw, ch);
+    const roiBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+    const roiEngine = await getEngine();
+    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
+    const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
+    const roiText = roiItems.map(it => it.text).join('\n');
+    if (!/住\s*院\s*时\s*间/.test(roiText)) return '';
+    const roiData = parseOcrText(roiText);
+    const v = roiData.visitDate || '';
+    if (/^\d{4}-\d{2}-\d{2}至\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    return '';
+  } catch (e) {
+    console.error('ROI 区域重识别失败', e);
+    return '';
+  }
 }
 
 // ---------- 表格 ----------
@@ -7430,6 +7619,7 @@ async function reRecognizeFile(uid, rowLabel) {
         rec.source = 'agent';
         rec.aiDone = true;
         rec.failFields = failFieldsOf(rec);
+        if (!rec.failFields.length) delete rec.dateOcrErr;
         rec.warnings = validateRecord(rec);
         if (rec.failFields.length || rec.warnings.length) { agentOk = false; rec._pending = true; }
         else rec.greenFlag = true;
@@ -7482,6 +7672,14 @@ async function reRunEngineLayer(uid) {
         const groupItems = invoiceGroups[g];
         const rawText = groupItems.map(it => it.text).join('\n');
         const data = parseOcrText(rawText);
+        // ROI 日期重识别（同主流程）：日期异常时裁「住院时间」行局部单独识别，规避邻近文本粘连
+        if (!data.visitDate || data.dateOcrErr || !/^\d{4}-\d{2}-\d{2}至\d{4}-\d{2}-\d{2}$/.test(data.visitDate || '')) {
+          const roiVisit = await roiOcrHospitalDate(t.blob, groupItems);
+          if (roiVisit) {
+            data.visitDate = roiVisit;
+            delete data.dateOcrErr;
+          }
+        }
         data.failFields = failFieldsOf(data);
         data.warnings = validateRecord(data);
         data.source = 'regex';
