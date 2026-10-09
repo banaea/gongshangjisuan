@@ -999,7 +999,44 @@ var _hmt = _hmt || [];
                 </div>
             </div>
 
-            <!-- 第二组：伤残与待遇基数 -->
+            <!-- 第二组：停工留薪期（误工费） -->
+            <div class="form-group">
+                <div class="group-title">停工留薪期（误工费）</div>
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label>误工费保单日限额</label>
+                        <select id="insuranceDayLimitSelect" onchange="handleInsuranceLimitChange()">
+                            <option value="50.00">50.00</option>
+                            <option value="80.00">80.00</option>
+                            <option value="100.00" selected>100.00</option>
+                            <option value="200.00">200.00</option>
+                            <option value="other">其他</option>
+                        </select>
+                        <input type="text" inputmode="decimal" id="insuranceDayLimitInput" value="100.00" disabled style="margin-top:6px;"
+                        oninput="formatDecimalInput(this);recalcDailyWageNewRule();calculate();"
+                        onblur="fixDecimalOnBlur(this);recalcDailyWageNewRule();calculate();">
+                    </div>
+
+                    <div class="form-item">
+                        <label>停工留薪期天数</label>
+                        <input type="text" inputmode="numeric" id="stopWorkDays" value="0" oninput="formatIntInput(this);calculate()">
+                        <div class="input-tip">⚠️ 工亡时，最高不超工亡日期－事故发生日期</div>
+                    </div>
+
+                    <div class="form-item">
+                        <label>误工日工资标准</label>
+                        <input type="text" inputmode="decimal" id="dailyWage" value="100.00" readonly>
+                        <div class="input-tip">⚠️ 此处与本人月工资联动，最高不超保单限额</div>
+                    </div>
+
+                    <div class="form-item">
+                        <label>误工费免赔天数</label>
+                        <input type="text" inputmode="numeric" id="deductDays" value="5" oninput="formatIntInput(this);calculate()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第五组：伤残与待遇基数 -->
             <div class="form-group">
                 <div class="group-title">伤残等级/工亡与待遇基数</div>
                 <div class="form-grid">
@@ -1040,45 +1077,62 @@ var _hmt = _hmt || [];
                 </div>
             </div>
 
-            <!-- 第五组：停工留薪期（误工费） -->
-            <div class="form-group">
-                <div class="group-title">停工留薪期（误工费）</div>
-                <div class="form-grid">
-                    <div class="form-item">
-                        <label>误工费保单日限额</label>
-                        <select id="insuranceDayLimitSelect" onchange="handleInsuranceLimitChange()">
-                            <option value="50.00">50.00</option>
-                            <option value="80.00">80.00</option>
-                            <option value="100.00" selected>100.00</option>
-                            <option value="200.00">200.00</option>
-                            <option value="other">其他</option>
-                        </select>
-                        <input type="text" inputmode="decimal" id="insuranceDayLimitInput" value="100.00" disabled style="margin-top:6px;"
-                        oninput="formatDecimalInput(this);recalcDailyWageNewRule();calculate();"
-                        onblur="fixDecimalOnBlur(this);recalcDailyWageNewRule();calculate();">
-                    </div>
+</div><div class="divider"></div><div class="right-panel">
+            <!-- 第三组：医疗费信息 -->
+<div class="form-group">
+    <div class="group-title">医疗费信息（OCR识别可自动填充）</div>
+    <div class="form-grid">
+        <div class="form-item">
+            <label>医疗费总金额（元）</label>
+            <input type="text" inputmode="decimal" id="medicalTotal" value="0.00" oninput="formatDecimalInput(this);onNonMedicalModeChange();" onblur="fixDecimalOnBlur(this);onNonMedicalModeChange();">
+        </div>
 
-                    <div class="form-item">
-                        <label>停工留薪期天数</label>
-                        <input type="text" inputmode="numeric" id="stopWorkDays" value="0" oninput="formatIntInput(this);calculate()">
-                        <div class="input-tip">⚠️ 工亡时，最高不超工亡日期－事故发生日期</div>
-                    </div>
+        <div class="form-item">
+            <label>已报销金额（元）</label>
+            <input type="text" inputmode="decimal" id="medicalReimbursed" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+        </div>
 
-                    <div class="form-item">
-                        <label>误工日工资标准</label>
-                        <input type="text" inputmode="decimal" id="dailyWage" value="100.00" readonly>
-                        <div class="input-tip">⚠️ 此处与本人月工资联动，最高不超保单限额</div>
-                    </div>
+        <div class="form-item">
+            <label>医疗费免赔额（元）</label>
+            <input type="text" inputmode="decimal" id="medicalDeductible" value="100.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
+        </div>
 
-                    <div class="form-item">
-                        <label>误工费免赔天数</label>
-                        <input type="text" inputmode="numeric" id="deductDays" value="5" oninput="formatIntInput(this);calculate()">
-                    </div>
+        <div class="form-item">
+            <label>赔付比例（%）</label>
+            <input type="text" inputmode="decimal" id="medicalRatio" value="90" data-last-valid="90"
+            oninput="formatPercentInput(this)" onblur="fixPercentOnBlur(this)">
+            <div class="input-tip percent-tip" style="display:none; color:#dc2626;">百分比范围为0-100，已拦截超出范围的输入</div>
+        </div>
+
+        <div class="form-item">
+            <label>非医保扣减方式</label>
+            <select id="nonMedicalMode" onchange="onNonMedicalModeChange(); calculate();">
+                <option value="ratio">按比例扣减</option>
+                <option value="amount">按金额扣减</option>
+            </select>
+        </div>
+
+        <div class="form-item">
+            <label>非医保扣减值</label>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <input type="text" inputmode="decimal" id="nonMedicalValue" value="15.00" style="flex:1;"
+                oninput="formatNonMedicalInput(this);calculate();"
+                onblur="fixNonMedicalBlur(this);calculate();">
+                <span class="non-med-percent" id="nonMedicalPercentSign" style="display:none; font-size:14px; color:#4b5563; font-weight:500;">%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- 完整识别数据弹层 -->
+            <div class="modal-mask" id="rawModal">
+                <div class="modal">
+                    <div class="modal-head"><span id="rawModalTitle">完整识别数据</span><span class="modal-close" id="rawModalClose">×</span></div>
+                    <div class="modal-body" id="rawModalBody"></div>
                 </div>
             </div>
 
-</div><div class="divider"></div><div class="right-panel">
-            <!-- 第三组：医疗票据录入（WASM 本地 OCR，识别结果填入本页表格并回填医疗费金额） -->
+            <!-- 第四组：医疗票据录入（WASM 本地 OCR，识别结果填入本页表格并回填医疗费金额） -->
             <div class="form-group">
                 <div class="group-title">医疗票据录入
                     <span class="badge" id="engineBadge">引擎未初始化</span>
@@ -1125,60 +1179,6 @@ var _hmt = _hmt || [];
                     </tfoot>
                 </table>
             </div>
-
-            <!-- 完整识别数据弹层 -->
-            <div class="modal-mask" id="rawModal">
-                <div class="modal">
-                    <div class="modal-head"><span id="rawModalTitle">完整识别数据</span><span class="modal-close" id="rawModalClose">×</span></div>
-                    <div class="modal-body" id="rawModalBody"></div>
-                </div>
-            </div>
-
-            <!-- 第四组：医疗费信息 -->
-<div class="form-group">
-    <div class="group-title">医疗费信息（OCR识别可自动填充）</div>
-    <div class="form-grid">
-        <div class="form-item">
-            <label>医疗费总金额（元）</label>
-            <input type="text" inputmode="decimal" id="medicalTotal" value="0.00" oninput="formatDecimalInput(this);onNonMedicalModeChange();" onblur="fixDecimalOnBlur(this);onNonMedicalModeChange();">
-        </div>
-
-        <div class="form-item">
-            <label>已报销金额（元）</label>
-            <input type="text" inputmode="decimal" id="medicalReimbursed" value="0.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
-        </div>
-
-        <div class="form-item">
-            <label>医疗费免赔额（元）</label>
-            <input type="text" inputmode="decimal" id="medicalDeductible" value="100.00" oninput="formatDecimalInput(this)" onblur="fixDecimalOnBlur(this)">
-        </div>
-
-        <div class="form-item">
-            <label>赔付比例（%）</label>
-            <input type="text" inputmode="decimal" id="medicalRatio" value="90" data-last-valid="90"
-            oninput="formatPercentInput(this)" onblur="fixPercentOnBlur(this)">
-            <div class="input-tip percent-tip" style="display:none; color:#dc2626;">百分比范围为0-100，已拦截超出范围的输入</div>
-        </div>
-
-        <div class="form-item">
-            <label>非医保扣减方式</label>
-            <select id="nonMedicalMode" onchange="onNonMedicalModeChange(); calculate();">
-                <option value="ratio">按比例扣减</option>
-                <option value="amount">按金额扣减</option>
-            </select>
-        </div>
-
-        <div class="form-item">
-            <label>非医保扣减值</label>
-            <div style="display:flex; align-items:center; gap:4px;">
-                <input type="text" inputmode="decimal" id="nonMedicalValue" value="15.00" style="flex:1;"
-                oninput="formatNonMedicalInput(this);calculate();"
-                onblur="fixNonMedicalBlur(this);calculate();">
-                <span class="non-med-percent" id="nonMedicalPercentSign" style="display:none; font-size:14px; color:#4b5563; font-weight:500;">%</span>
-            </div>
-        </div>
-    </div>
-</div>
 
 </div></div></div>
 <div class="detail-full">
