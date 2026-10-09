@@ -3701,8 +3701,8 @@ function exportExcel() {
                 if (nameFuzzy) ret.payerName = nameFuzzy[1].trim();
             }
 
-            // 3.开票日期
-            const billDateMatch = allRawText.match(/开票日期[:：\s]*(\d{4}-\d{1,2}-\d{1,2}|\d{8})/);
+            // 3.开票日期（兼容 OCR 吞字："开票日期"→"开日期"等变体）
+            const billDateMatch = allRawText.match(/开[^\d\n]{0,3}日期[:：\s]*(\d{4}-\d{1,2}-\d{1,2}|\d{8})/);
             if (billDateMatch) ret.makeOutDate = formatDateStr(billDateMatch[1]);
 
             // 4.住院时间 仅住院票据使用
@@ -4530,6 +4530,9 @@ function exportMedicalExcel() {
             return t === '住院票据' || t === '私立医院住院';
         });
 
+        // ★ 票据号码必须为文本格式（mso-number-format:'@'），防止 Excel 打开时前导 0 被吞（如 09950783 → 9950783）
+        function textCell(v) { return '<td style="mso-number-format:\'\\@\'">' + (v || '') + '</td>'; }
+
         // ---- 门诊发票表格 ----
         html += '<table border="1" cellpadding="5" cellspacing="0">';
         html += '<tr><th>票据类型</th><th>序号</th><th>患者姓名</th><th>票据号码</th><th>就诊日期</th><th>金额</th><th>医保报销</th><th>非医保</th></tr>';
@@ -4550,7 +4553,7 @@ function exportMedicalExcel() {
             
             html += '<tr><td>' + billTypeText(item.billType) + '</td><td>' + (idx + 1) + '</td>' +
                 '<td>' + (item.payerName || '') + '</td>' +
-                '<td>' + (item.invoiceNo || '') + '</td>' +
+                textCell(item.invoiceNo) +
                 '<td>' + (item.visitDate || '') + '</td>' +
                 '<td>' + round2(total).toFixed(2) + '</td>' +
                 '<td>' + round2(medicare).toFixed(2) + '</td>' +
@@ -4584,7 +4587,7 @@ function exportMedicalExcel() {
             
             html += '<tr><td>' + billTypeText(item.billType) + '</td><td>' + (idx + 1) + '</td>' +
                 '<td>' + (item.payerName || '') + '</td>' +
-                '<td>' + (item.invoiceNo || '') + '</td>' +
+                textCell(item.invoiceNo) +
                 '<td>' + (item.visitDate || '') + '</td>' +
                 '<td>' + round2(total).toFixed(2) + '</td>' +
                 '<td>' + round2(medicare).toFixed(2) + '</td>' +
@@ -6720,12 +6723,12 @@ function cnUpperToNumber(s) {
   return out === '0.00' ? '' : out;
 }
 
-// 日期合法性：YYYY-MM-DD 格式且月/日合法
+// 日期合法性：YYYY-MM-DD 格式且月/日合法，年份限 1900-2100（防"6226-07-09"水印粘连等假日期）
 function isValidDateStr(s) {
   const m = String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (!m) return false;
-  const mo = Number(m[2]), da = Number(m[3]);
-  return mo >= 1 && mo <= 12 && da >= 1 && da <= 31;
+  const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+  return y >= 1900 && y <= 2100 && mo >= 1 && mo <= 12 && da >= 1 && da <= 31;
 }
 // 8 位数字日期 → YYYY-MM-DD
 function fmtEight(s8) {
@@ -6943,9 +6946,24 @@ function aiParseAllRecords() {
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 
-// 从标签后提取日期（兼容 OCR 把日期截断到多行、中间夹杂字，如"出院日期：2023-0\n备\n4-04"；标签本身可能被加空格如"出 院日期"）
+// 从标签后提取日期（兼容 OCR 把日期截断到多行、中间夹杂字，如"出院日期：2023-0\n备\n4-04"；标签本身可能被加空格如"出 院日期"；
+//  兼容 OCR 形近字误识（入院日期→入院曰期/入阮日期）与个别字被吞（入院期/出院日）：首字必配 + 后续字形近类、可缺 1 字）
 function extractDate(t, label) {
-  const li = t.search(new RegExp(label.split('').join('\\s*')));
+  const FUZZY = {
+    '入': '[入人卜]', '院': '[院阮阬坑完宛]', '日': '[日曰目口]', '期': '[期其斯旗]',
+    '出': '[出山]', '住': '[住往位仫]'
+  };
+  const fuzzy = ch => (FUZZY[ch] || ch);
+  const chars = label.split('');
+  let re = chars.map(fuzzy).join('\\s*');
+  if (chars.length >= 3) {
+    const vars = [];
+    for (let i = 1; i < chars.length; i++) { // 首字必配，仅允许缺第 2 字及以后，防"入院"变体误匹配"出院日期"
+      vars.push(chars.filter((_, j) => j !== i).map(fuzzy).join('\\s*'));
+    }
+    re = `${re}|${vars.join('|')}`;
+  }
+  const li = t.search(new RegExp(re));
   if (li < 0) return '';
   const seg = t.slice(li, li + 45);
   const full = seg.match(/(\d{4})\s*[-./年]\s*(\d{1,2})\s*[-./月]\s*(\d{1,2})/);
@@ -6976,9 +6994,22 @@ function parsePrivateHospital(t) {
   m = t.match(/名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/) ||
       t.match(/购买方\s*名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/);
   if (m) ret.payerName = m[1].trim();
-  // 开票日期（中文格式 2023年04月04日 → 2023-04-04；也兼容 2023-04-04）
-  m = t.match(/开票日期[:：]\s*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/) ||
-      t.match(/开票日期[:：]\s*(\d{4})-(\d{1,2})-(\d{1,2})/);
+  // 开票日期（中文格式 2023年04月04日 → 2023-04-04；也兼容 2023-04-04；
+  //  标签兼容 OCR 吞字"开票日期"→"开日期"等变体；标签与日期拆行时，标签行后 2 行内兜底）
+  m = t.match(/开[^\d\n]{0,3}日期[:：]\s*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/) ||
+      t.match(/开[^\d\n]{0,3}日期[:：]\s*(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) {
+    const lines = t.split('\n');
+    for (let li = 0; li < lines.length; li++) {
+      if (!/开[^\d\n]{0,3}日期/.test(lines[li])) continue;
+      for (let k = 1; k <= 2 && li + k < lines.length; k++) {
+        const mm2 = lines[li + k].match(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日$/) ||
+                    lines[li + k].match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (mm2) { m = mm2; break; }
+      }
+      if (m) break;
+    }
+  }
   if (m) ret.makeOutDate = `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
   // 就诊/住院日期：备注区入院日期/出院日期（兼容 OCR 截断到多行、夹杂字）
   const d1 = extractDate(t, '入院日期');
@@ -7031,6 +7062,14 @@ function parseOcrText(allRawText) {
       return `${parts[0]}-${String(parts[1]).padStart(2,'0')}-${String(parts[2]).padStart(2,'0')}`;
     }
     return str;
+  }
+  // 6 位两位年份数字日期（241221 → 2024-12-21；70-99 视为 19xx，00-69 视为 20xx）
+  function fmtDate6(s6) {
+    if (!/^\d{6}$/.test(s6)) return '';
+    const yy = s6.slice(0, 2);
+    const year = (Number(yy) >= 70 ? '19' : '20') + yy;
+    const out = `${year}-${s6.slice(2,4)}-${s6.slice(4,6)}`;
+    return isValidDateStr(out) ? out : '';
   }
   // 票据类型：住院
   if (/住院/.test(allRawText) && !/门诊住院|住院费票据\s*\(?电?子?\)?/.test(allRawText) || allRawText.includes("住院时间")) {
@@ -7103,7 +7142,7 @@ function parseOcrText(allRawText) {
     const lines = allRawText.split('\n');
     let dFound = '';
     for (let li = 0; li < lines.length; li++) {
-      if (!/开票日期/.test(lines[li])) continue;
+      if (!/开[^\d\n]{0,3}日期/.test(lines[li])) continue;
       const mm = lines[li].match(/(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/);
       if (mm) { dFound = mm[1]; break; }
       for (let k = 1; k <= 2 && li + k < lines.length; k++) {
@@ -7124,26 +7163,70 @@ function parseOcrText(allRawText) {
   {
     const hIdx = allRawText.search(/住\s*院\s*时\s*间/);
     if (hIdx >= 0) {
-      const hSeg = allRawText.slice(Math.max(0, hIdx - 80), hIdx + 80).replace(/\s+/g, '');
-      // ① 标准 8 位日期对：20240914-20240918
-      const hp = hSeg.match(/(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})[至～~—－-](\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/);
+      // 标签后紧邻区域：无分隔/紧凑日期对只在此匹配（避免扫到标签前的业务流水号等数字干扰）
+      const hLb = allRawText.slice(hIdx).match(/住\s*院\s*时\s*间/);
+      const afterLabelRaw = allRawText.slice(hIdx + hLb[0].length, hIdx + hLb[0].length + 120);
+      const afterLabel = afterLabelRaw.replace(/\s+/g, '');
+      // ±80 窗口（保留给标准日期对 hp：兼容"日期被检测框粘连到标签上方一行"等错位场景）
+      const hSegRaw = allRawText.slice(Math.max(0, hIdx - 80), hIdx + 80);
+      const hSeg = hSegRaw.replace(/\s+/g, '');
+      // ① 标准日期对（8 位或 4 位年份；兼容两位年份 26-6-5至26-6-16、点号 2024.12.21-2025.1.18）
+      const hp = hSeg.match(/(\d{2,4}[-\/年.]\d{1,2}[-\/月.]\d{1,2}日?|\d{8})[至～~—－-](\d{2,4}[-\/年.]\d{1,2}[-\/月.]\d{1,2}日?|\d{8})/);
+      // ①.5 无分隔/紧凑拼接日期对（仅取"住院时间"标签后的第一个匹配，不循环扫全窗口）：
+      //     16位 8+8（2024122120250118）、12位 6+6（241221250118）、6-6 连字符（241221-250118）、
+      //     逐段两位年份（24-12-21-25-1-18）、空格分隔双日期（2024-12-21 2025-01-18）
+      const hpCompact = (() => {
+        // 空格分隔双完整日期（用未去空白的标签后原文）
+        const sp = afterLabelRaw.match(/(\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2})\s+(\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2})(?!\d)/);
+        if (sp) {
+          const a = fmtDate(sp[1].replace(/[\/.]/g, '-')), b = fmtDate(sp[2].replace(/[\/.]/g, '-'));
+          if (isValidDateStr(a) && isValidDateStr(b) && a <= b) return [a, b];
+        }
+        // 16 位：8+8 无分隔（2024122120250118）
+        const c16 = afterLabel.match(/(\d{8})(\d{8})(?![0-9])/);
+        if (c16) {
+          const a = fmtDate(c16[1]), b = fmtDate(c16[2]);
+          if (isValidDateStr(a) && isValidDateStr(b) && a <= b) return [a, b];
+        }
+        // 12 位：6+6 两位年份无分隔（241221250118）
+        const c12 = afterLabel.match(/(\d{6})(\d{6})(?![0-9])/);
+        if (c12) {
+          const a = fmtDate6(c12[1]), b = fmtDate6(c12[2]);
+          if (a && b && a <= b) return [a, b];
+        }
+        // 6-6 连字符（241221-250118）
+        const c6 = afterLabel.match(/(\d{6})-(\d{6})(?![0-9])/);
+        if (c6) {
+          const a = fmtDate6(c6[1]), b = fmtDate6(c6[2]);
+          if (a && b && a <= b) return [a, b];
+        }
+        // 逐段两位年份（24-12-21-25-1-18）
+        const cseg = afterLabel.match(/(\d{2})-(\d{1,2})-(\d{1,2})-(\d{2})-(\d{1,2})-(\d{1,2})(?![0-9])/);
+        if (cseg) {
+          const a = fmtDate(cseg[1] + '-' + cseg[2] + '-' + cseg[3]), b = fmtDate(cseg[4] + '-' + cseg[5] + '-' + cseg[6]);
+          if (isValidDateStr(a) && isValidDateStr(b) && a <= b) return [a, b];
+        }
+        return null;
+      })();
       // ② OCR 错位：7 位+8 位对（如 2024694-20240918，8 位日期丢失一位）
-      const hp7 = !hp && (hSeg.match(/(\d{7})[至～~—－-](\d{8})/) || hSeg.match(/(\d{8})[至～~—－-](\d{7})/));
-      if (hp) {
-        const n1 = hp[1].replace(/[\/年月]/g,'-').replace(/-+/g,'-').replace(/-$/,'');
-        const n2 = hp[2].replace(/[\/年月]/g,'-').replace(/-+/g,'-').replace(/-$/,'');
+      const hp7 = !hp && !hpCompact && (hSeg.match(/(\d{7})[至～~—－-](\d{8})/) || hSeg.match(/(\d{8})[至～~—－-](\d{7})/));
+      if (hpCompact) {
+        ret.visitDate = hpCompact[0] + "至" + hpCompact[1];
+      } else if (hp) {
+        const n1 = hp[1].replace(/[\/年月.]/g,'-').replace(/-+/g,'-').replace(/-$/,'');
+        const n2 = hp[2].replace(/[\/年月.]/g,'-').replace(/-+/g,'-').replace(/-$/,'');
         const d1s = fmtDate(n1), d2s = fmtDate(n2);
         if (isValidDateStr(d1s) && isValidDateStr(d2s)) {
           ret.visitDate = d1s + "至" + d2s;
         } else {
           // 一侧非法：先用合法侧做参考，尝试编辑距离 ≤1 修复（覆盖"丢/多/错一位"常见错位）
-          const ref8 = (isValidDateStr(d2s) ? n2 : (isValidDateStr(d1s) ? n1 : '')).replace(/[\/年月]/g,'').replace(/-/g,'');
+          const ref8 = (isValidDateStr(d2s) ? n2 : (isValidDateStr(d1s) ? n1 : '')).replace(/[\/年月.]/g,'').replace(/-/g,'');
           let fixed = '';
           if (!isValidDateStr(d1s) && isValidDateStr(d2s)) {
-            const f = fixEightDigits(n1.replace(/[\/年月]/g,'').replace(/-/g,''), ref8);
+            const f = fixEightDigits(n1.replace(/[\/年月.]/g,'').replace(/-/g,''), ref8);
             if (f) fixed = f + "至" + d2s;
           } else if (isValidDateStr(d1s) && !isValidDateStr(d2s)) {
-            const f = fixEightDigits(n2.replace(/[\/年月]/g,'').replace(/-/g,''), ref8);
+            const f = fixEightDigits(n2.replace(/[\/年月.]/g,'').replace(/-/g,''), ref8);
             if (f) fixed = d1s + "至" + f;
           }
           if (fixed) {
@@ -7165,8 +7248,13 @@ function parseOcrText(allRawText) {
         ret.visitDate = fmtDate(eight);
         ret.dateOcrErr = true;
       } else {
-        const hd = hSeg.match(/\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8}/);
-        if (hd) ret.visitDate = fmtDate(hd[0].replace(/[\/年月]/g,'-').replace(/-+/g,'-').replace(/-$/,''));
+        // 单日期兜底：兼容两位年份，循环取窗口内第一个合法日期（防"金额+水印"粘连如 6226-7-9 被误匹配）
+        const hdRe = /\d{2,4}[-\/年.]\d{1,2}[-\/月.]\d{1,2}日?|\d{8}/g;
+        let hm;
+        while ((hm = hdRe.exec(hSeg)) !== null) {
+          const cand = fmtDate(hm[0].replace(/[\/年月]/g,'-').replace(/-+/g,'-').replace(/-$/,''));
+          if (isValidDateStr(cand)) { ret.visitDate = cand; break; }
+        }
       }
     }
   }
