@@ -461,7 +461,7 @@
             margin: 12px 0 0;
         }
         .ocr-drop-box p {
-            margin: 0 0 10px;
+            margin: 10px 0 0;
             font-size: 13px;
             color: #64748b;
         }
@@ -1162,12 +1162,11 @@ var _hmt = _hmt || [];
                     <span class="badge" id="engineBadge">引擎未初始化</span>
                 </div>
 
-                <!-- 拖拽+选择上传区域（缩略图在虚线框内展示，末尾 + 号继续添加） -->
+                <!-- 拖拽+选择上传区域（缩略图在上层，+号始终末尾；文字提示在下方） -->
                 <div class="ocr-drop-box" id="ocrDropArea">
-                    <p>点击选择图片 / PDF，或直接拖拽多张票据文件到此处上传</p>
-                    <button class="ocr-btn" id="ocrSelectBtn">选择票据文件</button>
-                    <input type="file" id="ocrFileInput" multiple accept="image/png,image/jpeg,image/jpg,image/bmp,image/webp,application/pdf,.pdf">
                     <div class="ocr-preview-wrap" id="ocrPreviewBox"></div>
+                    <p>点击选择图片 / PDF，或直接拖拽多张票据文件到此处上传</p>
+                    <input type="file" id="ocrFileInput" multiple accept="image/png,image/jpeg,image/jpg,image/bmp,image/webp,application/pdf,.pdf">
                 </div>
 
                 <div style="margin:12px 0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -3512,9 +3511,9 @@ function exportExcel() {
             var previewBox = $('ocrPreviewBox');
             var submitBtn = $('ocrSubmitBtn');
             var tipText = $('ocrTipText');
-            if (!dropArea || !fileInput || !selectBtn || !previewBox || !submitBtn || !tipText) return;
+            if (!dropArea || !fileInput || !previewBox || !submitBtn || !tipText) return;
 
-            selectBtn.onclick = function() { fileInput.click(); };
+            if (selectBtn) selectBtn.onclick = function() { fileInput.click(); };
             fileInput.onchange = function(e) {
                 addOcrFiles(Array.prototype.slice.call(e.target.files));
                 fileInput.value = '';
@@ -6520,7 +6519,8 @@ const ocrPreviewBox = $('ocrPreviewBox'), ocrSubmitBtn = $('ocrSubmitBtn'), ocrT
 const ocrTableBody = $('ocrTableBody'), sumTotalMoneyEl = $('sumTotalMoney'), sumMedicareMoneyEl = $('sumMedicareMoney');
 const medicalTotalInput = $('medicalTotal'), medicalReimbursedInput = $('medicalReimbursed');
 
-ocrSelectBtn.onclick = () => ocrFileInput.click();
+if (ocrSelectBtn) ocrSelectBtn.onclick = () => ocrFileInput.click();
+renderOcrPreview(); // 初始渲染：空列表时 + 号占首位
 ocrFileInput.onchange = e => { addOcrFiles(Array.from(e.target.files)); ocrFileInput.value = ''; };
 ocrDropArea.ondragover = e => { e.preventDefault(); ocrDropArea.classList.add('drag-hover'); };
 ocrDropArea.ondragleave = () => ocrDropArea.classList.remove('drag-hover');
