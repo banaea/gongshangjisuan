@@ -550,6 +550,7 @@
         .ocr-btn-green:hover { background: #047857; }
         .ocr-btn-green:disabled { background: #9ca3af; }
         .ocr-table tr.warn-row td { background-color: #ffe4e0 !important; }
+        .ocr-table .cell-note-mark { color: #d97706; font-weight: bold; margin-left: 2px; }
         .badge { display: inline-block; background: #ecfdf5; color: #047857; font-size: 12px; padding: 2px 10px; border-radius: 10px; border: 1px solid #a7f3d0; margin-left: 10px; vertical-align: middle; }
         .notice { background: #eff6ff; border-left: 3px solid #1a56db; padding: 8px 12px; margin: 10px 0 14px; font-size: 13px; color: #1e40af; border-radius: 0 6px 6px 0; }
         .progress-wrap { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
@@ -3907,6 +3908,7 @@ function exportExcel() {
                         dupRec.billType = '重复票据';
                         dupRec.totalMoney = '0.00';
                         dupRec.medicareFundPay = '0.00';
+                        delete dupRec._medNote; delete dupRec._totalNote; delete dupRec._f2Note; delete dupRec._f3Note; delete dupRec._sfInferred;
                     }
                 } else if (indices.length === 1) {
                     var singleIdx = indices[0];
@@ -6399,9 +6401,11 @@ function splitInvoices(items) {
     try { const p = it.poly; if (!p || !p.length) return 0; let s = 0; p.forEach(c => s += c[axis]); return s / p.length; }
     catch (e) { return 0; }
   }
-  // 1. 找锚点行（每张发票的"票据号码"或"票据代码"）
+  // 1. 找锚点行（每张发票的"票据号码"/"票格号码"/"系据号码"等形近标签；排除"电子票据号码"防单张误拆）
   let marks = [];
-  items.forEach((it, i) => { if (/票据号码/.test(it.text)) marks.push({ i, x: center(it, 0), y: center(it, 1) }); });
+  items.forEach((it, i) => {
+    if (/[票系][据格]\s*号\s*[码吗]/.test(it.text) && !/电子[票系][据格]\s*号\s*[码吗]/.test(it.text)) marks.push({ i, x: center(it, 0), y: center(it, 1) });
+  });
   if (!marks.length) items.forEach((it, i) => { if (/票据代码/.test(it.text)) marks.push({ i, x: center(it, 0), y: center(it, 1) }); });
   if (marks.length <= 1) return [items];
 
@@ -6629,6 +6633,7 @@ ocrSubmitBtn.onclick = async () => {
         }
         data.failFields = failFieldsOf(data);
         data.warnings = validateRecord(data);
+        if (/^private/.test(data.billType)) data._privateNote = '请核对该票是否医保报销（私立医院票据）';
         data.source = 'regex';
         data.bindUid = t.fileItem.uid;
         data.fileName = name + (invoiceGroups.length > 1 ? `（票${g + 1}/${invoiceGroups.length}）` : '');
@@ -7028,6 +7033,8 @@ function parsePrivateHospital(t) {
   // 医保统筹支付：私立医院备注字段为"医保报销"，兼容"医保支付/统筹支付"变体
   m = t.match(/(?:医保报销|医保支付|统筹支付)[:：]?\s*([0-9][0-9.,]*)/);
   if (m) ret.medicareFundPay = cleanAmount(m[1]);
+  // 私立医院票据：医保统筹支付金额全部标记，提示核对是否医保报销
+  ret._privateNote = '请核对该票是否医保报销（私立医院票据）';
   return ret;
 }
 
@@ -7040,6 +7047,9 @@ function parseOcrText(allRawText) {
     invoiceNo: "", billType: "outpatient", payerName: "", visitDate: "",
     makeOutDate: "", totalMoney: "0.00", medicareFundPay: "0.00"
   };
+  // 预归一化：千分位点号+空格形态（引擎误把千分位逗号识别为点且带空格，如"2.699. 32"）→ 还原为连续小数串
+  // 仅处理「数字.空格+数字」模式，不影响 2024-03-13、60.00 等正常格式
+  allRawText = String(allRawText).replace(/(\d)\.\s+(\d)/g, '$1.$2');
   let m; // 供后续多个字段提取复用（就诊日期/医保统筹/金额等）
   // 金额清洗（与顶层 cleanAmount 一致：删千分位/全角逗号/空格，多点点号取最后点为小数点）
   function cleanAmount(s) {
@@ -7080,7 +7090,9 @@ function parseOcrText(allRawText) {
     const lines = allRawText.split('\n');
     let numFound = '';
     for (let li = 0; li < lines.length; li++) {
-      if (!/票据号码/.test(lines[li])) continue;
+      // 票据号码标签形近通配：票据/票格/系据 号码/号吗；排除"电子票据号码"与"票据代码/票号代码"
+      if (!/[票系][据格]\s*号\s*[码吗]/.test(lines[li])) continue;
+      if (/电子[票系][据格]\s*号\s*[码吗]/.test(lines[li])) continue;
       const mm1 = lines[li].match(/(\d{8,20})/);
       if (mm1) { numFound = mm1[1]; break; }
       for (let k = 1; k <= 3 && li + k < lines.length; k++) {
@@ -7088,9 +7100,17 @@ function parseOcrText(allRawText) {
         if (mm2) { numFound = mm2[1]; break; }
       }
       if (!numFound) {
-        for (let k = 1; k <= 2 && li - k >= 0; k++) {
-          const mm3 = lines[li - k].match(/^(\d{8,20})$/);
-          if (mm3) { numFound = mm3[1]; break; }
+        // 中央医疗票等：号码被引擎识别为散落行（N0032051050 / No 0032051050 / 0032051050），
+        // 且可能位于标签行上方数行（与票据代码/监制字符交错）→ 前向放宽至 5 行，优先 N 前缀形态
+        for (let k = 1; k <= 5 && li - k >= 0; k++) {
+          const mN = lines[li - k].match(/N[oO]?\s*(\d{7,20})\b/);
+          if (mN) { numFound = mN[1]; break; }
+        }
+        if (!numFound) {
+          for (let k = 1; k <= 5 && li - k >= 0; k++) {
+            const mm3 = lines[li - k].match(/^(\d{8,20})$/);
+            if (mm3) { numFound = mm3[1]; break; }
+          }
         }
       }
       if (numFound) break;
@@ -7107,7 +7127,9 @@ function parseOcrText(allRawText) {
       const cand = (mm[2] || '').trim();
       if (!tag || !cand) continue;
       if (/收款单位|收款人|复核人|开票人|经办人|结算人|单位|医院|机器/.test(tag)) continue;
-      if (!/[\u4e00-\u9fa5]/.test(cand) || /统一|信用|证件|身份证|代码|号码|^\d/.test(cand)) continue;
+      if (!/[\u4e00-\u9fa5]/.test(cand)) continue;
+      // 排除表头词/日期残留/非姓名候选（中央医疗票 OCR 词序乱：交款人：下方是"开票日/项目名称"等）
+      if (/统一|信用|证件|身份证|代码|号码|^\d|开票|日期|项目|金额|数量|单位|备注|名称|收费|诊察|检查|化验|治疗|手术|床位|护理|麻醉|西药|中成|卫生|材料|合计|大写|小写|医保|统筹|支付|账户|现金|自付|自费/.test(cand)) continue;
       nameFound = cand;
       break;
     }
@@ -7118,19 +7140,28 @@ function parseOcrText(allRawText) {
         const cand = (mm[2] || '').trim();
         if (!tag || !cand) continue;
         if (/收款单位|收款人|复核人|开票人|经办人|单位|医院/.test(tag)) continue;
-        if (!/[\u4e00-\u9fa5]/.test(cand) || /统一|信用|证件|身份证|代码|号码|^\d/.test(cand)) continue;
+        if (!/[\u4e00-\u9fa5]/.test(cand)) continue;
+        if (/统一|信用|证件|身份证|代码|号码|^\d|开票|日期|项目|金额|数量|单位|备注|名称|收费|诊察|检查|化验|治疗|手术|床位|护理|麻醉|西药|中成|卫生|材料|合计|大写|小写|医保|统筹|支付|账户|现金|自付|自费/.test(cand)) continue;
         nameFound = cand;
         break;
       }
     }
-    // 拆行兜底："交款人:" 与姓名分两行时，取其后 2 行内的纯汉字行
+    // 拆行兜底："交款人:" 与姓名分两行时，取其后 2 行内的纯汉字行；中央医疗票姓名可能在标签上方（前向 3 行）
     if (!nameFound) {
       const lines = allRawText.split('\n');
+      const BAD = /开票|日期|项目|金额|数量|单位|备注|名称|收费|诊察|检查|化验|治疗|手术|床位|护理|麻醉|西药|中成|卫生|材料|合计|大写|小写|医保|统筹|支付|账户|现金|自付|自费|结算|专用|收款|复核|经办/;
       for (let li = 0; li < lines.length; li++) {
-        if (!/[文交众缴]?.{0,2}[款缴].{0,1}[人认从入几八力乃]/.test(lines[li])) continue;
+        // 候选行必须是完整标签（带冒号），排除"交款人统"等 OCR 残行
+        if (!/[文交众缴]?.{0,2}[款缴].{0,1}[人认从入几八力乃]\s*[:：]/.test(lines[li])) continue;
         for (let k = 1; k <= 2 && li + k < lines.length; k++) {
           const nm = lines[li + k].match(/^([\u4e00-\u9fa5]{2,8})$/);
-          if (nm) { nameFound = nm[1]; break; }
+          if (nm && !BAD.test(nm[1])) { nameFound = nm[1]; break; }
+        }
+        if (!nameFound) {
+          for (let k = 1; k <= 3 && li - k >= 0; k++) {
+            const nm2 = lines[li - k].match(/^([\u4e00-\u9fa5]{2,8})$/);
+            if (nm2 && !BAD.test(nm2[1])) { nameFound = nm2[1]; break; }
+          }
         }
         if (nameFound) break;
       }
@@ -7142,16 +7173,17 @@ function parseOcrText(allRawText) {
     const lines = allRawText.split('\n');
     let dFound = '';
     for (let li = 0; li < lines.length; li++) {
-      if (!/开[^\d\n]{0,3}日期/.test(lines[li])) continue;
+      if (!/开[^\d\n]{0,3}日期?/.test(lines[li])) continue;
       const mm = lines[li].match(/(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/);
       if (mm) { dFound = mm[1]; break; }
       for (let k = 1; k <= 2 && li + k < lines.length; k++) {
-        const mm2 = lines[li + k].match(/^(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})$/);
+        // 日期行可带开票时刻后缀（2024-03-13 12:57）与全角冒号
+        const mm2 = lines[li + k].match(/^(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})(?:\s*[:：]?\s*\d{1,2}[:：]\d{2})?$/);
         if (mm2) { dFound = mm2[1]; break; }
       }
       if (!dFound) {
         for (let k = 1; k <= 3 && li - k >= 0; k++) {
-          const mm3 = lines[li - k].match(/^(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})$/);
+          const mm3 = lines[li - k].match(/^(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})(?:\s*[:：]?\s*\d{1,2}[:：]\d{2})?$/);
           if (mm3) { dFound = mm3[1]; break; }
         }
       }
@@ -7296,12 +7328,48 @@ function parseOcrText(allRawText) {
     }
   }
   if (medRaw) ret.medicareFundPay = cleanAmount(medRaw);
-  // 6. 总金额：优先"金额合计/小写"，金额数字兼容全角逗号与误识点
+  // 5.5 交叉校验辅助字段（三公式勾稽用）：
+  //   公式1[财政部]：金额合计 = 医保统筹 + 其他支付 + 个人账户支付 + 个人现金支付
+  //   公式2[山东]：个人账户支付 + 个人现金支付 = 个人自付 + 个人自费
+  //   公式3：金额合计 = 医保统筹 + 其他支付 + 个人自付 + 个人自费
+  {
+    // 个人现金支付（标准票）/ 个人支付（中央票，值可能带 CCBAPP 前缀或换行、引擎错字 O→0）：
+    //   中央票公式：金额合计 = 医保统筹 + 个人账户 + 个人支付（缺失字段按 0 计算）
+    let cashRaw = '';
+    let cm = allRawText.match(/(?:个人现金支付|个人支付)[：:]\s*([\d,，.]+\.\d{2})/);
+    if (cm) cashRaw = cm[1];
+    if (!cashRaw) {
+      cm = allRawText.match(/个人支付[：:][^\d]{0,12}([\d,，.]+\.\d{2})/);
+      if (cm) cashRaw = cm[1];
+    }
+    if (!cashRaw) {
+      const clines = allRawText.split('\n');
+      for (let li = 0; li < clines.length; li++) {
+        if (!/个人支付[：:]/.test(clines[li])) continue;
+        for (let k = 1; k <= 2 && li + k < clines.length; k++) {
+          const cc = clines[li + k].match(/([0-9Oo][0-9,，.Oo\s]*\.\s*[0-9]{2})/);
+          if (cc && /CCB|APP/.test(clines[li + k])) { cashRaw = cc[1]; break; }
+        }
+        if (cashRaw) break;
+      }
+      if (cashRaw) cashRaw = cashRaw.replace(/[Oo]/g, '0').replace(/\s+/g, '');
+    }
+    if (cashRaw) ret._cash = cleanAmount(cashRaw);
+    const am = allRawText.match(/个人账户支付[：:]\s*([\d,，.]+\.\d{2})/);
+    if (am) ret._acct = cleanAmount(am[1]);
+    const om = allRawText.match(/(?:其他|大病保险)支付[：:]\s*([\d,，.]+\.\d{2})/);
+    if (om) ret._other = cleanAmount(om[1]);
+    const spM = allRawText.match(/个人自付[：:]\s*([\d,，.]+\.\d{2})/);
+    if (spM) ret._selfPay = cleanAmount(spM[1]);
+    const sfM = allRawText.match(/(?:个人)?自费[：:]\s*([\d,，.]+\.\d{2})/);
+    if (sfM) ret._selfFee = cleanAmount(sfM[1]);
+  }
+  // 6. 总金额：优先"金额合计/小写"，金额数字兼容全角逗号与误识点；(?![\d.]) 防止贪婪回溯截断（2.699. 32 → 2.69）
   let totalVal = "";
-  m = allRawText.match(/(?:金额合计|合计金额|总金额|小写)[^\d]*([\d,，.]+\.\d{2})/);
+  m = allRawText.match(/(?:金额合计|合计金额|总金额|小写)[^\d]*([\d,，.]+\.\d{2})(?![\d.])/);
   if (m) totalVal = m[1];
   if (!totalVal) {
-    m = allRawText.match(/小写[^\d]*([\d,，.]+\.\d{2})/);
+    m = allRawText.match(/小写[^\d]*([\d,，.]+\.\d{2})(?![\d.])/);
     if (m) totalVal = m[1];
   }
   if (!totalVal) {
@@ -7321,6 +7389,63 @@ function parseOcrText(allRawText) {
     }
   }
   if (totalVal) ret.totalMoney = cleanAmount(totalVal);
+  // 6.6 三公式数学交叉验证（输出总金额/医保统筹前）：
+  //   F1[财政部·最高] 金额合计 = 统筹 + 其他支付 + 个人账户 + 个人现金
+  //   F2[山东勾稽]    个人账户 + 个人现金 = 个人自付 + 个人自费
+  //   F3              金额合计 = 统筹 + 其他支付 + 个人自付 + 个人自费
+  //   任一代入偏差≠0 均标记可疑；F1 权威优先，结合 F3 反推交叉修正引擎错字（如 2040.69→2010.69）
+  //   注：大写金额不参与覆盖（引擎对大写错字如 伍→佰 不鲁棒，曾把 35.00 误改为 30.00），仅小写缺失时兜底（见 6.5）
+  {
+    const medN = Number(ret.medicareFundPay) || 0;
+    const totalN = Number(ret.totalMoney) || 0;
+    const otherN = Number(ret._other) || 0, acctN = Number(ret._acct) || 0, cashN = Number(ret._cash) || 0;
+    const spN = Number(ret._selfPay) || 0, sfN = Number(ret._selfFee) || 0;
+    // F1/F2/F3 偏差（分）
+    const f1 = totalN - (medN + otherN + acctN + cashN);
+    const f2 = (acctN + cashN) - (spN + sfN);
+    const f3 = totalN - (medN + otherN + spN + sfN);
+    // F1 不成立 → 统筹/总金额错字：缺失字段（其他/账户/现金等）按 0 参与计算（中央票等引擎未识别到的字段填充 0.00 计算），
+    // 按 F1 反推 med' = 合计 - 其他 - 账户 - 现金，与 F3 反推交叉验证；修正失败则统筹与总金额双双标记存疑
+    if (Math.abs(f1) > 0.01 && totalN > 0) {
+      const infer1 = totalN - otherN - acctN - cashN;
+      const infer3 = totalN - otherN - spN - sfN;
+      const nearEnough = medN > 0 && Math.abs(infer1 - medN) <= medN * 0.15;
+      if (infer1 >= 0 && nearEnough && Math.abs(infer1 - medN) > 0.01 && Math.abs(infer1 - infer3) < 0.01) {
+        ret.medicareFundPay = infer1.toFixed(2);
+        ret._medNote = '医保统筹按公式1（金额合计=统筹+其他+账户+现金）交叉校验修正，请核对';
+      } else if (infer1 >= 0 && nearEnough && Math.abs(infer1 - medN) > 0.01) {
+        // infer1(F1反推) 与 infer3(F3反推) 不一致：若 现金+账户 < 个人自付 → 个人现金支付疑似引擎错字
+        // （如 442.51→412.51），F1 反推不可信，保留引擎识别值并标存疑；否则按 F1 修正
+        if ((acctN + cashN) < spN - 0.01) {
+          ret._medNote = '医保统筹金额存疑（公式1/3反推不一致，个人现金支付疑似识别错误），请核对';
+        } else {
+          ret.medicareFundPay = infer1.toFixed(2);
+          ret._medNote = '医保统筹按公式1交叉校验修正（公式3勾稽不符，请核对）';
+        }
+      } else {
+        ret._medNote = '医保统筹金额存疑（公式1交叉校验不成立），请核对';
+        ret._totalNote = '总金额数学交叉校验不通过（合计≠统筹+其他+账户+现金），请核对';
+      }
+    }
+    // 公式2/3 勾稽（F1 已平衡时）：自付/自费行齐全则直接校验；
+    // 自费行缺失（如徐伟杰票引擎漏识别"个人自费"）时，用 F2 反推(账户+现金-自付) 与 F3 反推(合计-统筹-其他-自付) 交叉验证，
+    // 两值一致且≥0 说明票面满足三公式（仅引擎漏行）→ 校验通过不提示
+    if (Math.abs(f1) <= 0.01) {
+      let f2f3Ok = false;
+      if (ret._selfFee === undefined) {
+        const inferSf2 = (acctN + cashN) - spN;
+        const inferSf3 = totalN - medN - otherN - spN;
+        if (inferSf2 >= 0 && Math.abs(inferSf2 - inferSf3) < 0.01) {
+          f2f3Ok = true;
+          ret._sfInferred = inferSf2.toFixed(2);
+        }
+      }
+      if (!f2f3Ok) {
+        if (Math.abs(f2) > 0.01 && ret._selfPay !== undefined && ret._selfFee !== undefined) ret._f2Note = '公式2勾稽不符（账户+现金≠自付+自费），请核对分项';
+        if (Math.abs(f3) > 0.01 && ret._selfFee !== undefined) ret._f3Note = '公式3勾稽不符（合计≠统筹+其他+自付+自费），请核对分项';
+      }
+    }
+  }
   return ret;
 }
 
@@ -7362,6 +7487,42 @@ async function roiOcrHospitalDate(blob, items) {
   }
 }
 
+// 医保统筹金额 ROI 区域重识别：引擎把"医保统筹基金支付"行识别错字（如 2040.69→2010.69）时，
+// 裁标签行局部区域单独重识别；成功返回 cleanAmount 后的金额，失败返回 ''
+async function roiOcrMedicare(blob, items) {
+  try {
+    const hit = (items || []).find(it => /(医保统筹|统筹基金|统筹)\s*支付/.test(String(it.text || '')) && !/个人|账户|自付|自费|大病/.test(String(it.text || '')));
+    if (!hit || !hit.poly || hit.poly.length < 4) return '';
+    const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
+    let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    const padX = Math.max(30, (maxX - minX) * 0.15);
+    const padY = Math.max(15, (maxY - minY) * 0.25);
+    minX = Math.max(0, minX - padX); maxX += padX;
+    minY = Math.max(0, minY - padY); maxY += padY;
+    const bmp = await createImageBitmap(blob);
+    const sx = Math.floor(minX), sy = Math.floor(minY);
+    const cw = Math.min(bmp.width, Math.ceil(maxX)) - sx;
+    const ch = Math.min(bmp.height, Math.ceil(maxY)) - sy;
+    if (cw <= 0 || ch <= 0) return '';
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    canvas.getContext('2d').drawImage(bmp, sx, sy, cw, ch, 0, 0, cw, ch);
+    const roiBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+    const roiEngine = await getEngine();
+    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
+    const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
+    const roiText = roiItems.map(it => it.text).join('\n');
+    const m = roiText.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/);
+    if (!m) return '';
+    const v = cleanAmount(m[1]);
+    return /^\d+(\.\d{2})?$/.test(v) ? v : '';
+  } catch (e) {
+    console.error('ROI 医保统筹重识别失败', e);
+    return '';
+  }
+}
+
 // ---------- 表格 ----------
 function insertOcrRow(seq, data, idx) {
   const tr = document.createElement('tr');
@@ -7381,8 +7542,8 @@ function insertOcrRow(seq, data, idx) {
       <td data-key="payerName" ondblclick="window.editCell(this,${idx})">${data.payerName || ''}</td>
       <td data-key="visitDate" ondblclick="window.editCell(this,${idx})">${data.visitDate || ''}</td>
       <td data-key="makeOutDate" ondblclick="window.editCell(this,${idx})">${data.makeOutDate || ''}</td>
-      <td data-key="totalMoney" ondblclick="window.editCell(this,${idx})">${data.totalMoney}</td>
-      <td data-key="medicareFundPay" ondblclick="window.editCell(this,${idx})">${data.medicareFundPay}</td>
+      <td data-key="totalMoney" ondblclick="window.editCell(this,${idx})" title="${data._totalNote ? data._totalNote : ((data._f2Note || data._f3Note) ? [data._f2Note, data._f3Note].filter(Boolean).join('；') : '')}">${data.totalMoney}${(data._totalNote || data._f2Note || data._f3Note) ? `<span class="cell-note-mark">*</span>` : ''}</td>
+      <td data-key="medicareFundPay" ondblclick="window.editCell(this,${idx})" title="${[data._medNote, data._totalNote, data._privateNote].filter(Boolean).join('；')}">${data.medicareFundPay}${(data._medNote || data._totalNote || data._privateNote) ? `<span class="cell-note-mark">*</span>` : ''}</td>
       <td><button class="table-del-btn" data-rec-idx="${idx}">×</button></td>
     `;
   }
@@ -7400,9 +7561,10 @@ function removeRecordAndRebuild(delIndex) {
   sameGroup.forEach((item, pos) => {
     if (pos === 0) { item.billType = item.originBillType; item.totalMoney = item.originTotal; item.medicareFundPay = item.originMedicare; }
     else {
-      // 重复票据：金额归零，其余数据从正本（第一条）复制填充
+      // 重复票据：金额归零，其余数据从正本（第一条）复制填充；校验标记一并清除（金额已归零，勾稽无意义）
       const first = sameGroup[0];
       item.billType = "重复票据"; item.totalMoney = "0.00"; item.medicareFundPay = "0.00"; item.originBillType = "重复票据";
+      delete item._medNote; delete item._totalNote; delete item._f2Note; delete item._f3Note; delete item._sfInferred;
       if (first && !first.error) {
         item.payerName = first.payerName;
         item.visitDate = first.visitDate;
@@ -7770,6 +7932,7 @@ async function reRunEngineLayer(uid) {
         }
         data.failFields = failFieldsOf(data);
         data.warnings = validateRecord(data);
+        if (/^private/.test(data.billType)) data._privateNote = '请核对该票是否医保报销（私立医院票据）';
         data.source = 'regex';
         data.bindUid = uid;
         data.fileName = name + (invoiceGroups.length > 1 ? `（票${g + 1}/${invoiceGroups.length}）` : '');
