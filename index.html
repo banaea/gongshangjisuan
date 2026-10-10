@@ -475,13 +475,14 @@
         .ocr-preview-wrap {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin: 14px 0;
+            gap: 8px;
+            margin: 12px 0 2px;
+            justify-content: flex-start;
         }
         .ocr-preview-item {
-            width: 150px;
+            width: 75px;
             height: auto;
-            min-height: 106px;
+            min-height: 53px;
             position: relative;
             border: 1px solid #e5e7eb;
             background: #f9fafb;
@@ -495,11 +496,33 @@
         }
         .ocr-preview-item .ocr-preview-img-box {
             width: 100%;
-            height: 106px;
+            height: 53px;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+        }
+        .ocr-add-btn {
+            width: 75px;
+            height: 53px;
+            min-height: 53px;
+            border: 1.5px dashed #cbd5e1;
+            border-radius: 4px;
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 22px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: border-color .15s, background .15s;
+        }
+        .ocr-add-btn:hover {
+            border-color: #1a56db;
+            background: #eff6ff;
+            color: #1a56db;
         }
         .ocr-preview-item img {
             max-width: 100%;
@@ -1139,14 +1162,13 @@ var _hmt = _hmt || [];
                     <span class="badge" id="engineBadge">引擎未初始化</span>
                 </div>
 
-                <!-- 拖拽+选择上传区域 -->
+                <!-- 拖拽+选择上传区域（缩略图在虚线框内展示，末尾 + 号继续添加） -->
                 <div class="ocr-drop-box" id="ocrDropArea">
                     <p>点击选择图片 / PDF，或直接拖拽多张票据文件到此处上传</p>
                     <button class="ocr-btn" id="ocrSelectBtn">选择票据文件</button>
                     <input type="file" id="ocrFileInput" multiple accept="image/png,image/jpeg,image/jpg,image/bmp,image/webp,application/pdf,.pdf">
+                    <div class="ocr-preview-wrap" id="ocrPreviewBox"></div>
                 </div>
-
-                <div class="ocr-preview-wrap" id="ocrPreviewBox"></div>
 
                 <div style="margin:12px 0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
                     <button class="ocr-btn" id="ocrSubmitBtn" disabled>📷 提交识别</button>
@@ -6561,6 +6583,13 @@ function renderOcrPreview() {
     wrap.append(delBtn);
     ocrPreviewBox.appendChild(wrap);
   });
+  // 末尾追加 "+" 号：点击添加文件（拖拽到虚线框任意位置同样可添加）
+  const addBtn = document.createElement('div');
+  addBtn.className = 'ocr-add-btn';
+  addBtn.textContent = '+';
+  addBtn.title = '添加票据文件';
+  addBtn.onclick = e => { e.stopPropagation(); ocrFileInput.click(); };
+  ocrPreviewBox.appendChild(addBtn);
 }
 
 // ---------- 批量识别 ----------
@@ -7502,15 +7531,29 @@ function parseOcrText(allRawText) {
 // 规避邻近文本（如业务流水号）粘连导致的日期错乱；识别出合法日期则返回（区间或单日期）
 async function roiOcrHospitalDate(blob, items) {
   try {
-    const hit = (items || []).find(it => /住\s*院\s*时\s*间/.test(String(it.text || '')));
-    if (!hit || !hit.poly || hit.poly.length < 4) return '';
+    let hit = (items || []).find(it => /住\s*院\s*时\s*间/.test(String(it.text || '')));
+    let fallbackAnchor = null; // 无"住院时间"标签行（被印章/印戳干扰漏检）时，用同行锚点裁左侧区域
+    if (!hit || !hit.poly || hit.poly.length < 4) {
+      fallbackAnchor = (items || []).find(it => /预缴金额|补缴金额|退费金额|住院科别/.test(String(it.text || '')) && it.poly && it.poly.length >= 4);
+      if (!fallbackAnchor) return '';
+      hit = fallbackAnchor;
+    }
     const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
     let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
     let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
     const padX = Math.max(30, (maxX - minX) * 0.15);
     const padY = Math.max(15, (maxY - minY) * 0.25);
-    minX = Math.max(0, minX - padX); maxX += padX;
-    minY = Math.max(0, minY - padY); maxY += padY;
+    if (fallbackAnchor) {
+      // 住院时间在锚点行左侧（x 从 0 到锚点起点），整行裁左侧区域规避印戳干扰
+      minX = 0;
+      maxX = Math.min.apply(null, xs) + padX * 2;
+      minY = Math.max(0, minY - padY); maxY += padY;
+    } else {
+      minX = Math.max(0, minX - padX);
+      // 日期数字在「住院时间」标签右侧，大幅右扩展避免裁剪过窄只得到标签
+      maxX += Math.max(300, padX * 6);
+      minY = Math.max(0, minY - padY); maxY += padY;
+    }
     const bmp = await createImageBitmap(blob);
     const sx = Math.floor(minX), sy = Math.floor(minY);
     const cw = Math.min(bmp.width, Math.ceil(maxX)) - sx;
