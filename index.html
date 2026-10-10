@@ -6184,7 +6184,7 @@ function exportWordDocument() {
 <script src="./ocr/libs/pdfjs-lib.js"></script>
 <script type="module">
 // ============================================================
-// 医疗票据 OCR（纯本地 WASM · PP-OCRv5）生产功能测试版
+// 医疗票据 OCR（纯本地 WASM · PP-OCRv6）生产功能测试版
 // ============================================================
 
 const $ = id => document.getElementById(id);
@@ -6193,8 +6193,8 @@ const OCR_API_ENGINE = null; // 纯本地引擎，无云端接口
 // ---------- 引擎初始化进度（monkey-patch fetch 统计模型下载） ----------
 let modelBytes = 0, modelTotal = 0, initPhase = 'idle';
 const MODEL_URLS = [
-  'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_det_onnx_infer.tar',
-  'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_rec_onnx_infer.tar'
+  'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv6_small_det_onnx_infer.tar',
+  'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv6_small_rec_onnx_infer.tar'
 ];
 let patchInstalled = false;
 
@@ -6202,7 +6202,7 @@ function setInitProgress(pct, label) {
   const b = $('engineBadge');
   if (!b) return;
   if (pct >= 100) {
-    b.textContent = '引擎已就绪（PP-OCRv5 WASM）';
+    b.textContent = '引擎已就绪（PP-OCRv6 WASM）';
     b.style.background = '#d1fae5';
     b.style.color = '#065f46';
   } else {
@@ -6301,7 +6301,7 @@ async function getEngine() {
   installFetchPatch();
   setInitProgress(2, '加载本地识别引擎…');
   const { PaddleOCR } = await import('./ocr/libs/ocr-sdk.js');
-  setInitProgress(8, '初始化 OCR 引擎（PP-OCRv5）…');
+  setInitProgress(8, '初始化 OCR 引擎（PP-OCRv6）…');
   // 预取模型大小以计算下载进度
   try {
     const sizes = await Promise.all(MODEL_URLS.map(u =>
@@ -6312,7 +6312,7 @@ async function getEngine() {
   setInitProgress(12, '创建识别引擎（首次需下载模型）…');
   const createEngine = () => PaddleOCR.create({
     lang: 'ch',
-    ocrVersion: 'PP-OCRv5',
+    ocrVersion: 'PP-OCRv6',
     ortOptions: {
       backend: 'wasm',
       wasmPaths: new URL('./ocr/libs/onnx/', location.href).href,
