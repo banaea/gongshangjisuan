@@ -7393,7 +7393,8 @@ function parseOcrText(allRawText) {
   //   F1[财政部·最高] 金额合计 = 统筹 + 其他支付 + 个人账户 + 个人现金
   //   F2[山东勾稽]    个人账户 + 个人现金 = 个人自付 + 个人自费
   //   F3              金额合计 = 统筹 + 其他支付 + 个人自付 + 个人自费
-  //   任一代入偏差≠0 均标记可疑；F1 权威优先，结合 F3 反推交叉修正引擎错字（如 2040.69→2010.69）
+  //   按顺序短路：F1 → F2 → F3，任一公式验证通过即视为校验通过，后续公式不再验证、不再标记；
+  //   F1 不成立时优先尝试反推修正（含统筹被印章遮挡漏识别为 0 时按 F1 反推兜底，公立票适用）
   //   注：大写金额不参与覆盖（引擎对大写错字如 伍→佰 不鲁棒，曾把 35.00 误改为 30.00），仅小写缺失时兜底（见 6.5）
   {
     const medN = Number(ret.medicareFundPay) || 0;
@@ -7404,45 +7405,56 @@ function parseOcrText(allRawText) {
     const f1 = totalN - (medN + otherN + acctN + cashN);
     const f2 = (acctN + cashN) - (spN + sfN);
     const f3 = totalN - (medN + otherN + spN + sfN);
-    // F1 不成立 → 统筹/总金额错字：缺失字段（其他/账户/现金等）按 0 参与计算（中央票等引擎未识别到的字段填充 0.00 计算），
-    // 按 F1 反推 med' = 合计 - 其他 - 账户 - 现金，与 F3 反推交叉验证；修正失败则统筹与总金额双双标记存疑
-    if (Math.abs(f1) > 0.01 && totalN > 0) {
+    let passed = Math.abs(f1) <= 0.01;
+    // F1 不成立 → 尝试反推修正；修正成功即视为通过（短路）
+    if (!passed && Math.abs(f1) > 0.01 && totalN > 0) {
       const infer1 = totalN - otherN - acctN - cashN;
-      const infer3 = totalN - otherN - spN - sfN;
-      const nearEnough = medN > 0 && Math.abs(infer1 - medN) <= medN * 0.15;
-      if (infer1 >= 0 && nearEnough && Math.abs(infer1 - medN) > 0.01 && Math.abs(infer1 - infer3) < 0.01) {
+      // 场景A：统筹漏识别为 0（引擎受印章/水印遮挡未识别出统筹行），票面非私立 → F1 反推兜底
+      if (medN === 0 && infer1 > 0 && !ret._privateNote) {
         ret.medicareFundPay = infer1.toFixed(2);
-        ret._medNote = '医保统筹按公式1（金额合计=统筹+其他+账户+现金）交叉校验修正，请核对';
-      } else if (infer1 >= 0 && nearEnough && Math.abs(infer1 - medN) > 0.01) {
-        // infer1(F1反推) 与 infer3(F3反推) 不一致：若 现金+账户 < 个人自付 → 个人现金支付疑似引擎错字
-        // （如 442.51→412.51），F1 反推不可信，保留引擎识别值并标存疑；否则按 F1 修正
-        if ((acctN + cashN) < spN - 0.01) {
-          ret._medNote = '医保统筹金额存疑（公式1/3反推不一致，个人现金支付疑似识别错误），请核对';
-        } else {
-          ret.medicareFundPay = infer1.toFixed(2);
-          ret._medNote = '医保统筹按公式1交叉校验修正（公式3勾稽不符，请核对）';
-        }
+        ret._medNote = '医保统筹按公式1反推修正（引擎受干扰未识别统筹），请核对';
+        passed = true;
       } else {
-        ret._medNote = '医保统筹金额存疑（公式1交叉校验不成立），请核对';
-        ret._totalNote = '总金额数学交叉校验不通过（合计≠统筹+其他+账户+现金），请核对';
+        const infer3 = totalN - otherN - spN - sfN;
+        const nearEnough = medN > 0 && Math.abs(infer1 - medN) <= medN * 0.15;
+        if (infer1 >= 0 && nearEnough && Math.abs(infer1 - medN) > 0.01 && Math.abs(infer1 - infer3) < 0.01) {
+          ret.medicareFundPay = infer1.toFixed(2);
+          ret._medNote = '医保统筹按公式1（金额合计=统筹+其他+账户+现金）交叉校验修正，请核对';
+          passed = true;
+        } else if (infer1 >= 0 && nearEnough && Math.abs(infer1 - medN) > 0.01) {
+          // infer1(F1反推) 与 infer3(F3反推) 不一致：若 现金+账户 < 个人自付 → 个人现金支付疑似引擎错字
+          // （如 442.51→412.51），F1 反推不可信，保留引擎识别值并标存疑；否则按 F1 修正
+          if ((acctN + cashN) < spN - 0.01) {
+            ret._medNote = '医保统筹金额存疑（公式1/3反推不一致，个人现金支付疑似识别错误），请核对';
+          } else {
+            ret.medicareFundPay = infer1.toFixed(2);
+            ret._medNote = '医保统筹按公式1交叉校验修正（公式3勾稽不符，请核对）';
+            passed = true;
+          }
+        } else {
+          ret._medNote = '医保统筹金额存疑（公式1交叉校验不成立），请核对';
+          ret._totalNote = '总金额数学交叉校验不通过（合计≠统筹+其他+账户+现金），请核对';
+        }
       }
     }
-    // 公式2/3 勾稽（F1 已平衡时）：自付/自费行齐全则直接校验；
-    // 自费行缺失（如徐伟杰票引擎漏识别"个人自费"）时，用 F2 反推(账户+现金-自付) 与 F3 反推(合计-统筹-其他-自付) 交叉验证，
-    // 两值一致且≥0 说明票面满足三公式（仅引擎漏行）→ 校验通过不提示
-    if (Math.abs(f1) <= 0.01) {
-      let f2f3Ok = false;
-      if (ret._selfFee === undefined) {
-        const inferSf2 = (acctN + cashN) - spN;
-        const inferSf3 = totalN - medN - otherN - spN;
-        if (inferSf2 >= 0 && Math.abs(inferSf2 - inferSf3) < 0.01) {
-          f2f3Ok = true;
-          ret._sfInferred = inferSf2.toFixed(2);
-        }
-      }
-      if (!f2f3Ok) {
+    // F1 未通过时，按顺序短路验证 F2 → F3（字段齐全才判定；任一组字段缺失则该公式不可判，顺延）
+    if (!passed) {
+      if (ret._selfPay !== undefined && ret._selfFee !== undefined && Math.abs(f2) <= 0.01) {
+        passed = true;
+      } else if (ret._selfPay !== undefined && ret._selfFee !== undefined && Math.abs(f3) <= 0.01) {
+        passed = true;
+      } else {
         if (Math.abs(f2) > 0.01 && ret._selfPay !== undefined && ret._selfFee !== undefined) ret._f2Note = '公式2勾稽不符（账户+现金≠自付+自费），请核对分项';
         if (Math.abs(f3) > 0.01 && ret._selfFee !== undefined) ret._f3Note = '公式3勾稽不符（合计≠统筹+其他+自付+自费），请核对分项';
+      }
+    }
+    // 自费行缺失（引擎漏识别"个人自费"）时：F2 反推(账户+现金-自付) 与 F3 反推(合计-统筹-其他-自付) 一致且≥0 → 视为通过（仅引擎漏行）
+    if (!passed && ret._selfFee === undefined && ret._selfPay !== undefined) {
+      const inferSf2 = (acctN + cashN) - spN;
+      const inferSf3 = totalN - medN - otherN - spN;
+      if (inferSf2 >= 0 && Math.abs(inferSf2 - inferSf3) < 0.01) {
+        ret._sfInferred = inferSf2.toFixed(2);
+        passed = true;
       }
     }
   }
