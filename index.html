@@ -7361,7 +7361,10 @@ function parseOcrText(allRawText) {
       }
     }
   }
-  if (medRaw) ret.medicareFundPay = cleanAmount(medRaw);
+  if (medRaw) {
+    ret.medicareFundPay = cleanAmount(medRaw);
+    ret._medRaw = medRaw; // 引擎已识别到统筹（含 0.00），反推修正不得覆盖
+  }
   // 5.5 交叉校验辅助字段（三公式勾稽用）：
   //   公式1[财政部]：金额合计 = 医保统筹 + 其他支付 + 个人账户支付 + 个人现金支付
   //   公式2[山东]：个人账户支付 + 个人现金支付 = 个人自付 + 个人自费
@@ -7370,7 +7373,7 @@ function parseOcrText(allRawText) {
     // 个人现金支付（标准票）/ 个人支付（中央票，值可能带 CCBAPP 前缀或换行、引擎错字 O→0）：
     //   中央票公式：金额合计 = 医保统筹 + 个人账户 + 个人支付（缺失字段按 0 计算）
     let cashRaw = '';
-    let cm = allRawText.match(/(?:个人现金支付|个人支付)[：:]\s*([\d,，.]+\.\d{2})/);
+    let cm = allRawText.match(/(?:个人现金支付|个人支付)[：:]\s*([\d,，.]+\.\d{1,2})/);
     if (cm) cashRaw = cm[1];
     if (!cashRaw) {
       cm = allRawText.match(/个人支付[：:][^\d]{0,12}([\d,，.]+\.\d{2})/);
@@ -7391,11 +7394,11 @@ function parseOcrText(allRawText) {
     if (cashRaw) ret._cash = cleanAmount(cashRaw);
     const am = allRawText.match(/个人账户支付[：:]\s*([\d,，.]+\.\d{2})/);
     if (am) ret._acct = cleanAmount(am[1]);
-    const om = allRawText.match(/(?:其他|大病保险)支付[：:]\s*([\d,，.]+\.\d{2})/);
+    const om = allRawText.match(/(?:其他|大病保险)[^：:\n]{0,3}?支[付行][：:]\s*([\d,，.]+\.\d{2})/);
     if (om) ret._other = cleanAmount(om[1]);
     const spM = allRawText.match(/个人自付[：:]\s*([\d,，.]+\.\d{2})/);
     if (spM) ret._selfPay = cleanAmount(spM[1]);
-    const sfM = allRawText.match(/(?:个人)?自费[：:]\s*([\d,，.]+\.\d{2})/);
+    const sfM = allRawText.match(/(?:个人)?自[費费][：:]\s*([\d,，.]+\.\d{2})/);
     if (sfM) ret._selfFee = cleanAmount(sfM[1]);
   }
   // 6. 总金额：优先"金额合计/小写"，金额数字兼容全角逗号与误识点；(?![\d.]) 防止贪婪回溯截断（2.699. 32 → 2.69）
@@ -7443,8 +7446,8 @@ function parseOcrText(allRawText) {
     // F1 不成立 → 尝试反推修正；修正成功即视为通过（短路）
     if (!passed && Math.abs(f1) > 0.01 && totalN > 0) {
       const infer1 = totalN - otherN - acctN - cashN;
-      // 场景A：统筹漏识别为 0（引擎受印章/水印遮挡未识别出统筹行），票面非私立 → F1 反推兜底
-      if (medN === 0 && infer1 > 0 && !ret._privateNote) {
+      // 场景A：统筹漏识别为 0（引擎受印章/水印遮挡完全未识别出统筹行，_medRaw 为空），票面非私立 → F1 反推兜底
+      if (medN === 0 && !ret._medRaw && infer1 > 0 && !ret._privateNote) {
         ret.medicareFundPay = infer1.toFixed(2);
         ret._medNote = '医保统筹按公式1反推修正（引擎受干扰未识别统筹），请核对';
         passed = true;
