@@ -6631,6 +6631,40 @@ ocrSubmitBtn.onclick = async () => {
             delete data.dateOcrErr;
           }
         }
+        // 七字段 ROI 区域重识别：主正则匹配缺失时，按字段标签行坐标裁局部区域单独引擎识别再正则匹配，
+        // 覆盖票据号码/患者姓名/就诊日期/开票日期/总金额/医保统筹（规避邻近文本粘连、印章水印遮挡导致的识别错误）
+        // 票据号码专项：主正则提取值存在但「票据号码」标签行后无数字（中央票标签后空、值在条形码区，全文兜底易取错）
+        // → 强制裁「票据号码」标签行 ROI 重识别
+        const billHitRaw = groupItems.find(it => /票据号码/.test(String(it.text || '')) && !/电子票据/.test(String(it.text || '')));
+        if (billHitRaw && data.invoiceNo) {
+          const billTxt = String(billHitRaw.text || '');
+          const labelEnd = billTxt.indexOf('票据号码') + 4;
+          if (!/\d/.test(billTxt.slice(labelEnd))) {
+            const roiBill = await roiOcrField(t.blob, groupItems, { label: /票据号码|No\s*[0-9A-Za-z]/, exclude: /电子票据/, padRight: 500, padY: 70, extract: txt => {
+              // 优先标签后值；其次 No 后值；再次独立 6 位以上数字行（条形码区值被识别为独立行时）
+              const m1 = txt.match(/(?:票据号码|号码)[：:\s]*([0-9]{6,})/);
+              if (m1) return m1[1].trim();
+              const m2 = txt.match(/No\s*([0-9]{6,})/);
+              if (m2) return m2[1].trim();
+              const m3 = txt.match(/(?<![0-9])([0-9]{6,})(?![0-9])/);
+              return m3 ? m3[1].trim() : '';
+            } });
+            if (roiBill) data.invoiceNo = roiBill;
+          }
+        }
+        const roiCfg = [
+          { key: 'invoiceNo', label: /票据号码/, exclude: /电子票据/, extract: t => { const m = t.match(/(?:票据号码|号码)[：:\s]*([0-9A-Za-z]{6,})/); return m ? m[1].trim() : ''; } },
+          { key: 'payerName', label: /交款人|患者姓名/, exclude: /统一社会信用代码/, extract: t => { const m = t.match(/(?:交款人|患者姓名)[：:\s]*([\u4e00-\u9fa5·]{2,8})/); return m ? m[1].trim() : ''; } },
+          { key: 'visitDate', label: /就诊日期|就诊时间/, exclude: /住院时间/, extract: t => { const m = t.match(/就诊日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/); return m ? fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,'')) : ''; } },
+          { key: 'makeOutDate', label: /开票日期|开日期/, extract: t => { const m = t.match(/开[^\d\n]{0,3}日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}|\d{8})/); return m ? formatDateStr(m[1]) : ''; } },
+          { key: 'totalMoney', label: /金额合计|小写/, exclude: /大写/, extract: t => { const m = t.match(/\(?小写\)?[：:\s]*[¥￥]?\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } },
+          { key: 'medicareFundPay', label: /医保统筹|统筹基金/, exclude: /个人|账户|自付|自费|大病/, extract: t => { const m = t.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } }
+        ];
+        for (const cfg of roiCfg) {
+          if (data[cfg.key]) continue;
+          const roiV = await roiOcrField(t.blob, groupItems, cfg);
+          if (roiV) data[cfg.key] = roiV;
+        }
         data.failFields = failFieldsOf(data);
         data.warnings = validateRecord(data);
         if (/^private/.test(data.billType)) data._privateNote = '请核对该票是否医保报销（私立医院票据）';
@@ -7535,6 +7569,43 @@ async function roiOcrMedicare(blob, items) {
   }
 }
 
+// 通用 ROI 区域重识别：主正则匹配缺失时，按字段标签行 poly 裁出局部区域单独引擎识别，再正则匹配，
+// 规避邻近文本粘连/印章水印遮挡导致的识别错误（住院日期另有 roiOcrHospitalDate 独立处理）
+// opts: { label: RegExp(标签匹配), exclude: RegExp|null(排除干扰标签), extract: (text)=>string(从局部文本提取字段值) }
+async function roiOcrField(blob, items, opts) {
+  try {
+    const hit = (items || []).find(it => opts.label.test(String(it.text || '')) && (!opts.exclude || !opts.exclude.test(String(it.text || ''))));
+    if (!hit || !hit.poly || hit.poly.length < 4) return '';
+    const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
+    let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    // 值通常在标签右侧：向右扩标签宽度的 2 倍（保底 120px）；上下小幅扩展容纳错位（opts.padRight/padY 可覆盖）
+    const w = maxX - minX, h = maxY - minY;
+    const padRight = opts.padRight || Math.max(w * 2, 120);
+    const padY = opts.padY || Math.max(h * 0.8, 20);
+    minX = Math.max(0, minX - 10); maxX += padRight;
+    minY = Math.max(0, minY - padY * 0.5); maxY += padY * 0.5;
+    const bmp = await createImageBitmap(blob);
+    const sx = Math.floor(minX), sy = Math.floor(minY);
+    const cw = Math.min(bmp.width, Math.ceil(maxX)) - sx;
+    const ch = Math.min(bmp.height, Math.ceil(maxY)) - sy;
+    if (cw <= 0 || ch <= 0) return '';
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    canvas.getContext('2d').drawImage(bmp, sx, sy, cw, ch, 0, 0, cw, ch);
+    const roiBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+    const roiEngine = await getEngine();
+    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
+    const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
+    const roiText = roiItems.map(it => it.text).join('\n');
+    if (!opts.label.test(roiText)) return '';
+    return opts.extract(roiText);
+  } catch (e) {
+    console.error('ROI 区域重识别失败', String(opts.label), e);
+    return '';
+  }
+}
+
 // ---------- 表格 ----------
 function insertOcrRow(seq, data, idx) {
   const tr = document.createElement('tr');
@@ -7941,6 +8012,40 @@ async function reRunEngineLayer(uid) {
             data.visitDate = roiVisit;
             delete data.dateOcrErr;
           }
+        }
+        // 七字段 ROI 区域重识别：主正则匹配缺失时，按字段标签行坐标裁局部区域单独引擎识别再正则匹配，
+        // 覆盖票据号码/患者姓名/就诊日期/开票日期/总金额/医保统筹（规避邻近文本粘连、印章水印遮挡导致的识别错误）
+        // 票据号码专项：主正则提取值存在但「票据号码」标签行后无数字（中央票标签后空、值在条形码区，全文兜底易取错）
+        // → 强制裁「票据号码」标签行 ROI 重识别
+        const billHitRaw = groupItems.find(it => /票据号码/.test(String(it.text || '')) && !/电子票据/.test(String(it.text || '')));
+        if (billHitRaw && data.invoiceNo) {
+          const billTxt = String(billHitRaw.text || '');
+          const labelEnd = billTxt.indexOf('票据号码') + 4;
+          if (!/\d/.test(billTxt.slice(labelEnd))) {
+            const roiBill = await roiOcrField(t.blob, groupItems, { label: /票据号码|No\s*[0-9A-Za-z]/, exclude: /电子票据/, padRight: 500, padY: 70, extract: txt => {
+              // 优先标签后值；其次 No 后值；再次独立 6 位以上数字行（条形码区值被识别为独立行时）
+              const m1 = txt.match(/(?:票据号码|号码)[：:\s]*([0-9]{6,})/);
+              if (m1) return m1[1].trim();
+              const m2 = txt.match(/No\s*([0-9]{6,})/);
+              if (m2) return m2[1].trim();
+              const m3 = txt.match(/(?<![0-9])([0-9]{6,})(?![0-9])/);
+              return m3 ? m3[1].trim() : '';
+            } });
+            if (roiBill) data.invoiceNo = roiBill;
+          }
+        }
+        const roiCfg = [
+          { key: 'invoiceNo', label: /票据号码/, exclude: /电子票据/, extract: t => { const m = t.match(/(?:票据号码|号码)[：:\s]*([0-9A-Za-z]{6,})/); return m ? m[1].trim() : ''; } },
+          { key: 'payerName', label: /交款人|患者姓名/, exclude: /统一社会信用代码/, extract: t => { const m = t.match(/(?:交款人|患者姓名)[：:\s]*([\u4e00-\u9fa5·]{2,8})/); return m ? m[1].trim() : ''; } },
+          { key: 'visitDate', label: /就诊日期|就诊时间/, exclude: /住院时间/, extract: t => { const m = t.match(/就诊日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/); return m ? fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,'')) : ''; } },
+          { key: 'makeOutDate', label: /开票日期|开日期/, extract: t => { const m = t.match(/开[^\d\n]{0,3}日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}|\d{8})/); return m ? formatDateStr(m[1]) : ''; } },
+          { key: 'totalMoney', label: /金额合计|小写/, exclude: /大写/, extract: t => { const m = t.match(/\(?小写\)?[：:\s]*[¥￥]?\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } },
+          { key: 'medicareFundPay', label: /医保统筹|统筹基金/, exclude: /个人|账户|自付|自费|大病/, extract: t => { const m = t.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } }
+        ];
+        for (const cfg of roiCfg) {
+          if (data[cfg.key]) continue;
+          const roiV = await roiOcrField(t.blob, groupItems, cfg);
+          if (roiV) data[cfg.key] = roiV;
         }
         data.failFields = failFieldsOf(data);
         data.warnings = validateRecord(data);
