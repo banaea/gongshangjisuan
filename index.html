@@ -6338,7 +6338,7 @@ async function getEngine() {
   setInitProgress(96, '识别引擎就绪，正在完成初始化…');
   await ocrEngine.initialize();
   setInitProgress(100, '识别引擎就绪');
-  $('engineBadge').textContent = '引擎已就绪（PP-OCRv5 WASM）';
+  $('engineBadge').textContent = '引擎已就绪（PP-OCRv6 WASM）';
   $('engineBadge').style.background = '#d1fae5';
   $('engineBadge').style.color = '#065f46';
   return ocrEngine;
