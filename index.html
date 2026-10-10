@@ -7534,7 +7534,9 @@ async function roiOcrHospitalDate(blob, items) {
     let hit = (items || []).find(it => /住\s*院\s*时\s*间/.test(String(it.text || '')));
     let fallbackAnchor = null; // 无"住院时间"标签行（被印章/印戳干扰漏检）时，用同行锚点裁左侧区域
     if (!hit || !hit.poly || hit.poly.length < 4) {
-      fallbackAnchor = (items || []).find(it => /预缴金额|补缴金额|退费金额|住院科别/.test(String(it.text || '')) && it.poly && it.poly.length >= 4);
+      // 锚点优先级：预缴/补缴/退费金额（与住院时间行同区块、紧邻下方）优先于住院科别（上方行距远，y 扩展不够会裁不到）
+      const anchorItems = (items || []).filter(it => it.poly && it.poly.length >= 4 && /预缴金额|补缴金额|退费金额/.test(String(it.text || '')));
+      fallbackAnchor = anchorItems[0] || (items || []).find(it => /住院科别/.test(String(it.text || '')) && it.poly && it.poly.length >= 4);
       if (!fallbackAnchor) return '';
       hit = fallbackAnchor;
     }
@@ -7544,10 +7546,12 @@ async function roiOcrHospitalDate(blob, items) {
     const padX = Math.max(30, (maxX - minX) * 0.15);
     const padY = Math.max(15, (maxY - minY) * 0.25);
     if (fallbackAnchor) {
-      // 住院时间在锚点行左侧（x 从 0 到锚点起点），整行裁左侧区域规避印戳干扰
+      // 住院时间在锚点行上方（x 从 0 到锚点起点），整行裁左侧区域规避印戳干扰；
+      // x 向右大幅扩展（日期数字在标签右侧，锚点 minX 不够宽会裁掉日期尾部）；
+      // y 向上大幅扩展（住院时间行紧邻锚点上方，padY 默认太小裁不到）
       minX = 0;
-      maxX = Math.min.apply(null, xs) + padX * 2;
-      minY = Math.max(0, minY - padY); maxY += padY;
+      maxX = Math.min.apply(null, xs) + Math.max(300, padX * 6);
+      minY = Math.max(0, minY - Math.max(45, padY * 4)); maxY += padY * 1.5;
     } else {
       minX = Math.max(0, minX - padX);
       // 日期数字在「住院时间」标签右侧，大幅右扩展避免裁剪过窄只得到标签
