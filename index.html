@@ -6316,7 +6316,138 @@ function installFetchPatch() {
 }
 
 // ---------- 引擎单例 ----------
+// 提速 A：识别前降采样工具——短边 > maxSide 时缩放到短边 = maxSide（保持纵横比），
+// 返回 { blob: JPEG blob, scale: 原图边长/降采样边长 }（scale>1 表示已缩放，ROI 需乘回原图坐标）；
+// 小图原样返回 { blob, scale: 1 }。发票文字字号大，降采样后识别精度基本不受影响
+async function downscaleBlob(blob, maxSide) {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const long = Math.max(bmp.width, bmp.height);
+    if (long <= maxSide) { bmp.close(); return { blob, scale: 1 }; }
+    const scale = long / maxSide;
+    const w = Math.max(1, Math.round(bmp.width / scale));
+    const h = Math.max(1, Math.round(bmp.height / scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const smallBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+    return { blob: smallBlob, scale };
+  } catch (e) {
+    return { blob, scale: 1 }; // 降采样失败则用原图，不影响识别
+  }
+}
 let ocrEngine = null;
+
+// ---------- OCR Worker 池（提速 B）----------
+// 多 worker 多核并行识别：懒初始化（后台预热，不阻塞主流程），
+// 就绪前自动回退主线程 engine.predict；任一 worker 出错 → 池失效并回退，绝不破坏现有功能
+let ocrPool = null;
+function getOcrPool() {
+  if (!ocrPool) {
+    ocrPool = {
+      ready: false, failed: false, workers: [], queue: [], pending: {}, busy: 0, nextId: 1,
+      async init() {
+        if (this.ready || this.failed || this._initStarted) return;
+        this._initStarted = true;
+        // W 实测结论（用户已见）：8 路 200s、6 路 100s 均超载，3 路 ~60s/8张 最优 → 核数-1 且上限 3
+        const W = Math.max(1, Math.min((navigator.hardwareConcurrency || 4) - 1, 3));
+        const sdkUrl = new URL('./ocr/libs/ocr-sdk.js', location.href).href;
+        const wasmPaths = new URL('./ocr/libs/onnx/', location.href).href;
+        const created = [];
+        try {
+          for (let i = 0; i < W; i++) {
+            const w = new Worker(new URL('./ocr/worker.js', location.href), { type: 'module' });
+            created.push(w);
+          }
+        } catch (e) { /* worker 创建失败：回退主线程 */ }
+        if (!created.length) { this.failed = true; return; }
+        const initDone = created.map(w => new Promise((res, rej) => {
+          const h = (e) => { if (e.data && e.data.type === 'ready') { w.onmessage = null; res(); } };
+          w.onmessage = h;
+          w.onerror = () => rej(new Error('worker 初始化失败'));
+          w.postMessage({ type: 'init', sdkUrl, wasmPaths });
+        }));
+        const timer = setTimeout(() => this.failed = true, 45000);
+        try { await Promise.all(initDone); } catch (e) { this.failed = true; }
+        clearTimeout(timer);
+        if (this.failed) { created.forEach(w => w.terminate()); return; }
+        this.workers = created.map(w => ({ worker: w, busy: false }));
+        created.forEach(w => {
+          w.onmessage = (e) => {
+            const d = e.data || {};
+            if (d.type === 'result') this.onResult(d.id, d.results);
+            else if (d.type === 'error') this.onError(d.id, d.message);
+          };
+          w.onerror = () => { this.failAll('worker 运行错误'); };
+        });
+        this.ready = true;
+      },
+      onResult(id, results) {
+        const t = this.pending[id];
+        if (!t) return;
+        clearTimeout(t.timer); delete this.pending[id];
+        if (t.worker) t.worker.busy = false;
+        this.busy = Math.max(0, this.busy - 1);
+        t.resolve(results);
+        this.pump();
+      },
+      onError(id, message) {
+        const t = this.pending[id];
+        if (!t) return;
+        clearTimeout(t.timer); delete this.pending[id];
+        if (t.worker) t.worker.busy = false;
+        this.busy = Math.max(0, this.busy - 1);
+        t.reject(new Error(message || 'worker 识别失败'));
+        this.pump();
+      },
+      failAll(message) {
+        if (this.failed) return;
+        this.failed = true;
+        const pend = Object.values(this.pending);
+        this.pending = {};
+        this.workers.forEach(w => { try { w.worker.terminate(); } catch (e) {} });
+        this.workers = [];
+        pend.forEach(t => { clearTimeout(t.timer); t.reject(new Error(message || 'worker 池失效')); });
+      },
+      predict(blob, opts) {
+        return new Promise((resolve, reject) => {
+          const task = { id: this.nextId++, blob, opts, resolve, reject };
+          this.queue.push(task);
+          this.pump();
+        });
+      },
+      pump() {
+        while (this.queue.length && this.busy < this.workers.length) {
+          const free = this.workers.find(w => !w.busy);
+          if (!free) break;
+          const task = this.queue.shift();
+          task.worker = free;
+          free.busy = true; this.busy++;
+          this.pending[task.id] = task;
+          task.timer = setTimeout(() => this.onError(task.id, 'predict 超时（60s）'), 60000);
+          try { free.worker.postMessage({ type: 'predict', id: task.id, blob: task.blob, opts: task.opts }); }
+          catch (e) { this.onError(task.id, '发送任务失败'); }
+        }
+      }
+    };
+  }
+  return ocrPool;
+}
+// 页面加载即后台预热 Worker 池（不依赖 load 事件延迟）：用户上传/拖拽文件期间引擎已在后台就绪，
+// 提交识别时零等待直接并行；池未就绪/失败时 predictWithPool 自动回退主线程，不影响功能
+(function () { try { getOcrPool().init().catch(() => { }); } catch (e) { } })();
+// 主识别 predict：池就绪走池（并发），否则/失败回退主线程 engine.predict
+async function predictWithPool(blob, opts) {
+  const pool = getOcrPool();
+  if (pool.ready) {
+    try { return await pool.predict(blob, opts); }
+    catch (e) { /* 回退主线程 */ }
+  }
+  // 回退主线程路径：主引擎未初始化时懒加载（正常走池时无需加载，省首次提交等待）
+  if (!ocrEngine) await getEngine();
+  return await ocrEngine.predict(blob, opts);
+}
 async function getEngine() {
   if (ocrEngine) return ocrEngine;
   installFetchPatch();
@@ -6594,22 +6725,30 @@ function renderOcrPreview() {
 
 // ---------- 批量识别 ----------
 ocrSubmitBtn.onclick = async () => {
+  const tStart = Date.now();
   const needRec = ocrFileList.filter(item => !item.hasRecognized);
   if (needRec.length === 0) { ocrTipText.textContent = "没有新增待识别票据，无需重复识别"; return; }
   ocrSubmitBtn.disabled = true;
-  ocrTipText.textContent = `正在初始化识别引擎…`;
+  // 引擎未就绪时才显示初始化提示；池就绪（同页复用/预热完成）则直接进入识别，不再初始化主线程引擎
+  const poolAtSubmit = getOcrPool();
+  ocrTipText.textContent = poolAtSubmit.ready
+    ? `开始识别 ${needRec.length} 个文件…`
+    : `正在初始化识别引擎…`;
   let engine;
-  try {
-    engine = await getEngine();
-    engineReady = true;
-  } catch (e) {
-    console.error(e);
-    ocrTipText.textContent = `引擎初始化失败：${e.message}`;
-    $('engineBadge').textContent = '引擎初始化失败';
-    $('engineBadge').style.background = '#fee2e2';
-    $('engineBadge').style.color = '#991b1b';
-    ocrSubmitBtn.disabled = false;
-    return;
+  // 主线程引擎仅回退路径需要：池就绪时跳过（predictWithPool 走 Worker 池，识别前无需初始化主引擎，省 20~30s）
+  if (!poolAtSubmit.ready) {
+    try {
+      engine = await getEngine();
+      engineReady = true;
+    } catch (e) {
+      console.error(e);
+      ocrTipText.textContent = `引擎初始化失败：${e.message}`;
+      $('engineBadge').textContent = '引擎初始化失败';
+      $('engineBadge').style.background = '#fee2e2';
+      $('engineBadge').style.color = '#991b1b';
+      ocrSubmitBtn.disabled = false;
+      return;
+    }
   }
 
   let totalTasks = 0, doneTasks = 0;
@@ -6636,12 +6775,37 @@ ocrSubmitBtn.onclick = async () => {
   }
   totalTasks = tasks.length;
 
-  for (let i = 0; i < tasks.length; i++) {
-    const t = tasks[i];
-    const name = t.fileItem.file.name + (t.pageNo ? `（第${t.pageNo}页）` : '');
-    ocrTipText.textContent = `正在识别 ${i + 1}/${totalTasks}：${name}`;
-    try {
-      const results = await engine.predict(t.blob, { textDetLimitSideLen: 1280, textDetLimitType: 'max', textRecScoreThresh: 0.5 });
+  // 提速 B：后台预热 Worker 池；任务级滑动窗口并发 —— W 路同时跑，谁先完成谁先入表，
+  // 完成立即补充下一个任务（始终保持并行槽位满）；池未就绪/失败时 predictWithPool 自动回退主线程
+  getOcrPool().init().catch(() => {});
+  // 并行路数：用户实测 3 路最优（8 张 ~60s），4/6/8 路均超载（87/100/200s）→ 核数-1 且上限 3
+  const LIMIT = Math.max(1, Math.min((navigator.hardwareConcurrency || 4) - 1, 3));
+  // 首次批量：等待 Worker 池就绪（避免初始化风暴抢 CPU、避免回退路径多路并发主线程），就绪后并行识别；
+  // 池失败或单张任务时不等待，直接识别（predictWithPool 自动回退主线程）
+  if (tasks.length > 1) {
+    const pool = getOcrPool();
+    if (!pool.ready && !pool.failed) {
+      // 显示初始化进度（已就绪 Worker 数/总路数），避免长时间无提示的等待感
+      const progressTimer = setInterval(() => {
+        ocrTipText.textContent = `正在加载识别引擎（已就绪 ${(pool.workers || []).length}/${LIMIT} 个 Worker）…`;
+      }, 600);
+      await pool.init().catch(() => { });
+      clearInterval(progressTimer);
+      ocrTipText.textContent = `识别引擎已就绪，开始 ${totalTasks} 张 ${LIMIT} 路并行识别…`;
+    }
+  }
+  let cursor = 0;
+  const processOne = async () => {
+    while (true) {
+      const i = cursor++;
+      if (i >= tasks.length) break;
+      const t = tasks[i];
+      const name = t.fileItem.file.name + (t.pageNo ? `（第${t.pageNo}页）` : '');
+      try {
+      // 提速 A：识别前降采样（短边 ≤1280），rec 耗时与像素数近似线性，小图提速约 2.5~3 倍；
+      // ROI 重识别仍使用原图 t.blob（poly 坐标基于原图），需用 scale 把降采样 poly 还原到原图坐标
+      const ds = await downscaleBlob(t.blob, 1280);
+      const results = await predictWithPool(ds.blob, { textDetLimitSideLen: 1280, textDetLimitType: 'max', textRecScoreThresh: 0.5 });
       const items = (results && results[0] && results[0].items) || [];
       const fullJson = JSON.stringify(results, null, 2);
 
@@ -6654,7 +6818,7 @@ ocrSubmitBtn.onclick = async () => {
         // ROI 日期重识别：主识别日期异常（缺失/错乱/单日期住院）时，裁「住院时间」行局部区域单独识别，
         // 规避邻近文本粘连导致的日期错乱；成功则纯本地修复，不再走 Agent
         if (!data.visitDate || data.dateOcrErr || !/^\d{4}-\d{2}-\d{2}至\d{4}-\d{2}-\d{2}$/.test(data.visitDate || '')) {
-          const roiVisit = await roiOcrHospitalDate(t.blob, groupItems);
+          const roiVisit = await roiOcrHospitalDate(t.blob, groupItems, ds.scale);
           if (roiVisit) {
             data.visitDate = roiVisit;
             delete data.dateOcrErr;
@@ -6662,23 +6826,22 @@ ocrSubmitBtn.onclick = async () => {
         }
         // 七字段 ROI 区域重识别：主正则匹配缺失时，按字段标签行坐标裁局部区域单独引擎识别再正则匹配，
         // 覆盖票据号码/患者姓名/就诊日期/开票日期/总金额/医保统筹（规避邻近文本粘连、印章水印遮挡导致的识别错误）
-        // 票据号码专项：主正则提取值存在但「票据号码」标签行后无数字（中央票标签后空、值在条形码区，全文兜底易取错）
-        // → 强制裁「票据号码」标签行 ROI 重识别
+        // 票据号码专项：纸质/中央/电子医疗票据（含「票据号码」标签）号码易受条形码区、印章、水印干扰而识别错，
+        // 且引擎拆行（标签后无数字、值在下一行）时全文兜底易取错 → 始终按「票据号码」标签行坐标裁局部区域重识别：
+        // ROI 提取到合法数字且与主识别不同 → 采用 ROI 并标记；ROI 为空/相同则保留主识别（ROI 结果由引擎能力决定）
         const billHitRaw = groupItems.find(it => /票据号码/.test(String(it.text || '')) && !/电子票据/.test(String(it.text || '')));
-        if (billHitRaw && data.invoiceNo) {
-          const billTxt = String(billHitRaw.text || '');
-          const labelEnd = billTxt.indexOf('票据号码') + 4;
-          if (!/\d/.test(billTxt.slice(labelEnd))) {
-            const roiBill = await roiOcrField(t.blob, groupItems, { label: /票据号码|No\s*[0-9A-Za-z]/, exclude: /电子票据/, padRight: 500, padY: 70, extract: txt => {
-              // 优先标签后值；其次 No 后值；再次独立 6 位以上数字行（条形码区值被识别为独立行时）
-              const m1 = txt.match(/(?:票据号码|号码)[：:\s]*([0-9]{6,})/);
-              if (m1) return m1[1].trim();
-              const m2 = txt.match(/No\s*([0-9]{6,})/);
-              if (m2) return m2[1].trim();
-              const m3 = txt.match(/(?<![0-9])([0-9]{6,})(?![0-9])/);
-              return m3 ? m3[1].trim() : '';
-            } });
-            if (roiBill) data.invoiceNo = roiBill;
+        if (billHitRaw) {
+          const roiBill = await roiOcrField(t.blob, groupItems, { label: /票据号码|No\s*[0-9A-Za-z]/, exclude: /电子票据/, padRight: 700, padY: 70, scale: ds.scale, extract: txt => {
+            const m1 = txt.match(/(?:票据号码|号码)[：:\s]*([0-9]{6,})/);
+            if (m1) return m1[1].trim();
+            const m2 = txt.match(/No\s*([0-9]{6,})/);
+            if (m2) return m2[1].trim();
+            const m3 = txt.match(/(?<![0-9])([0-9]{6,})(?![0-9])/);
+            return m3 ? m3[1].trim() : '';
+          } });
+          if (roiBill && /^\d{6,14}$/.test(roiBill) && roiBill !== data.invoiceNo) {
+            data.invoiceNo = roiBill;
+            data._noNote = '票据号码经区域重识别修正（标签行区域重识别）';
           }
         }
         const roiCfg = [
@@ -6691,7 +6854,7 @@ ocrSubmitBtn.onclick = async () => {
         ];
         for (const cfg of roiCfg) {
           if (data[cfg.key]) continue;
-          const roiV = await roiOcrField(t.blob, groupItems, cfg);
+          const roiV = await roiOcrField(t.blob, groupItems, Object.assign({}, cfg, { scale: ds.scale }));
           if (roiV) data[cfg.key] = roiV;
         }
         data.failFields = failFieldsOf(data);
@@ -6722,10 +6885,25 @@ ocrSubmitBtn.onclick = async () => {
       const currentIdx = finishedOcrRecords.length - 1;
       insertOcrRow(currentIdx + 1, errItem, currentIdx);
       refreshAllTableAndSum();
+      } finally {
+        doneTasks++;
+        ocrTipText.textContent = `并行识别中（${LIMIT} 路）… 已完成 ${doneTasks}/${totalTasks} 张 · 已用时 ${Math.round((Date.now() - tStart) / 1000)}s`;
+      }
     }
-    doneTasks++;
-  }
-  ocrTipText.textContent = `本次处理${needRec.length}个文件，识别${doneTasks}个任务，累计已识别${finishedOcrRecords.filter(i => !i.error).length}张`;
+  };
+  // 滑动窗口：启动 LIMIT 路并发处理，完成一个立即补下一个
+  // 启动即显示并行进度（0/N）+ 计时，避免"开始识别"提示在首张完成前长时间无变化
+  if (tasks.length > 1) ocrTipText.textContent = `并行识别中（${LIMIT} 路）… 已完成 0/${totalTasks} 张 · 已用时 0s`;
+  // 读秒计时：识别期间每秒动态更新"已用时"（并行/单张统一，完成时在 Promise.all 后清除）
+  const tickTimer = setInterval(() => {
+    const sec = Math.round((Date.now() - tStart) / 1000);
+    ocrTipText.textContent = (tasks.length > 1)
+      ? `并行识别中（${LIMIT} 路）… 已完成 ${doneTasks}/${totalTasks} 张 · 已用时 ${sec}s`
+      : `正在识别 ${totalTasks} 个文件… 已用时 ${sec}s`;
+  }, 1000);
+  await Promise.all(Array.from({ length: Math.min(LIMIT, tasks.length) }, () => processOne()));
+  clearInterval(tickTimer);
+  ocrTipText.textContent = `本次处理${needRec.length}个文件，识别${doneTasks}个任务，累计已识别${finishedOcrRecords.filter(i => !i.error).length}张 · 用时 ${Math.round((Date.now() - tStart) / 1000)}s`;
   $('ocrViewRawBtn').disabled = false;
   ocrSubmitBtn.disabled = false;
   if (AI_PARSE.enabled) {
@@ -7058,10 +7236,26 @@ function parsePrivateHospital(t) {
   // 发票号码
   let m = t.match(/发票号码[:：]\s*([0-9A-Za-z]{4,30})/);
   if (m) ret.invoiceNo = m[1].trim();
-  // 患者姓名（购买方名称，兼容"名 称:"空格、无冒号、购买方名称前缀）
-  m = t.match(/名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/) ||
-      t.match(/购买方\s*名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/);
-  if (m) ret.payerName = m[1].trim();
+  // 患者姓名（购买方名称）："名称:"/"购买方"后的真实姓名（兼容"名称: 购买方 王国兴"换行拆分、无冒号、购买方名称前缀）
+  const pLines = t.split('\n');
+  let pIdx = -1;
+  for (let li = 0; li < pLines.length; li++) {
+    if (/购买方/.test(pLines[li])) { pIdx = li; break; }
+  }
+  if (pIdx >= 0) {
+    for (let k = 1; k <= 2 && pIdx + k < pLines.length; k++) {
+      const cand = pLines[pIdx + k].trim();
+      if (/^[\u4e00-\u9fa5·]{2,8}$/.test(cand) && !/购买方|销售方|名称|纳税人|地址|电话|开户|识别号/.test(cand)) {
+        ret.payerName = cand; break;
+      }
+    }
+  }
+  if (!ret.payerName) {
+    m = t.match(/名\s*称\s*[:：]?\s*购买方\s*[:：]?\s*([^\s\n：]{2,16})/) ||
+        t.match(/名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/) ||
+        t.match(/购买方\s*名\s*称\s*[:：]?\s*([^\s\n：]{2,16})/);
+    if (m && !/购买方|销售方/.test(m[1])) ret.payerName = m[1].trim();
+  }
   // 开票日期（中文格式 2023年04月04日 → 2023-04-04；也兼容 2023-04-04；
   //  标签兼容 OCR 吞字"开票日期"→"开日期"等变体；标签与日期拆行时，标签行后 2 行内兜底）
   m = t.match(/开[^\d\n]{0,3}日期[:：]\s*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/) ||
@@ -7212,7 +7406,7 @@ function parseOcrText(allRawText) {
     // 拆行兜底："交款人:" 与姓名分两行时，取其后 2 行内的纯汉字行；中央医疗票姓名可能在标签上方（前向 3 行）
     if (!nameFound) {
       const lines = allRawText.split('\n');
-      const BAD = /开票|日期|项目|金额|数量|单位|备注|名称|收费|诊察|检查|化验|治疗|手术|床位|护理|麻醉|西药|中成|卫生|材料|合计|大写|小写|医保|统筹|支付|账户|现金|自付|自费|结算|专用|收款|复核|经办/;
+      const BAD = /开票|日期|项目|金额|数量|单位|备注|名称|收费|诊察|检查|化验|治疗|手术|床位|护理|麻醉|西药|中成|卫生|材料|合计|大写|小写|医保|统筹|支付|账户|现金|自付|自费|结算|专用|收款|复核|经办|校验码|代码|号码|信用|电子|票据|编码|流水|性别|住院|门诊|就诊|编号|业务|医疗机构类型|信息|其|他|信/;
       for (let li = 0; li < lines.length; li++) {
         // 候选行必须是完整标签（带冒号），排除"交款人统"等 OCR 残行
         if (!/[文交众缴]?.{0,2}[款缴].{0,1}[人认从入几八力乃]\s*[:：]/.test(lines[li])) continue;
@@ -7529,8 +7723,12 @@ function parseOcrText(allRawText) {
 
 // ROI 区域重识别：主识别日期异常时，用「住院时间」行 poly 坐标裁出局部区域单独识别，
 // 规避邻近文本（如业务流水号）粘连导致的日期错乱；识别出合法日期则返回（区间或单日期）
-async function roiOcrHospitalDate(blob, items) {
+async function roiOcrHospitalDate(blob, items, scale) {
   try {
+    // 降采样坐标还原：主识别走降采样图时 items poly 基于小图，ROI 用原图裁剪前需乘 scale 还原
+    if (scale && scale > 1 && items) {
+      items = items.map(it => ({ ...it, poly: it.poly.map(p => [p[0] * scale, p[1] * scale]) }));
+    }
     let hit = (items || []).find(it => /住\s*院\s*时\s*间/.test(String(it.text || '')));
     let cropMode = 'label'; // label(标签行) | doubleAnchor(业务流水号+医疗机构类型双锚点夹取) | singleAnchor(单锚点)
     let topMinY = 0, topMaxY = 0, botMinY = 0, pxMaxX = 0, anchorMaxX = 0;
@@ -7594,7 +7792,7 @@ async function roiOcrHospitalDate(blob, items) {
     canvas.getContext('2d').drawImage(bmp, sx, sy, cw, ch, 0, 0, cw, ch);
     const roiBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
     const roiEngine = await getEngine();
-    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
+    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 448, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
     const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
     const roiText = roiItems.map(it => it.text).join('\n');
     const roiData = parseOcrText(roiText);
@@ -7659,7 +7857,7 @@ async function roiOcrMedicare(blob, items) {
     canvas.getContext('2d').drawImage(bmp, sx, sy, cw, ch, 0, 0, cw, ch);
     const roiBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
     const roiEngine = await getEngine();
-    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
+    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 448, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
     const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
     const roiText = roiItems.map(it => it.text).join('\n');
     const m = roiText.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/);
@@ -7677,6 +7875,10 @@ async function roiOcrMedicare(blob, items) {
 // opts: { label: RegExp(标签匹配), exclude: RegExp|null(排除干扰标签), extract: (text)=>string(从局部文本提取字段值) }
 async function roiOcrField(blob, items, opts) {
   try {
+    // 降采样坐标还原：主识别走降采样图时 items poly 基于小图，ROI 用原图裁剪前需乘 opts.scale 还原
+    if (opts && opts.scale && opts.scale > 1 && items) {
+      items = items.map(it => ({ ...it, poly: it.poly.map(p => [p[0] * opts.scale, p[1] * opts.scale]) }));
+    }
     let hit = (items || []).find(it => opts.label.test(String(it.text || '')) && (!opts.exclude || !opts.exclude.test(String(it.text || ''))));
     let anchorMode = false, topMinY = 0, botMaxY = 0, topMaxX = 0;
     if ((!hit || !hit.poly || hit.poly.length < 4) && opts.anchorTop && opts.anchorBottom) {
@@ -7722,7 +7924,7 @@ async function roiOcrField(blob, items, opts) {
     canvas.getContext('2d').drawImage(bmp, sx, sy, cw, ch, 0, 0, cw, ch);
     const roiBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
     const roiEngine = await getEngine();
-    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
+    const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 448, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
     const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
     const roiText = roiItems.map(it => it.text).join('\n');
     if (!opts.label.test(roiText)) return '';
@@ -7748,7 +7950,7 @@ function insertOcrRow(seq, data, idx) {
     tr.innerHTML = `
       <td>${seq}</td>
       <td data-key="billType" ondblclick="window.editCell(this,${idx})">${hasWarn ? '⚠ ' : ''}${typeText}</td>
-      <td data-key="invoiceNo" ondblclick="window.editCell(this,${idx})">${data.invoiceNo || '-'}</td>
+      <td data-key="invoiceNo" ondblclick="window.editCell(this,${idx})" title="${data._noNote || ''}">${data.invoiceNo || '-'}${data._noNote ? `<span class="cell-note-mark">*</span>` : ''}</td>
       <td data-key="payerName" ondblclick="window.editCell(this,${idx})">${data.payerName || ''}</td>
       <td data-key="visitDate" ondblclick="window.editCell(this,${idx})">${data.visitDate || ''}</td>
       <td data-key="makeOutDate" ondblclick="window.editCell(this,${idx})">${data.makeOutDate || ''}</td>
@@ -8121,10 +8323,20 @@ async function reRunEngineLayer(uid) {
   } else {
     tasks.push({ fileItem, blob: fileItem.file, pageNo: 0 });
   }
+  // 提速 B：并发发起全部主识别 predict（池就绪走 Worker 池，否则回退主线程），按序取结果
+  getOcrPool().init().catch(() => {});
+  const predictPromises = tasks.map(async t => {
+    const ds = await downscaleBlob(t.blob, 1280);
+    t.ds = ds;
+    return predictWithPool(ds.blob, { textDetLimitSideLen: 1280, textDetLimitType: 'max', textRecScoreThresh: 0.5 });
+  });
   for (const t of tasks) {
     const name = t.fileItem.file.name + (t.pageNo ? `（第${t.pageNo}页）` : '');
     try {
-      const results = await engine.predict(t.blob, { textDetLimitSideLen: 1280, textDetLimitType: 'max', textRecScoreThresh: 0.5 });
+      // 提速 A：识别前降采样（短边 ≤1280）
+      const results = await predictPromises[0];
+      predictPromises.shift();
+      const ds = t.ds;
       const items = (results && results[0] && results[0].items) || [];
       const fullJson = JSON.stringify(results, null, 2);
       const invoiceGroups = splitInvoices(preprocessItems(items));
@@ -8134,7 +8346,7 @@ async function reRunEngineLayer(uid) {
         const data = parseOcrText(rawText);
         // ROI 日期重识别（同主流程）：日期异常时裁「住院时间」行局部单独识别，规避邻近文本粘连
         if (!data.visitDate || data.dateOcrErr || !/^\d{4}-\d{2}-\d{2}至\d{4}-\d{2}-\d{2}$/.test(data.visitDate || '')) {
-          const roiVisit = await roiOcrHospitalDate(t.blob, groupItems);
+          const roiVisit = await roiOcrHospitalDate(t.blob, groupItems, ds.scale);
           if (roiVisit) {
             data.visitDate = roiVisit;
             delete data.dateOcrErr;
@@ -8142,23 +8354,22 @@ async function reRunEngineLayer(uid) {
         }
         // 七字段 ROI 区域重识别：主正则匹配缺失时，按字段标签行坐标裁局部区域单独引擎识别再正则匹配，
         // 覆盖票据号码/患者姓名/就诊日期/开票日期/总金额/医保统筹（规避邻近文本粘连、印章水印遮挡导致的识别错误）
-        // 票据号码专项：主正则提取值存在但「票据号码」标签行后无数字（中央票标签后空、值在条形码区，全文兜底易取错）
-        // → 强制裁「票据号码」标签行 ROI 重识别
+        // 票据号码专项：纸质/中央/电子医疗票据（含「票据号码」标签）号码易受条形码区、印章、水印干扰而识别错，
+        // 且引擎拆行（标签后无数字、值在下一行）时全文兜底易取错 → 始终按「票据号码」标签行坐标裁局部区域重识别：
+        // ROI 提取到合法数字且与主识别不同 → 采用 ROI 并标记；ROI 为空/相同则保留主识别（ROI 结果由引擎能力决定）
         const billHitRaw = groupItems.find(it => /票据号码/.test(String(it.text || '')) && !/电子票据/.test(String(it.text || '')));
-        if (billHitRaw && data.invoiceNo) {
-          const billTxt = String(billHitRaw.text || '');
-          const labelEnd = billTxt.indexOf('票据号码') + 4;
-          if (!/\d/.test(billTxt.slice(labelEnd))) {
-            const roiBill = await roiOcrField(t.blob, groupItems, { label: /票据号码|No\s*[0-9A-Za-z]/, exclude: /电子票据/, padRight: 500, padY: 70, extract: txt => {
-              // 优先标签后值；其次 No 后值；再次独立 6 位以上数字行（条形码区值被识别为独立行时）
-              const m1 = txt.match(/(?:票据号码|号码)[：:\s]*([0-9]{6,})/);
-              if (m1) return m1[1].trim();
-              const m2 = txt.match(/No\s*([0-9]{6,})/);
-              if (m2) return m2[1].trim();
-              const m3 = txt.match(/(?<![0-9])([0-9]{6,})(?![0-9])/);
-              return m3 ? m3[1].trim() : '';
-            } });
-            if (roiBill) data.invoiceNo = roiBill;
+        if (billHitRaw) {
+          const roiBill = await roiOcrField(t.blob, groupItems, { label: /票据号码|No\s*[0-9A-Za-z]/, exclude: /电子票据/, padRight: 700, padY: 70, scale: ds.scale, extract: txt => {
+            const m1 = txt.match(/(?:票据号码|号码)[：:\s]*([0-9]{6,})/);
+            if (m1) return m1[1].trim();
+            const m2 = txt.match(/No\s*([0-9]{6,})/);
+            if (m2) return m2[1].trim();
+            const m3 = txt.match(/(?<![0-9])([0-9]{6,})(?![0-9])/);
+            return m3 ? m3[1].trim() : '';
+          } });
+          if (roiBill && /^\d{6,14}$/.test(roiBill) && roiBill !== data.invoiceNo) {
+            data.invoiceNo = roiBill;
+            data._noNote = '票据号码经区域重识别修正（标签行区域重识别）';
           }
         }
         const roiCfg = [
@@ -8171,7 +8382,7 @@ async function reRunEngineLayer(uid) {
         ];
         for (const cfg of roiCfg) {
           if (data[cfg.key]) continue;
-          const roiV = await roiOcrField(t.blob, groupItems, cfg);
+          const roiV = await roiOcrField(t.blob, groupItems, Object.assign({}, cfg, { scale: ds.scale }));
           if (roiV) data[cfg.key] = roiV;
         }
         data.failFields = failFieldsOf(data);
