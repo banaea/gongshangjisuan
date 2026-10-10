@@ -6682,12 +6682,12 @@ ocrSubmitBtn.onclick = async () => {
           }
         }
         const roiCfg = [
-          { key: 'invoiceNo', label: /票据号码/, exclude: /电子票据/, extract: t => { const m = t.match(/(?:票据号码|号码)[：:\s]*([0-9A-Za-z]{6,})/); return m ? m[1].trim() : ''; } },
-          { key: 'payerName', label: /交款人|患者姓名/, exclude: /统一社会信用代码/, extract: t => { const m = t.match(/(?:交款人|患者姓名)[：:\s]*([\u4e00-\u9fa5·]{2,8})/); return m ? m[1].trim() : ''; } },
-          { key: 'visitDate', label: /就诊日期|就诊时间/, exclude: /住院时间/, extract: t => { const m = t.match(/就诊日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/); return m ? fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,'')) : ''; } },
-          { key: 'makeOutDate', label: /开票日期|开日期/, extract: t => { const m = t.match(/开[^\d\n]{0,3}日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}|\d{8})/); return m ? formatDateStr(m[1]) : ''; } },
-          { key: 'totalMoney', label: /金额合计|小写/, exclude: /大写/, extract: t => { const m = t.match(/\(?小写\)?[：:\s]*[¥￥]?\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } },
-          { key: 'medicareFundPay', label: /医保统筹|统筹基金/, exclude: /个人|账户|自付|自费|大病/, extract: t => { const m = t.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } }
+          { key: 'invoiceNo', label: /票据号码/, exclude: /电子票据/, anchorTop: /票据代码/, anchorBottom: /交款人统一社会信用代码/, extract: t => { const m = t.match(/(?:票据号码|号码)[：:\s]*([0-9A-Za-z]{6,})/); return m ? m[1].trim() : ''; } },
+          { key: 'payerName', label: /交款人|患者姓名/, exclude: /统一社会信用代码/, anchorTop: /交款人统一社会信用代码/, anchorBottom: /开票日期|校验码/, extract: t => { const m = t.match(/(?:交款人|患者姓名)[：:\s]*([\u4e00-\u9fa5·]{2,8})/); return m ? m[1].trim() : ''; } },
+          { key: 'visitDate', label: /就诊日期|就诊时间/, exclude: /住院时间/, anchorTop: /业务流水号/, anchorBottom: /医保类型|医保编号/, extract: t => { const m = t.match(/就诊日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/); return m ? fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,'')) : ''; } },
+          { key: 'makeOutDate', label: /开票日期|开日期/, anchorTop: /校验码/, anchorBottom: /项目名称/, extract: t => { const m = t.match(/开[^\d\n]{0,3}日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}|\d{8})/); return m ? formatDateStr(m[1]) : ''; } },
+          { key: 'totalMoney', label: /金额合计|小写/, exclude: /大写/, anchorTop: /金额合计/, anchorBottom: /业务流水号/, extract: t => { const m = t.match(/\(?小写\)?[：:\s]*[¥￥]?\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } },
+          { key: 'medicareFundPay', label: /医保统筹|统筹基金/, exclude: /个人|账户|自付|自费|大病/, anchorTop: /医保统筹|统筹基金/, anchorBottom: /个人账户支付/, extract: t => { const m = t.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } }
         ];
         for (const cfg of roiCfg) {
           if (data[cfg.key]) continue;
@@ -7677,21 +7677,45 @@ async function roiOcrMedicare(blob, items) {
 // opts: { label: RegExp(标签匹配), exclude: RegExp|null(排除干扰标签), extract: (text)=>string(从局部文本提取字段值) }
 async function roiOcrField(blob, items, opts) {
   try {
-    const hit = (items || []).find(it => opts.label.test(String(it.text || '')) && (!opts.exclude || !opts.exclude.test(String(it.text || ''))));
-    if (!hit || !hit.poly || hit.poly.length < 4) return '';
-    const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
-    let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-    let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-    // 值通常在标签右侧：向右扩标签宽度的 2 倍（保底 120px）；上下小幅扩展容纳错位（opts.padRight/padY 可覆盖）
-    const w = maxX - minX, h = maxY - minY;
-    const padRight = opts.padRight || Math.max(w * 2, 120);
-    const padY = opts.padY || Math.max(h * 0.8, 20);
-    minX = Math.max(0, minX - 10); maxX += padRight;
-    minY = Math.max(0, minY - padY * 0.5); maxY += padY * 0.5;
+    let hit = (items || []).find(it => opts.label.test(String(it.text || '')) && (!opts.exclude || !opts.exclude.test(String(it.text || ''))));
+    let anchorMode = false, topMinY = 0, botMaxY = 0, topMaxX = 0;
+    if ((!hit || !hit.poly || hit.poly.length < 4) && opts.anchorTop && opts.anchorBottom) {
+      // 双锚点兜底：标签行漏检（印章/水印干扰）时，用上/下锚点行夹取该字段所在行带，
+      // 同样走 ROI 区域重识别（与住院日期双锚点同方案）
+      const topA = (items || []).find(it => it.poly && it.poly.length >= 4 && opts.anchorTop.test(String(it.text || '')));
+      const botA = (items || []).find(it => it.poly && it.poly.length >= 4 && opts.anchorBottom.test(String(it.text || '')));
+      if (topA && botA) {
+        const tys = topA.poly.map(p => p[1]), bys = botA.poly.map(p => p[1]);
+        const tMin = Math.min.apply(null, tys), bMax = Math.max.apply(null, bys);
+        if (bMax - tMin >= 10) {
+          topMinY = tMin; botMaxY = bMax;
+          topMaxX = Math.max.apply(null, topA.poly.map(p => p[0]));
+          anchorMode = true;
+        }
+      }
+      if (!anchorMode) return '';
+    }
     const bmp = await createImageBitmap(blob);
-    const sx = Math.floor(minX), sy = Math.floor(minY);
-    const cw = Math.min(bmp.width, Math.ceil(maxX)) - sx;
-    const ch = Math.min(bmp.height, Math.ceil(maxY)) - sy;
+    let sx, sy, cw, ch;
+    if (anchorMode) {
+      // 双锚点夹取：y 从上锚点顶边 -10 到下锚点底边 +10，x 全宽（字段可能在左右栏任意一侧）
+      sx = 0; sy = Math.max(0, Math.floor(topMinY - 10));
+      cw = bmp.width;
+      ch = Math.min(bmp.height, Math.ceil(botMaxY + 10)) - sy;
+    } else {
+      const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
+      let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+      let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+      // 值通常在标签右侧：向右扩标签宽度的 2 倍（保底 120px）；上下小幅扩展容纳错位（opts.padRight/padY 可覆盖）
+      const w = maxX - minX, h = maxY - minY;
+      const padRight = opts.padRight || Math.max(w * 2, 120);
+      const padY = opts.padY || Math.max(h * 0.8, 20);
+      minX = Math.max(0, minX - 10); maxX += padRight;
+      minY = Math.max(0, minY - padY * 0.5); maxY += padY * 0.5;
+      sx = Math.floor(minX); sy = Math.floor(minY);
+      cw = Math.min(bmp.width, Math.ceil(maxX)) - sx;
+      ch = Math.min(bmp.height, Math.ceil(maxY)) - sy;
+    }
     if (cw <= 0 || ch <= 0) return '';
     const canvas = document.createElement('canvas');
     canvas.width = cw; canvas.height = ch;
@@ -8138,12 +8162,12 @@ async function reRunEngineLayer(uid) {
           }
         }
         const roiCfg = [
-          { key: 'invoiceNo', label: /票据号码/, exclude: /电子票据/, extract: t => { const m = t.match(/(?:票据号码|号码)[：:\s]*([0-9A-Za-z]{6,})/); return m ? m[1].trim() : ''; } },
-          { key: 'payerName', label: /交款人|患者姓名/, exclude: /统一社会信用代码/, extract: t => { const m = t.match(/(?:交款人|患者姓名)[：:\s]*([\u4e00-\u9fa5·]{2,8})/); return m ? m[1].trim() : ''; } },
-          { key: 'visitDate', label: /就诊日期|就诊时间/, exclude: /住院时间/, extract: t => { const m = t.match(/就诊日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/); return m ? fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,'')) : ''; } },
-          { key: 'makeOutDate', label: /开票日期|开日期/, extract: t => { const m = t.match(/开[^\d\n]{0,3}日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}|\d{8})/); return m ? formatDateStr(m[1]) : ''; } },
-          { key: 'totalMoney', label: /金额合计|小写/, exclude: /大写/, extract: t => { const m = t.match(/\(?小写\)?[：:\s]*[¥￥]?\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } },
-          { key: 'medicareFundPay', label: /医保统筹|统筹基金/, exclude: /个人|账户|自付|自费|大病/, extract: t => { const m = t.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } }
+          { key: 'invoiceNo', label: /票据号码/, exclude: /电子票据/, anchorTop: /票据代码/, anchorBottom: /交款人统一社会信用代码/, extract: t => { const m = t.match(/(?:票据号码|号码)[：:\s]*([0-9A-Za-z]{6,})/); return m ? m[1].trim() : ''; } },
+          { key: 'payerName', label: /交款人|患者姓名/, exclude: /统一社会信用代码/, anchorTop: /交款人统一社会信用代码/, anchorBottom: /开票日期|校验码/, extract: t => { const m = t.match(/(?:交款人|患者姓名)[：:\s]*([\u4e00-\u9fa5·]{2,8})/); return m ? m[1].trim() : ''; } },
+          { key: 'visitDate', label: /就诊日期|就诊时间/, exclude: /住院时间/, anchorTop: /业务流水号/, anchorBottom: /医保类型|医保编号/, extract: t => { const m = t.match(/就诊日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?|\d{8})/); return m ? fmtDate(m[1].replace(/年|月|日/g,'-').replace(/-+/g,'-').replace(/-$/,'')) : ''; } },
+          { key: 'makeOutDate', label: /开票日期|开日期/, anchorTop: /校验码/, anchorBottom: /项目名称/, extract: t => { const m = t.match(/开[^\d\n]{0,3}日期[：:\s]*(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}|\d{8})/); return m ? formatDateStr(m[1]) : ''; } },
+          { key: 'totalMoney', label: /金额合计|小写/, exclude: /大写/, anchorTop: /金额合计/, anchorBottom: /业务流水号/, extract: t => { const m = t.match(/\(?小写\)?[：:\s]*[¥￥]?\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } },
+          { key: 'medicareFundPay', label: /医保统筹|统筹基金/, exclude: /个人|账户|自付|自费|大病/, anchorTop: /医保统筹|统筹基金/, anchorBottom: /个人账户支付/, extract: t => { const m = t.match(/(?:医保统筹|统筹基金|统筹)[^：:\n]{0,8}?支付[：:]\s*([\d,，.]+\.\d{2})/); return m ? cleanAmount(m[1]) : ''; } }
         ];
         for (const cfg of roiCfg) {
           if (data[cfg.key]) continue;
