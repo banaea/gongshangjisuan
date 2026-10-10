@@ -7532,31 +7532,57 @@ function parseOcrText(allRawText) {
 async function roiOcrHospitalDate(blob, items) {
   try {
     let hit = (items || []).find(it => /住\s*院\s*时\s*间/.test(String(it.text || '')));
-    let fallbackAnchor = null; // 无"住院时间"标签行（被印章/印戳干扰漏检）时，用同行锚点裁左侧区域
+    let cropMode = 'label'; // label(标签行) | doubleAnchor(业务流水号+医疗机构类型双锚点夹取) | singleAnchor(单锚点)
+    let topMinY = 0, topMaxY = 0, botMinY = 0, pxMaxX = 0, anchorMaxX = 0;
     if (!hit || !hit.poly || hit.poly.length < 4) {
-      // 锚点优先级：预缴/补缴/退费金额（与住院时间行同区块、紧邻下方）优先于住院科别（上方行距远，y 扩展不够会裁不到）
-      const anchorItems = (items || []).filter(it => it.poly && it.poly.length >= 4 && /预缴金额|补缴金额|退费金额/.test(String(it.text || '')));
-      fallbackAnchor = anchorItems[0] || (items || []).find(it => /住院科别/.test(String(it.text || '')) && it.poly && it.poly.length >= 4);
-      if (!fallbackAnchor) return '';
-      hit = fallbackAnchor;
+      // 双锚点：业务流水号（上）+ 医疗机构类型（下），住院日期夹在两行中间
+      const topA = (items || []).find(it => it.poly && it.poly.length >= 4 && /业务流水号/.test(String(it.text || '')));
+      const botA = (items || []).find(it => it.poly && it.poly.length >= 4 && /医疗机构类型/.test(String(it.text || '')));
+      if (topA && botA) {
+        const tys = topA.poly.map(p => p[1]), bys = botA.poly.map(p => p[1]);
+        const tMin = Math.min.apply(null, tys), tMax = Math.max.apply(null, tys), bMin = Math.min.apply(null, bys);
+        if (bMin - tMax >= 15) { // 两锚点间有足够空隙容纳住院时间行
+          const px = (items || []).find(it => it.poly && it.poly.length >= 4 && /预缴金额|补缴金额|退费金额/.test(String(it.text || '')));
+          const xsTop = topA.poly.map(p => p[0]);
+          pxMaxX = px ? Math.min.apply(null, px.poly.map(p => p[0])) : 0;
+          anchorMaxX = Math.max(Math.max.apply(null, xsTop), pxMaxX);
+          topMinY = tMin; topMaxY = tMax; botMinY = bMin;
+          cropMode = 'doubleAnchor';
+        }
+      }
+      if (cropMode === 'label') {
+        // 双锚点缺失，回退单锚点：预缴/补缴/退费金额（与住院时间行同区块）优先，住院科别兜底
+        const anchorItems = (items || []).filter(it => it.poly && it.poly.length >= 4 && /预缴金额|补缴金额|退费金额/.test(String(it.text || '')));
+        hit = anchorItems[0] || (items || []).find(it => /住院科别/.test(String(it.text || '')) && it.poly && it.poly.length >= 4);
+        if (!hit) return '';
+        cropMode = 'singleAnchor';
+      }
     }
-    const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
-    let minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-    let minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-    const padX = Math.max(30, (maxX - minX) * 0.15);
-    const padY = Math.max(15, (maxY - minY) * 0.25);
-    if (fallbackAnchor) {
-      // 住院时间在锚点行上方（x 从 0 到锚点起点），整行裁左侧区域规避印戳干扰；
-      // x 向右大幅扩展（日期数字在标签右侧，锚点 minX 不够宽会裁掉日期尾部）；
-      // y 向上大幅扩展（住院时间行紧邻锚点上方，padY 默认太小裁不到）
+    let minX, maxX, minY, maxY;
+    if (cropMode === 'doubleAnchor') {
+      // 双锚点定位（业务流水号上 / 医疗机构类型下），裁剪参数沿用实测最优区域：
+      // y 从业务流水号顶边向上 25px 到医疗机构类型顶边向下 20px（覆盖住院时间行+预缴金额行，
+      // 不含医疗机构类型行本体）；x 从 0 到预缴金额起点+300（日期尾部不被裁掉）
       minX = 0;
-      maxX = Math.min.apply(null, xs) + Math.max(300, padX * 6);
-      minY = Math.max(0, minY - Math.max(45, padY * 4)); maxY += padY * 1.5;
+      maxX = (pxMaxX || anchorMaxX) + 300;
+      minY = Math.max(0, topMinY - 25); maxY = botMinY + 20;
     } else {
-      minX = Math.max(0, minX - padX);
-      // 日期数字在「住院时间」标签右侧，大幅右扩展避免裁剪过窄只得到标签
-      maxX += Math.max(300, padX * 6);
-      minY = Math.max(0, minY - padY); maxY += padY;
+      const xs = hit.poly.map(p => p[0]), ys = hit.poly.map(p => p[1]);
+      minX = Math.min.apply(null, xs); maxX = Math.max.apply(null, xs);
+      minY = Math.min.apply(null, ys); maxY = Math.max.apply(null, ys);
+      const padX = Math.max(30, (maxX - minX) * 0.15);
+      const padY = Math.max(15, (maxY - minY) * 0.25);
+      if (cropMode === 'singleAnchor') {
+        // 住院时间在锚点行上方：x 从 0 到锚点最右 + 300（日期尾部不被裁掉），y 向上扩展 45 覆盖住院时间行
+        minX = 0;
+        maxX = maxX + Math.max(300, padX * 6);
+        minY = Math.max(0, minY - Math.max(45, padY * 4)); maxY += padY * 1.5;
+      } else {
+        // label 模式：日期在标签右侧，x 右扩展 300，y 上下小 pad
+        minX = Math.max(0, minX - padX);
+        maxX += Math.max(300, padX * 6);
+        minY = Math.max(0, minY - padY); maxY += padY;
+      }
     }
     const bmp = await createImageBitmap(blob);
     const sx = Math.floor(minX), sy = Math.floor(minY);
