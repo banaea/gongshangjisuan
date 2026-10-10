@@ -7567,9 +7567,36 @@ async function roiOcrHospitalDate(blob, items) {
     const roiRes = await roiEngine.predict(roiBlob, { textDetLimitSideLen: 640, textDetLimitType: 'max', textRecScoreThresh: 0.4 });
     const roiItems = (roiRes && roiRes[0] && roiRes[0].items) || [];
     const roiText = roiItems.map(it => it.text).join('\n');
-    if (!/住\s*院\s*时\s*间/.test(roiText)) return '';
     const roiData = parseOcrText(roiText);
-    const v = roiData.visitDate || '';
+    let v = roiData.visitDate || '';
+    if (!v && !/住\s*院\s*时\s*间/.test(roiText)) {
+      // 无「住院时间」标签（印戳干扰漏检）：裁剪区域即住院时间行，直接提取日期对/单日期
+      const okDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d) && +d.slice(5, 7) >= 1 && +d.slice(5, 7) <= 12 && +d.slice(8, 10) >= 1 && +d.slice(8, 10) <= 31;
+      const fmt = (a, b, c) => (String(a).length === 4 ? String(a) : '20' + String(a)) + '-' + String(+b).padStart(2, '0') + '-' + String(+c).padStart(2, '0');
+      // 1) 标准日期对：2024-09-14至2024-09-18 / 2024.09.14-2024.09.18
+      const mp = roiText.match(/(\d{4})[年\-/.．](\d{1,2})[月\-/.．](\d{1,2})日?[至到\s\-/.．~]{1,4}(\d{4})[年\-/.．](\d{1,2})[月\-/.．](\d{1,2})日?/);
+      if (mp) {
+        const d1 = fmt(mp[1], mp[2], mp[3]), d2 = fmt(mp[4], mp[5], mp[6]);
+        if (okDate(d1) && okDate(d2)) v = d1 + '至' + d2;
+      }
+      // 2) 8位紧凑日期对：20240914-20240918 / 2024091420250118
+      if (!v) {
+        const mc = roiText.match(/(\d{8})[至到\s\-/.．~]{0,4}(\d{8})/);
+        if (mc) {
+          const d1 = mc[1].slice(0, 4) + '-' + mc[1].slice(4, 6) + '-' + mc[1].slice(6, 8);
+          const d2 = mc[2].slice(0, 4) + '-' + mc[2].slice(4, 6) + '-' + mc[2].slice(6, 8);
+          if (okDate(d1) && okDate(d2)) v = d1 + '至' + d2;
+        }
+      }
+      // 3) 单日期兜底（需含住院/入院/出院字样，防误取其他日期）
+      if (!v) {
+        const ms = roiText.match(/(\d{4})[年\-/.．](\d{1,2})[月\-/.．](\d{1,2})日?/);
+        if (ms && /住\s*院|入院|出\s*院/.test(roiText)) {
+          const d = fmt(ms[1], ms[2], ms[3]);
+          if (okDate(d)) v = d;
+        }
+      }
+    }
     if (/^\d{4}-\d{2}-\d{2}至\d{4}-\d{2}-\d{2}$/.test(v)) return v;
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
     return '';
